@@ -1,6 +1,6 @@
 import { StyleSheet, type TextStyle, type ViewStyle } from "react-native";
 
-import { colors, spacing, typography } from "@/styles";
+import { colors, opacity, radius, spacing, typography } from "@/styles";
 
 import type { ButtonVariant } from "./types";
 
@@ -11,7 +11,7 @@ interface ButtonStyles {
 
 const baseContainer: ViewStyle = {
   height: 52,
-  borderRadius: 12,
+  borderRadius: radius.md,
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "center",
@@ -67,6 +67,6 @@ export function getVariantStyles(variant: ButtonVariant): ButtonStyles {
 
 export const buttonStyles = StyleSheet.create({
   disabled: {
-    opacity: 0.5,
+    opacity: opacity.disabled,
   },
 });

@@ -1,12 +1,12 @@
 import { Link } from "expo-router";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TextInput as RNTextInput, View } from "react-native";
+import { StyleSheet, TextInput as RNTextInput, View } from "react-native";
 
 import { AuthFooterLink, AuthHeader, FormError } from "@/components/auth";
-import { Button, GlassCard, ScreenContainer, TextInput } from "@/components/ui";
+import { AppText, Button, Card, ScreenContainer, TextInput } from "@/components/ui";
 import { useSignInForm } from "@/hooks";
-import { colors, spacing, typography } from "@/styles";
+import { colors, spacing } from "@/styles";
 
 export default function SignInScreen() {
   const { t } = useTranslation();
@@ -21,7 +21,7 @@ export default function SignInScreen() {
           subtitle={t("auth.signIn.subtitle")}
         />
 
-        <GlassCard style={styles.card}>
+        <Card style={styles.card}>
           {formError && <FormError message={formError} />}
 
           <View style={styles.fields}>
@@ -49,9 +49,9 @@ export default function SignInScreen() {
           </View>
 
           <Link href="/(auth)/forgot-password" asChild>
-            <Text style={styles.forgotPassword}>
+            <AppText variant="bodySmall" color={colors.accent} align="right">
               {t("auth.signIn.forgotPassword")}
-            </Text>
+            </AppText>
           </Link>
 
           <Button
@@ -60,7 +60,7 @@ export default function SignInScreen() {
             loading={isLoading}
             disabled={isLoading}
           />
-        </GlassCard>
+        </Card>
 
         <AuthFooterLink
           prompt={t("auth.signIn.noAccount")}
@@ -84,10 +84,5 @@ const styles = StyleSheet.create({
   },
   fields: {
     gap: spacing.md,
-  },
-  forgotPassword: {
-    ...typography.bodySmall,
-    color: colors.accent,
-    textAlign: "right",
   },
 });

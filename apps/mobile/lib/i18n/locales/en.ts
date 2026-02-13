@@ -1,14 +1,28 @@
 const en = {
   common: {
+    done: "Done",
     accessibility: {
       showPassword: "Show password",
       hidePassword: "Hide password",
     },
   },
+  tabs: {
+    journal: "Journal",
+    insights: "Insights",
+    settings: "Settings",
+  },
   home: {
     title: "NStil",
     authenticated: "Authenticated",
     signOut: "Sign Out",
+  },
+  journal: {
+    emptyTitle: "No entries yet",
+    emptySubtitle: "Your entries will appear here",
+  },
+  insights: {
+    emptyTitle: "No insights yet",
+    emptySubtitle: "Insights will appear as you journal",
   },
   auth: {
     welcome: {

@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { AuthFooterLink } from "@/components/auth";
-import { Button, GlassCard, ScreenContainer, TextInput } from "@/components/ui";
+import { AppText, Button, Card, ScreenContainer, TextInput } from "@/components/ui";
 import { useForgotPassword } from "@/hooks";
-import { colors, spacing, typography } from "@/styles";
+import { colors, spacing } from "@/styles";
 
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
@@ -28,16 +28,18 @@ export default function ForgotPasswordScreen() {
       <ScreenContainer scrollable={false} centered>
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>
+            <AppText variant="h1">
               {t("auth.forgotPassword.successTitle")}
-            </Text>
-            <Text style={styles.subtitle}>
+            </AppText>
+            <AppText variant="body" color={colors.textSecondary} align="center">
               {t("auth.forgotPassword.successSubtitle")}
-            </Text>
-            <Text style={styles.email}>{email.value.trim()}</Text>
+            </AppText>
+            <AppText variant="body" color={colors.accent} style={styles.email}>
+              {email.value.trim()}
+            </AppText>
           </View>
 
-          <GlassCard style={styles.card}>
+          <Card style={styles.card}>
             <Button
               title={resendTitle}
               onPress={resend}
@@ -47,9 +49,11 @@ export default function ForgotPasswordScreen() {
             />
 
             {statusMessage ? (
-              <Text style={styles.statusMessage}>{statusMessage}</Text>
+              <AppText variant="bodySmall" color={colors.success} align="center">
+                {statusMessage}
+              </AppText>
             ) : null}
-          </GlassCard>
+          </Card>
 
           <AuthFooterLink
             prompt=""
@@ -65,13 +69,13 @@ export default function ForgotPasswordScreen() {
     <ScreenContainer scrollable={false} centered>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>{t("auth.forgotPassword.title")}</Text>
-          <Text style={styles.subtitle}>
+          <AppText variant="h1">{t("auth.forgotPassword.title")}</AppText>
+          <AppText variant="body" color={colors.textSecondary} align="center">
             {t("auth.forgotPassword.subtitle")}
-          </Text>
+          </AppText>
         </View>
 
-        <GlassCard style={styles.card}>
+        <Card style={styles.card}>
           <TextInput
             label={t("auth.forgotPassword.email")}
             value={email.value}
@@ -91,9 +95,11 @@ export default function ForgotPasswordScreen() {
           />
 
           {statusMessage ? (
-            <Text style={styles.errorMessage}>{statusMessage}</Text>
+            <AppText variant="bodySmall" color={colors.error} align="center">
+              {statusMessage}
+            </AppText>
           ) : null}
-        </GlassCard>
+        </Card>
 
         <AuthFooterLink
           prompt=""
@@ -116,32 +122,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
   email: {
-    ...typography.body,
-    color: colors.accent,
     fontWeight: "600",
-    textAlign: "center",
   },
   card: {
     gap: spacing.lg,
-  },
-  statusMessage: {
-    ...typography.bodySmall,
-    color: colors.success,
-    textAlign: "center",
-  },
-  errorMessage: {
-    ...typography.bodySmall,
-    color: colors.error,
-    textAlign: "center",
   },
 });

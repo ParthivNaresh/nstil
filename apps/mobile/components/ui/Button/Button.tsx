@@ -8,12 +8,13 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
+import { easing } from "@/styles";
+
 import { ButtonSpinner } from "./ButtonSpinner";
 import { buttonStyles, getVariantStyles } from "./styles";
 import type { ButtonProps } from "./types";
 
 const PRESS_SCALE = 0.97;
-const SPRING_CONFIG = { damping: 15, stiffness: 150 };
 
 export function Button({
   title,
@@ -38,10 +39,10 @@ export function Button({
   const tapGesture = Gesture.Tap()
     .enabled(!isDisabled)
     .onBegin(() => {
-      scale.value = withSpring(PRESS_SCALE, SPRING_CONFIG);
+      scale.value = withSpring(PRESS_SCALE, easing.spring);
     })
     .onFinalize(() => {
-      scale.value = withSpring(1, SPRING_CONFIG);
+      scale.value = withSpring(1, easing.spring);
     })
     .onEnd(() => {
       handlePress();

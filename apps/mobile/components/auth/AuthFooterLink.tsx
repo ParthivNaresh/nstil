@@ -1,16 +1,21 @@
 import { Link } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { colors, spacing, typography } from "@/styles";
+import { AppText } from "@/components/ui/AppText";
+import { colors, spacing } from "@/styles";
 
 import type { AuthFooterLinkProps } from "./types";
 
 export function AuthFooterLink({ prompt, linkText, href }: AuthFooterLinkProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.prompt}>{prompt}</Text>
+      <AppText variant="bodySmall" color={colors.textSecondary}>
+        {prompt}
+      </AppText>
       <Link href={href} asChild>
-        <Text style={styles.link}>{linkText}</Text>
+        <AppText variant="bodySmall" color={colors.accent} style={styles.link}>
+          {linkText}
+        </AppText>
       </Link>
     </View>
   );
@@ -23,13 +28,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
   },
-  prompt: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-  },
   link: {
-    ...typography.bodySmall,
-    color: colors.accent,
     fontWeight: "600",
   },
 });
