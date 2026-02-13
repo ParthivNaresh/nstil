@@ -1,6 +1,18 @@
-import { TextStyle } from "react-native";
+import type { TextStyle } from "react-native";
 
-export const typography: Record<string, TextStyle> = {
+interface TypographyScale {
+  readonly h1: TextStyle;
+  readonly h2: TextStyle;
+  readonly h3: TextStyle;
+  readonly body: TextStyle;
+  readonly bodySmall: TextStyle;
+  readonly caption: TextStyle;
+  readonly label: TextStyle;
+}
+
+export type TypographyVariant = keyof TypographyScale;
+
+export const typography: TypographyScale = {
   h1: {
     fontSize: 32,
     fontWeight: "700",
@@ -39,4 +51,4 @@ export const typography: Record<string, TextStyle> = {
     lineHeight: 20,
     letterSpacing: 0.1,
   },
-};
+} as const;

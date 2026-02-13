@@ -10,14 +10,14 @@ import {
   withTiming,
 } from "react-native-reanimated";
 
-import { colors, spacing, typography } from "@/styles";
+import { colors, duration, radius, spacing, typography } from "@/styles";
 
 import { ErrorMessage } from "./ErrorMessage";
 import { FloatingLabel } from "./FloatingLabel";
 import { SecureToggle } from "./SecureToggle";
 import type { TextInputProps } from "./types";
 
-const ANIMATION_DURATION = 200;
+const ANIMATION_DURATION = duration.fast;
 
 export function TextInput({
   label,
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     backgroundColor: colors.glass,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: radius.md,
     height: 56,
     justifyContent: "center",
   },

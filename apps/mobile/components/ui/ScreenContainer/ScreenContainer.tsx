@@ -1,5 +1,4 @@
 import { StatusBar } from "expo-status-bar";
-import type { ReactNode } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,11 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors } from "@/styles";
 
-interface ScreenContainerProps {
-  children: ReactNode;
-  scrollable?: boolean;
-  centered?: boolean;
-}
+import type { ScreenContainerProps } from "./types";
 
 export function ScreenContainer({
   children,

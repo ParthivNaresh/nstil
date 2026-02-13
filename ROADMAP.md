@@ -143,13 +143,133 @@ End-to-end validation that the complete auth system works as a unit.
 
 ## Phase 2 — Design System & Core UI Components
 
-Build the reusable component library with Reanimated animations, glassmorphism effects, and accessibility. This is the visual foundation every feature screen builds on.
+Build the reusable component library with Reanimated animations, glassmorphism effects, and accessibility. This is the visual foundation every feature screen builds on. Critical path: 2A → 2B → 2C → 2E. Feedback/overlay components (2D) and animated transitions (2F) will be built as needed when use cases arise in later phases.
+
+### Subphase 2A — Design Token Hardening & Typography System ✅
+
+Formalize the design system foundation before building more components.
+
+**Objectives:**
+
+- [x] Typography refactor — `TypographyScale` interface with `TypographyVariant` type replaces `Record<string, TextStyle>`. `AppText` component with `variant`, `color`, `align` props. Existing `...typography.X` spread pattern preserved for backwards compatibility
+- [x] Icon system — Lucide React Native (already installed). Typed `Icon` component with `IconSize` enum (`xs`/`sm`/`md`/`lg`/`xl`), default color from design tokens, accepts any `LucideIcon` component
+- [x] Design token audit — extracted hardcoded values into tokens: `radius` (xs=4, sm=8, md=12, lg=16, xl=20, 2xl=24, full=9999), `duration` (instant=100, fast=200, normal=300, slow=500), `easing` (spring, springBouncy, springGentle), `opacity` (disabled=0.5, muted=0.4, subtle=0.7, full=1). Updated Button, TextInput, GlassCard, FormError to use tokens
+- [x] Theme structure — `theme` object aggregates all tokens (`colors`, `spacing`, `typography`, `radius`, `opacity`, `duration`, `easing`). Individual exports preserved. `Theme` type exported for future context/provider use
+
+**Implementation details:**
+
+- `styles/typography.ts` — `TypographyScale` interface, `TypographyVariant` type, `as const` assertion
+- `styles/radius.ts` — border radius scale with `RadiusToken` type
+- `styles/animation.ts` — duration and spring easing tokens with types
+- `styles/opacity.ts` — opacity scale with `OpacityToken` type
+- `styles/theme.ts` — aggregated theme object with `Theme` type
+- `components/ui/AppText/` — variant-driven text component with color and alignment overrides
+- `components/ui/Icon/` — typed Lucide wrapper with size enum and design token defaults
+
+### Subphase 2B — Core Layout & Navigation Components ✅
+
+The shell of the app — what the user sees on every screen.
+
+**Objectives:**
+
+- [x] Tab bar — custom `TabBar` with glassmorphism blur background, Lucide icons via `Icon` component, haptic feedback on tab switch, badge support (count or dot). Tab structure: Journal (BookOpen), Insights (Lightbulb), Settings (Settings). `TabBarItem` handles press, focus state, accessibility
+- [x] Navigation header — `Header` with centered title, optional back button (ChevronLeft), optional right action slot, `expo-blur` glassmorphism background, safe area inset aware, `transparent` mode for overlay use
+- [x] Divider — configurable `color`, `thickness`, `verticalSpacing` with design token defaults
+- [x] ScrollContainer — SafeArea-aware scrollable container with `RefreshControl` support (`onRefresh`/`refreshing`), keyboard avoidance toggle, custom `contentContainerStyle`
+
+**Implementation details:**
+
+- `components/ui/TabBar/` — `TabBar.tsx` (blur background, route mapping), `TabBarItem.tsx` (icon + label + badge + haptics), `tabIcons.ts` (route name → LucideIcon mapping), `types.ts`
+- `components/ui/Header/` — `Header.tsx` (blur/transparent modes, three-column layout), `types.ts`
+- `components/ui/Divider/` — `Divider.tsx`, `types.ts`
+- `components/ui/ScrollContainer/` — `ScrollContainer.tsx`, `types.ts`
+- `app/(tabs)/_layout.tsx` — custom tab bar via `tabBar` prop, three tabs with i18n labels
+- `app/(tabs)/insights.tsx` — placeholder Insights screen
+- `app/(tabs)/settings.tsx` — Settings screen with sign-out (moved from home)
+- `app/(tabs)/index.tsx` — Journal placeholder screen
+- i18n keys added: `tabs.*`, `journal.*`, `insights.*`
+
+### Subphase 2C — Data Display Components ✅
+
+Components for showing content — the building blocks of journal entries and lists.
+
+**Objectives:**
+
+- [x] Card — pressable content card with `glass`/`elevated` variants, spring press animation + haptics, `CardHeader` (title + subtitle + right slot), `CardFooter`, optional trailing chevron. Non-pressable mode renders as plain `View`
+- [x] Avatar — initials-based avatar with `sm`/`md`/`lg`/`xl` sizes, accent-tinted background, initials derived from name (two-letter) or email (one-letter), circular via `radius.full`
+- [x] Badge — `count` mode (number, capped at 99+, hidden when 0) and `dot` mode (8px indicator), configurable color, `positioned` prop for absolute overlay placement
+- [x] EmptyState — Lucide icon (xl, muted) + title + subtitle + optional CTA button, centered layout. Used in Journal and Insights placeholder screens
+- [x] Skeleton — pulse opacity animation via Reanimated, `text`/`circle`/`rect` shape presets with default dimensions and border radius, composable for content layout matching
+
+**Implementation details:**
+
+- `components/ui/Card/` — `Card.tsx` (GestureDetector for press), `CardHeader.tsx`, `CardFooter.tsx`, `styles.ts` (variant styles), `types.ts`
+- `components/ui/Avatar/` — `Avatar.tsx` (initials extraction, size config map), `types.ts`
+- `components/ui/Badge/` — `Badge.tsx` (count/dot modes, positioned overlay), `types.ts`
+- `components/ui/EmptyState/` — `EmptyState.tsx` (icon + text + optional action), `types.ts`
+- `components/ui/Skeleton/` — `Skeleton.tsx` (Reanimated pulse, shape presets), `types.ts`
+- `components/ui/ScreenContainer/` — extracted `types.ts` for consistency with other components
+- `app/(tabs)/index.tsx` — refactored to use `EmptyState` with `BookOpen` icon
+- `app/(tabs)/insights.tsx` — refactored to use `EmptyState` with `Lightbulb` icon
+- `app/(tabs)/settings.tsx` — added `Avatar` component showing user email initials
+
+### Subphase 2D — Feedback & Overlay Components _(as needed)_
+
+User feedback and modal interactions. Built when the first use case arises in later phases.
+
+**Objectives:**
+
+- [ ] Toast/Snackbar — non-blocking notification, auto-dismiss, success/error/info variants
+- [ ] Bottom sheet — draggable modal with snap points (Reanimated + Gesture Handler). Used for entry options, filters, quick actions
+- [ ] Confirmation dialog — modal with title, message, confirm/cancel buttons. Used for destructive actions
+- [ ] Pull-to-refresh indicator — custom animated refresh indicator matching glassmorphism theme
+
+### Subphase 2E — Input & Form Components ✅
+
+Extend the existing input system for journal entry creation.
+
+**Objectives:**
+
+- [x] TextArea — multi-line input with auto-growing height (min/max), character count or word count display, floating label (reuses `FloatingLabel` from TextInput), glassmorphism styling, `maxLength` support
+- [x] DatePicker — styled trigger button with Calendar icon showing formatted date, native `@react-native-community/datetimepicker` underneath, date/time/datetime modes, dark theme, iOS spinner with Done dismiss button
+- [x] MoodSelector — 5-mood emoji picker (😔😕😐🙂😊) with labels, Reanimated spring scale animation on selection, haptic feedback, accent-tinted selected state, radio group accessibility
+- [x] SearchInput — search icon prefix, clear button (X) when non-empty, debounced `onSearch` callback (300ms default), glassmorphism styling
+- [x] GlassCard deprecation — migrated all 6 auth screens from `GlassCard` to `Card`, removed `GlassCard` component directory, all auth screens now use `AppText` instead of raw `Text` with typography spread
+
+**Implementation details:**
+
+- `components/ui/TextArea/` — `TextArea.tsx` (auto-grow via `onContentSizeChange`, reuses `FloatingLabel` and `ErrorMessage`), `types.ts`
+- `components/ui/DatePicker/` — `DatePicker.tsx` (trigger + native picker), `formatDate.ts` (Intl.DateTimeFormat display), `types.ts`
+- `components/ui/MoodSelector/` — `MoodSelector.tsx` (radio group container), `MoodItem.tsx` (animated pressable item), `moods.ts` (mood options data), `types.ts`
+- `components/ui/SearchInput/` — `SearchInput.tsx` (debounced search with clear), `types.ts`
+- Removed `components/ui/GlassCard/` — replaced by `Card` with `variant="glass"` (default)
+- Auth screens migrated: `index.tsx`, `sign-in.tsx`, `sign-up.tsx`, `verify-email.tsx`, `forgot-password.tsx`, `reset-password.tsx` — all now use `Card` and `AppText`
+- Dependency added: `@react-native-community/datetimepicker`
+- i18n key added: `common.done`
+
+### Subphase 2F — Animated Transitions & Polish _(as needed)_
+
+The "feel" layer — what makes the app feel premium. Built during polish passes or when specific transitions are needed.
+
+**Objectives:**
+
+- [ ] Screen transitions — custom Reanimated transitions between screens (shared element for entry list → detail)
+- [ ] List animations — staggered fade-in for list items, swipe-to-delete with spring animation
+- [ ] Micro-interactions — button press scales, card hover/press states, loading state transitions
+- [ ] Haptic feedback patterns — define when haptics fire and which intensity (button press, pull-to-refresh, destructive actions)
 
 ---
 
 ## Phase 3 — Journal Entry CRUD
 
 The core product loop: create, read, update, delete journal entries. Backend endpoints with validation, pagination, and filtering. Mobile screens for writing, listing, and viewing entries.
+
+**Includes:**
+
+- [ ] Backend CRUD endpoints — create, read (single + paginated list), update, delete journal entries with RLS enforcement
+- [ ] Redis caching layer — cache frequently accessed data (user entries list, entry by ID) with TTL-based invalidation, define cache key patterns and TTL strategy
+- [ ] Network resilience — offline detection, retry logic for failed API calls, offline indicators in the UI (deferred from Phase 1E)
+- [ ] Mobile screens — entry list, entry detail, create/edit entry with rich text or markdown
 
 ---
 
@@ -168,3 +288,15 @@ Scheduled reflection reminders via push notifications. Configurable cadence. Gen
 ## Phase 6 — Production Deployment & Observability
 
 CI/CD pipelines, production Supabase project, monitoring, error tracking (Sentry), log aggregation, performance budgets, app store submission.
+
+**Includes:**
+
+- [ ] Production SMTP configuration — configure `[auth.email.smtp]` in Supabase for real email delivery (SendGrid, Postmark, or SES), custom email templates for verification and password reset
+- [ ] Token revocation — short-lived Redis-based token blacklist for immediate access token invalidation on sign-out (currently access tokens remain valid until expiry ~1hr)
+- [ ] API gateway rate limiting — rate limiting on backend endpoints (auth endpoints already rate-limited by Supabase)
+- [ ] CORS production configuration — replace localhost origins with production domains
+- [ ] CI/CD pipelines — automated lint, typecheck, test on every PR
+- [ ] Error tracking — Sentry integration for both backend and mobile
+- [ ] Log aggregation — structured log shipping to a centralized platform
+- [ ] Performance budgets — bundle size limits, API response time targets
+- [ ] App store submission — iOS App Store and Google Play Store

@@ -1,11 +1,11 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TextInput as RNTextInput, View } from "react-native";
+import { StyleSheet, TextInput as RNTextInput, View } from "react-native";
 
 import { AuthFooterLink, AuthHeader, FormError } from "@/components/auth";
-import { Button, GlassCard, ScreenContainer, TextInput } from "@/components/ui";
+import { AppText, Button, Card, ScreenContainer, TextInput } from "@/components/ui";
 import { useSignUpForm } from "@/hooks";
-import { colors, spacing, typography } from "@/styles";
+import { colors, spacing } from "@/styles";
 
 export default function SignUpScreen() {
   const { t } = useTranslation();
@@ -28,7 +28,7 @@ export default function SignUpScreen() {
           subtitle={t("auth.signUp.subtitle")}
         />
 
-        <GlassCard style={styles.card}>
+        <Card style={styles.card}>
           {formError && <FormError message={formError} />}
 
           <View style={styles.fields}>
@@ -66,12 +66,16 @@ export default function SignUpScreen() {
             />
           </View>
 
-          <Text style={styles.terms}>
+          <AppText variant="caption" color={colors.textTertiary} align="center" style={styles.terms}>
             {t("auth.signUp.termsPrefix")}
-            <Text style={styles.termsLink}>{t("auth.signUp.termsLink")}</Text>
+            <AppText variant="caption" color={colors.accent}>
+              {t("auth.signUp.termsLink")}
+            </AppText>
             {t("auth.signUp.termsMiddle")}
-            <Text style={styles.termsLink}>{t("auth.signUp.privacyLink")}</Text>
-          </Text>
+            <AppText variant="caption" color={colors.accent}>
+              {t("auth.signUp.privacyLink")}
+            </AppText>
+          </AppText>
 
           <Button
             title={t("auth.signUp.submit")}
@@ -79,7 +83,7 @@ export default function SignUpScreen() {
             loading={isLoading}
             disabled={isLoading}
           />
-        </GlassCard>
+        </Card>
 
         <AuthFooterLink
           prompt={t("auth.signUp.hasAccount")}
@@ -105,12 +109,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   terms: {
-    ...typography.caption,
-    color: colors.textTertiary,
-    textAlign: "center",
     lineHeight: 18,
-  },
-  termsLink: {
-    color: colors.accent,
   },
 });

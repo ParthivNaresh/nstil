@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput as RNTextInput, View } from "react-native";
 
 import { AuthHeader, FormError } from "@/components/auth";
-import { Button, GlassCard, ScreenContainer, TextInput } from "@/components/ui";
+import { Button, Card, ScreenContainer, TextInput } from "@/components/ui";
 import { useResetPassword } from "@/hooks";
 import { spacing } from "@/styles";
 
@@ -21,7 +21,7 @@ export default function ResetPasswordScreen() {
           subtitle={t("auth.resetPassword.subtitle")}
         />
 
-        <GlassCard style={styles.card}>
+        <Card style={styles.card}>
           {formError && <FormError message={formError} />}
 
           <View style={styles.fields}>
@@ -54,7 +54,7 @@ export default function ResetPasswordScreen() {
             loading={isLoading}
             disabled={isLoading}
           />
-        </GlassCard>
+        </Card>
       </View>
     </ScreenContainer>
   );

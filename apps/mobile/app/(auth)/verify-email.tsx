@@ -1,13 +1,13 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { AuthFooterLink } from "@/components/auth";
-import { Button, GlassCard, ScreenContainer } from "@/components/ui";
+import { AppText, Button, Card, ScreenContainer } from "@/components/ui";
 import { useVerifyEmail } from "@/hooks";
 import { useAuthStore } from "@/stores/authStore";
-import { colors, spacing, typography } from "@/styles";
+import { colors, spacing } from "@/styles";
 
 export default function VerifyEmailScreen() {
   const { t } = useTranslation();
@@ -38,12 +38,18 @@ export default function VerifyEmailScreen() {
     <ScreenContainer scrollable={false} centered>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>{t("auth.verifyEmail.title")}</Text>
-          <Text style={styles.subtitle}>{t("auth.verifyEmail.subtitle")}</Text>
-          {email ? <Text style={styles.email}>{email}</Text> : null}
+          <AppText variant="h1">{t("auth.verifyEmail.title")}</AppText>
+          <AppText variant="body" color={colors.textSecondary} align="center">
+            {t("auth.verifyEmail.subtitle")}
+          </AppText>
+          {email ? (
+            <AppText variant="body" color={colors.accent} style={styles.email}>
+              {email}
+            </AppText>
+          ) : null}
         </View>
 
-        <GlassCard style={styles.card}>
+        <Card style={styles.card}>
           <Button
             title={resendButtonTitle}
             onPress={resend}
@@ -53,7 +59,9 @@ export default function VerifyEmailScreen() {
           />
 
           {statusMessage ? (
-            <Text style={styles.statusMessage}>{statusMessage}</Text>
+            <AppText variant="bodySmall" color={colors.success} align="center">
+              {statusMessage}
+            </AppText>
           ) : null}
 
           <Button
@@ -61,7 +69,7 @@ export default function VerifyEmailScreen() {
             onPress={handleDifferentEmail}
             variant="ghost"
           />
-        </GlassCard>
+        </Card>
 
         <AuthFooterLink
           prompt={t("auth.verifyEmail.alreadyVerified")}
@@ -84,27 +92,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
   email: {
-    ...typography.body,
-    color: colors.accent,
     fontWeight: "600",
-    textAlign: "center",
   },
   card: {
     gap: spacing.md,
-  },
-  statusMessage: {
-    ...typography.bodySmall,
-    color: colors.success,
-    textAlign: "center",
   },
 });
