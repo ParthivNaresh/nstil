@@ -1,26 +1,39 @@
+import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { FileQuestion, Pencil } from "lucide-react-native";
+import { FileQuestion, Pencil, Pin, PinOff } from "lucide-react-native";
 import { useCallback } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { EntryDetailContent } from "@/components/journal";
-import { Button, EmptyState, Header, Icon, Skeleton } from "@/components/ui";
-import { useDeleteEntry, useEntry, useHeaderHeight } from "@/hooks";
-import { colors, spacing } from "@/styles";
+import { AmbientBackground, Button, EmptyState, Header, Icon, Skeleton } from "@/components/ui";
+import { useDeleteEntry, useEntry, useHeaderHeight, useTheme, useTogglePin } from "@/hooks";
+import { spacing } from "@/styles";
+
+import { styles } from "./styles";
 
 export default function EntryDetailScreen() {
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: entry, isLoading } = useEntry(id);
   const deleteMutation = useDeleteEntry();
+  const togglePinMutation = useTogglePin();
 
   const handleEdit = useCallback(() => {
     router.push(`/entry/${id}/edit`);
   }, [router, id]);
+
+  const handleTogglePin = useCallback(() => {
+    if (!entry) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    togglePinMutation.mutate({ id: entry.id, isPinned: entry.is_pinned });
+  }, [entry, togglePinMutation]);
 
   const handleDelete = useCallback(() => {
     Alert.alert(
@@ -41,18 +54,32 @@ export default function EntryDetailScreen() {
     );
   }, [t, id, deleteMutation, router]);
 
-  const editButton = (
-    <Pressable onPress={handleEdit} accessibilityLabel={t("journal.detail.edit")}>
-      <Icon icon={Pencil} size="sm" color={colors.accent} />
-    </Pressable>
-  );
+  const headerActions = entry ? (
+    <View style={styles.headerActions}>
+      <Pressable
+        onPress={handleTogglePin}
+        accessibilityLabel={entry.is_pinned ? "Unpin entry" : "Pin entry"}
+      >
+        <Icon
+          icon={entry.is_pinned ? PinOff : Pin}
+          size="sm"
+          color={entry.is_pinned ? colors.accent : colors.textTertiary}
+        />
+      </Pressable>
+      <Pressable onPress={handleEdit} accessibilityLabel={t("journal.detail.edit")}>
+        <Icon icon={Pencil} size="sm" color={colors.accent} />
+      </Pressable>
+    </View>
+  ) : null;
 
   if (isLoading) {
     return (
-      <View style={styles.root}>
-        <StatusBar style="light" />
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        <AmbientBackground />
+        <StatusBar style={isDark ? "light" : "dark"} />
         <Header title="" onBack={router.back} />
-        <View style={[styles.content, { paddingTop: headerHeight + spacing.md }]}>
+        <View style={[styles.content, { paddingTop: headerHeight + spacing.lg }]}>
+          <Skeleton shape="rect" height={80} />
           <Skeleton shape="text" width="40%" height={12} />
           <Skeleton shape="text" width="70%" height={20} />
           <Skeleton shape="rect" height={120} />
@@ -64,8 +91,9 @@ export default function EntryDetailScreen() {
 
   if (!entry) {
     return (
-      <View style={styles.root}>
-        <StatusBar style="light" />
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        <AmbientBackground />
+        <StatusBar style={isDark ? "light" : "dark"} />
         <Header title="" onBack={router.back} />
         <View style={styles.emptyContainer}>
           <EmptyState
@@ -79,13 +107,17 @@ export default function EntryDetailScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="light" />
-      <Header title="" onBack={router.back} rightAction={editButton} />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <AmbientBackground />
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <Header title="" onBack={router.back} rightAction={headerActions} />
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: headerHeight + spacing.md },
+          {
+            paddingTop: headerHeight + spacing.lg,
+            paddingBottom: insets.bottom + spacing.xl,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -104,25 +136,3 @@ export default function EntryDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: spacing.xl,
-  },
-  content: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  deleteSection: {
-    marginTop: spacing.xl,
-  },
-});

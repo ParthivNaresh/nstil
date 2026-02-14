@@ -5,7 +5,8 @@ import Animated, {
   interpolateColor,
 } from "react-native-reanimated";
 
-import { colors, typography } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { typography } from "@/styles";
 
 interface FloatingLabelProps {
   label: string;
@@ -19,6 +20,11 @@ const LABEL_INACTIVE_SIZE = typography.body.fontSize ?? 16;
 const LABEL_ACTIVE_SIZE = typography.caption.fontSize ?? 12;
 
 export function FloatingLabel({ label, progress, hasError }: FloatingLabelProps) {
+  const { colors } = useTheme();
+  const errorColor = colors.error;
+  const tertiaryColor = colors.textTertiary;
+  const secondaryColor = colors.textSecondary;
+
   const animatedStyle = useAnimatedStyle(() => {
     const top = interpolate(progress.value, [0, 1], [LABEL_INACTIVE_TOP, LABEL_ACTIVE_TOP]);
     const fontSize = interpolate(
@@ -28,11 +34,11 @@ export function FloatingLabel({ label, progress, hasError }: FloatingLabelProps)
     );
 
     const color = hasError
-      ? colors.error
+      ? errorColor
       : interpolateColor(
           progress.value,
           [0, 1],
-          [colors.textTertiary, colors.textSecondary],
+          [tertiaryColor, secondaryColor],
         );
 
     return {

@@ -7,7 +7,14 @@ from nstil.models.journal import (
     JournalEntryRow,
     JournalEntryUpdate,
 )
-from nstil.models.pagination import CursorParams
+from nstil.models.pagination import CursorParams, SearchParams
+from nstil.models.space import (
+    JournalSpaceCreate,
+    JournalSpaceListResponse,
+    JournalSpaceResponse,
+    JournalSpaceRow,
+    JournalSpaceUpdate,
+)
 
 __all__ = [
     "CursorParams",
@@ -17,5 +24,11 @@ __all__ = [
     "JournalEntryResponse",
     "JournalEntryRow",
     "JournalEntryUpdate",
+    "JournalSpaceCreate",
+    "JournalSpaceListResponse",
+    "JournalSpaceResponse",
+    "JournalSpaceRow",
+    "JournalSpaceUpdate",
+    "SearchParams",
     "UserPayload",
 ]

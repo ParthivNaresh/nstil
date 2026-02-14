@@ -1,69 +1,69 @@
-import { MapPin } from "lucide-react-native";
+import { Calendar, FileText, MapPin } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { AppText, Icon } from "@/components/ui";
+import { useTheme } from "@/hooks/useTheme";
 import { formatFullDate } from "@/lib/formatFullDate";
-import { getMoodEmoji, getMoodLabel } from "@/lib/moodUtils";
-import { colors, radius, spacing } from "@/styles";
+import { radius, spacing } from "@/styles";
 
+import { MoodBanner } from "./MoodBanner";
 import type { EntryDetailContentProps } from "./types";
 
 export function EntryDetailContent({ entry }: EntryDetailContentProps) {
   const { t } = useTranslation();
-  const emoji = getMoodEmoji(entry.mood_score);
-  const moodLabel = getMoodLabel(entry.mood_score);
+  const { colors } = useTheme();
   const formattedDate = formatFullDate(entry.created_at);
   const entryTypeLabel = t(`journal.entryTypes.${entry.entry_type}`);
+  const hasMood = entry.mood_score !== null;
 
   return (
     <View style={styles.container}>
-      <View style={styles.meta}>
-        <AppText variant="caption" color={colors.textTertiary}>
-          {formattedDate}
-        </AppText>
-        <View style={styles.typeBadge}>
+      {hasMood ? <MoodBanner moodScore={entry.mood_score!} /> : null}
+
+      <View style={styles.metaRow}>
+        <View style={styles.metaItem}>
+          <Icon icon={Calendar} size="xs" color={colors.textTertiary} />
+          <AppText variant="caption" color={colors.textTertiary}>
+            {formattedDate}
+          </AppText>
+        </View>
+        <View style={[styles.metaBadge, { backgroundColor: colors.accentMuted }]}>
+          <Icon icon={FileText} size="xs" color={colors.accentLight} />
           <AppText variant="caption" color={colors.accentLight}>
             {entryTypeLabel}
           </AppText>
         </View>
+        {entry.location ? (
+          <View style={styles.metaItem}>
+            <Icon icon={MapPin} size="xs" color={colors.textTertiary} />
+            <AppText variant="caption" color={colors.textTertiary}>
+              {entry.location}
+            </AppText>
+          </View>
+        ) : null}
       </View>
-
-      {emoji && moodLabel ? (
-        <View style={styles.mood}>
-          <AppText variant="h2">{emoji}</AppText>
-          <AppText variant="body" color={colors.textSecondary}>
-            {moodLabel}
-          </AppText>
-        </View>
-      ) : null}
 
       {entry.title ? (
         <AppText variant="h2">{entry.title}</AppText>
       ) : null}
 
-      <AppText variant="body" color={colors.textSecondary} style={styles.body}>
+      <AppText variant="body" color={colors.textSecondary}>
         {entry.body}
       </AppText>
 
       {entry.tags.length > 0 ? (
         <View style={styles.tags}>
           {entry.tags.map((tag) => (
-            <View key={tag} style={styles.tag}>
+            <View
+              key={tag}
+              style={[styles.tagPill, { backgroundColor: colors.accentMuted }]}
+            >
               <AppText variant="caption" color={colors.accentLight}>
                 {tag}
               </AppText>
             </View>
           ))}
-        </View>
-      ) : null}
-
-      {entry.location ? (
-        <View style={styles.location}>
-          <Icon icon={MapPin} size="xs" color={colors.textTertiary} />
-          <AppText variant="caption" color={colors.textTertiary}>
-            {entry.location}
-          </AppText>
         </View>
       ) : null}
     </View>
@@ -72,41 +72,35 @@ export function EntryDetailContent({ entry }: EntryDetailContentProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.md,
+    gap: spacing.lg,
   },
-  meta: {
+  metaRow: {
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
-  typeBadge: {
-    backgroundColor: colors.accentMuted,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  mood: {
+  metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
-  body: {
-    lineHeight: 24,
+  metaBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 3,
   },
   tags: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
-  tag: {
-    backgroundColor: colors.accentMuted,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  location: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
+  tagPill: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.xs + 1,
   },
 });

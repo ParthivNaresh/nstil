@@ -3,7 +3,8 @@ import { StyleSheet, View } from "react-native";
 import { AppText } from "@/components/ui/AppText";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
-import { colors, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/styles";
 
 import type { EmptyStateProps } from "./types";
 
@@ -14,6 +15,8 @@ export function EmptyState({
   actionLabel,
   onAction,
 }: EmptyStateProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>

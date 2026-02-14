@@ -1,22 +1,25 @@
 import { useMemo } from "react";
 import { View, type ViewStyle } from "react-native";
 
-import { colors } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
 
 import type { DividerProps } from "./types";
 
 export function Divider({
-  color = colors.border,
+  color,
   thickness = 1,
   verticalSpacing = 0,
 }: DividerProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.border;
+
   const style = useMemo<ViewStyle>(
     () => ({
       height: thickness,
-      backgroundColor: color,
+      backgroundColor: resolvedColor,
       marginVertical: verticalSpacing,
     }),
-    [color, thickness, verticalSpacing],
+    [resolvedColor, thickness, verticalSpacing],
   );
 
   return <View style={style} accessibilityRole="none" />;

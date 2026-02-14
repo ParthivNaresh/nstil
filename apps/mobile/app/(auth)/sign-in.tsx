@@ -6,15 +6,17 @@ import { StyleSheet, TextInput as RNTextInput, View } from "react-native";
 import { AuthFooterLink, AuthHeader, FormError } from "@/components/auth";
 import { AppText, Button, Card, ScreenContainer, TextInput } from "@/components/ui";
 import { useSignInForm } from "@/hooks";
-import { colors, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/styles";
 
 export default function SignInScreen() {
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const { email, password, isLoading, formError, handleSubmit } = useSignInForm();
   const passwordRef = useRef<RNTextInput>(null);
 
   return (
-    <ScreenContainer>
+    <ScreenContainer ambient={false}>
       <View style={styles.content}>
         <AuthHeader
           title={t("auth.signIn.title")}

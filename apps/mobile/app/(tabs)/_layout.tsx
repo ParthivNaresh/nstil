@@ -13,7 +13,11 @@ export default function TabLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: t("tabs.journal") }}
+        options={{ title: t("tabs.home") }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{ title: t("tabs.history") }}
       />
       <Tabs.Screen
         name="insights"

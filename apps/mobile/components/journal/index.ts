@@ -1,5 +1,8 @@
-export { EntryCard, EntryCardSkeleton } from "./EntryCard";
+export { AnimatedEntryCard, EntryCard, EntryCardSkeleton } from "./EntryCard";
 export type { EntryCardProps, EntryCardSkeletonProps } from "./EntryCard";
+
+export { EntryDatePicker } from "./EntryDatePicker";
+export type { EntryDatePickerProps } from "./EntryDatePicker";
 
 export { EntryDetailContent } from "./EntryDetail";
 export type { EntryDetailContentProps } from "./EntryDetail";

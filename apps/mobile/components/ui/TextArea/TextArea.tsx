@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   StyleSheet,
   TextInput as RNTextInput,
@@ -12,7 +12,8 @@ import {
 import { AppText } from "@/components/ui/AppText";
 import { FloatingLabel } from "@/components/ui/TextInput/FloatingLabel";
 import { ErrorMessage } from "@/components/ui/TextInput/ErrorMessage";
-import { colors, duration, radius, spacing, typography } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { duration, radius, spacing, typography } from "@/styles";
 
 import type { TextAreaProps } from "./types";
 
@@ -33,6 +34,7 @@ export function TextArea({
   accessibilityLabel,
   testID,
 }: TextAreaProps) {
+  const { colors, keyboardAppearance } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const [contentHeight, setContentHeight] = useState(minHeight);
   const labelProgress = useSharedValue(value ? 1 : 0);
@@ -71,12 +73,22 @@ export function TextArea({
       ? colors.borderFocused
       : colors.glassBorder;
 
+  const inputContainerStyle = useMemo(
+    () => [styles.inputContainer, { borderColor, backgroundColor: colors.glass, minHeight }],
+    [borderColor, colors.glass, minHeight],
+  );
+
+  const inputStyle = useMemo(
+    () => [styles.input, { height: contentHeight, color: colors.textPrimary }],
+    [contentHeight, colors.textPrimary],
+  );
+
   return (
     <View style={styles.container}>
-      <View style={[styles.inputContainer, { borderColor, minHeight }]}>
+      <View style={inputContainerStyle}>
         <FloatingLabel label={label} progress={labelProgress} hasError={hasError} />
         <RNTextInput
-          style={[styles.input, { height: contentHeight }]}
+          style={inputStyle}
           value={value}
           onChangeText={onChangeText}
           onFocus={handleFocus}
@@ -88,7 +100,7 @@ export function TextArea({
           placeholder={isActive ? placeholder : undefined}
           placeholderTextColor={colors.textTertiary}
           selectionColor={colors.accent}
-          keyboardAppearance="dark"
+          keyboardAppearance={keyboardAppearance}
           accessibilityLabel={accessibilityLabel ?? label}
           accessibilityState={{ selected: isActive }}
           testID={testID}
@@ -116,13 +128,11 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   inputContainer: {
-    backgroundColor: colors.glass,
     borderWidth: 1,
     borderRadius: radius.md,
   },
   input: {
     ...typography.body,
-    color: colors.textPrimary,
     paddingHorizontal: spacing.md,
     paddingTop: 28,
     paddingBottom: spacing.sm,

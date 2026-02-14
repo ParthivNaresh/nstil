@@ -1,5 +1,5 @@
 import { X } from "lucide-react-native";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -10,7 +10,8 @@ import { useTranslation } from "react-i18next";
 
 import { AppText } from "@/components/ui/AppText";
 import { Icon } from "@/components/ui/Icon";
-import { colors, radius, spacing, typography } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { radius, spacing, typography } from "@/styles";
 
 import type { TagInputProps } from "./types";
 
@@ -22,19 +23,18 @@ export function TagInput({
   label,
 }: TagInputProps) {
   const { t } = useTranslation();
+  const { colors, keyboardAppearance } = useTheme();
   const [inputValue, setInputValue] = useState("");
-  const canAdd = tags.length < maxTags;
+  const inputRef = useRef<RNTextInput>(null);
+  const canAddMore = tags.length < maxTags;
 
   const handleSubmit = useCallback(() => {
     const trimmed = inputValue.trim();
-    if (!trimmed || !canAdd) return;
-    if (tags.includes(trimmed)) {
+    if (trimmed && canAddMore) {
+      onAdd(trimmed);
       setInputValue("");
-      return;
     }
-    onAdd(trimmed);
-    setInputValue("");
-  }, [inputValue, canAdd, tags, onAdd]);
+  }, [inputValue, canAddMore, onAdd]);
 
   return (
     <View style={styles.container}>
@@ -49,28 +49,34 @@ export function TagInput({
         </View>
       ) : null}
 
-      {tags.length > 0 ? (
-        <View style={styles.tags}>
-          {tags.map((tag) => (
-            <View key={tag} style={styles.tag}>
-              <AppText variant="caption" color={colors.accentLight}>
-                {tag}
-              </AppText>
-              <Pressable
-                onPress={() => onRemove(tag)}
-                hitSlop={8}
-                accessibilityLabel={`Remove tag ${tag}`}
-              >
-                <Icon icon={X} size="xs" color={colors.accentLight} />
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      ) : null}
+      <View style={styles.tagsRow}>
+        {tags.map((tag) => (
+          <View key={tag} style={[styles.tag, { backgroundColor: colors.accentMuted }]}>
+            <AppText variant="caption" color={colors.accentLight}>
+              {tag}
+            </AppText>
+            <Pressable
+              onPress={() => onRemove(tag)}
+              hitSlop={4}
+              accessibilityLabel={`Remove tag ${tag}`}
+            >
+              <Icon icon={X} size="xs" color={colors.accentLight} />
+            </Pressable>
+          </View>
+        ))}
+      </View>
 
-      {canAdd ? (
+      {canAddMore ? (
         <RNTextInput
-          style={styles.input}
+          ref={inputRef}
+          style={[
+            styles.input,
+            {
+              color: colors.textPrimary,
+              backgroundColor: colors.glass,
+              borderColor: colors.glassBorder,
+            },
+          ]}
           value={inputValue}
           onChangeText={setInputValue}
           onSubmitEditing={handleSubmit}
@@ -79,7 +85,7 @@ export function TagInput({
           returnKeyType="done"
           autoCapitalize="none"
           selectionColor={colors.accent}
-          keyboardAppearance="dark"
+          keyboardAppearance={keyboardAppearance}
           blurOnSubmit={false}
         />
       ) : null}
@@ -89,7 +95,6 @@ export function TagInput({
 
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
     gap: spacing.sm,
   },
   labelRow: {
@@ -97,7 +102,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  tags: {
+  tagsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.xs,
@@ -106,17 +111,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: colors.accentMuted,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 1,
   },
   input: {
     ...typography.body,
-    color: colors.textPrimary,
-    backgroundColor: colors.glass,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

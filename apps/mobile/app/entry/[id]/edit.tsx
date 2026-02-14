@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,12 +11,13 @@ import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
 
 import { EntryForm } from "@/components/journal";
-import { Header, HeaderAction, Skeleton } from "@/components/ui";
-import { useEntry, useEntryForm, useHeaderHeight } from "@/hooks";
-import { colors, spacing } from "@/styles";
+import { AmbientBackground, Header, HeaderAction, Skeleton } from "@/components/ui";
+import { useEntry, useEntryForm, useHeaderHeight, useTheme } from "@/hooks";
+import { spacing } from "@/styles";
 
 export default function EditEntryScreen() {
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,8 +25,9 @@ export default function EditEntryScreen() {
 
   if (isLoading || !entry) {
     return (
-      <View style={styles.root}>
-        <StatusBar style="light" />
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        <AmbientBackground />
+        <StatusBar style={isDark ? "light" : "dark"} />
         <Header title={t("journal.editEntry")} onBack={router.back} />
         <View style={[styles.content, { paddingTop: headerHeight + spacing.md }]}>
           <Skeleton shape="rect" height={200} />
@@ -36,25 +39,31 @@ export default function EditEntryScreen() {
   return <EditEntryForm entryId={id} />;
 }
 
-function EditEntryForm({ entryId }: { entryId: string }) {
+function EditEntryForm({ entryId }: { readonly entryId: string }) {
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
   const { data: entry } = useEntry(entryId);
   const form = useEntryForm(entry);
 
+  const handleSave = useCallback(() => {
+    form.handleSubmit();
+  }, [form]);
+
   const saveAction = (
     <HeaderAction
       title={t("journal.save")}
-      onPress={form.handleSubmit}
+      onPress={handleSave}
       loading={form.isSubmitting}
       disabled={!form.canSubmit}
     />
   );
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="light" />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <AmbientBackground />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Header
         title={t("journal.editEntry")}
         onBack={router.back}
@@ -79,12 +88,14 @@ function EditEntryForm({ entryId }: { entryId: string }) {
               moodScore={form.moodScore}
               tags={form.tags}
               entryType={form.entryType}
+              entryDate={form.entryDate}
               bodyError={form.bodyError}
               maxTags={form.maxTags}
               onBodyChange={form.setBody}
               onTitleChange={form.setTitle}
               onMoodChange={form.setMoodScore}
               onEntryTypeChange={form.setEntryType}
+              onDateChange={form.setEntryDate}
               onAddTag={form.addTag}
               onRemoveTag={form.removeTag}
             />
@@ -98,7 +109,6 @@ function EditEntryForm({ entryId }: { entryId: string }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   flex: {
     flex: 1,

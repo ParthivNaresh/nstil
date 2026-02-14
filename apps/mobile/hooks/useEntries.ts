@@ -4,6 +4,7 @@ import {
   deleteEntry,
   getEntry,
   listEntries,
+  searchEntries,
   updateEntry,
 } from "@/services/api/entries";
 import type {
@@ -74,6 +75,46 @@ export function useUpdateEntry() {
         queryKey: queryKeys.entries.lists(),
       });
     },
+  });
+}
+
+export function useTogglePin() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    JournalEntry,
+    Error,
+    { id: string; isPinned: boolean }
+  >({
+    mutationFn: ({ id, isPinned }) =>
+      updateEntry(id, { is_pinned: !isPinned }),
+    onSuccess: (updatedEntry) => {
+      queryClient.setQueryData(
+        queryKeys.entries.detail(updatedEntry.id),
+        updatedEntry,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.entries.lists(),
+      });
+    },
+  });
+}
+
+export function useSearchEntries(query: string) {
+  const trimmed = query.trim();
+
+  return useInfiniteQuery<PaginatedResponse<JournalEntry>>({
+    queryKey: queryKeys.entries.search(trimmed),
+    queryFn: ({ pageParam }) =>
+      searchEntries({
+        query: trimmed,
+        cursor: pageParam as string | undefined,
+        limit: DEFAULT_PAGE_SIZE,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.has_more ? lastPage.next_cursor : undefined,
+    enabled: trimmed.length > 0,
   });
 }
 

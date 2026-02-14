@@ -2,17 +2,18 @@ import { BlurView } from "expo-blur";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
 
 import { TabBarItem } from "./TabBarItem";
 import type { TabBarProps } from "./types";
 
 export function TabBar({ state, descriptors, navigation }: TabBarProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
-    <BlurView intensity={40} tint="dark" style={styles.blur}>
-      <View style={styles.borderTop} />
+    <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={styles.blur}>
+      <View style={[styles.borderTop, { backgroundColor: colors.border }]} />
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -68,7 +69,6 @@ const styles = StyleSheet.create({
   },
   borderTop: {
     height: 1,
-    backgroundColor: colors.border,
   },
   container: {
     flexDirection: "row",

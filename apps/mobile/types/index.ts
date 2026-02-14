@@ -1,4 +1,4 @@
-export type { CursorParams, PaginatedResponse } from "./api";
+export type { CursorParams, PaginatedResponse, SearchParams } from "./api";
 export type {
   DeepLinkType,
   ResetPasswordFormData,

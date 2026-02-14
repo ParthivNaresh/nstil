@@ -8,3 +8,9 @@ export interface CursorParams {
   readonly cursor?: string;
   readonly limit?: number;
 }
+
+export interface SearchParams {
+  readonly query: string;
+  readonly cursor?: string;
+  readonly limit?: number;
+}

@@ -43,8 +43,9 @@ just mobile-check       # typecheck + lint
 
 ## Current Status
 
-- **Phase 1 — Authentication** ✅ Complete (39 backend tests, 6 auth screens, deep linking, session management)
-- **Phase 2 — Design System** ✅ Complete (18 UI components, design tokens, custom tab bar, glassmorphism theme)
-- **Phase 3 — Journal Entry CRUD** — Next
+- **Phase 1 — Authentication** ✅ Complete (6 auth screens, deep linking, session management)
+- **Phase 2 — Design System** ✅ Complete (19 UI components, design tokens, custom tab bar, glassmorphism theme)
+- **Phase 3 — Journal Entry CRUD** ✅ Complete (124 backend tests, cursor-based pagination, Redis caching)
+- **Phase 4 — Core Journaling Features** 🔄 In progress (4A theme system ✅, 4B visual polish 🔄)
 
 See [ROADMAP.md](ROADMAP.md) for the full development plan.

@@ -11,17 +11,24 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { setupDeepLinkListener } from "@/lib/deepLink";
 import { queryClient } from "@/lib/queryClient";
 import { useAuthStore } from "@/stores/authStore";
+import { useThemeStore } from "@/stores/themeStore";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const initialize = useAuthStore((s) => s.initialize);
-  const initialized = useAuthStore((s) => s.initialized);
+  const initializeAuth = useAuthStore((s) => s.initialize);
+  const authInitialized = useAuthStore((s) => s.initialized);
+  const initializeTheme = useThemeStore((s) => s.initialize);
+  const themeInitialized = useThemeStore((s) => s.initialized);
+
+  useEffect(() => {
+    initializeTheme();
+  }, [initializeTheme]);
 
   useEffect(() => {
     const boot = async () => {
       try {
-        await initialize();
+        await initializeAuth();
       } catch {
         // proceed with null session
       } finally {
@@ -29,14 +36,14 @@ export default function RootLayout() {
       }
     };
     boot();
-  }, [initialize]);
+  }, [initializeAuth]);
 
   useEffect(() => {
     const cleanup = setupDeepLinkListener();
     return cleanup;
   }, []);
 
-  if (!initialized) {
+  if (!authInitialized || !themeInitialized) {
     return null;
   }
 

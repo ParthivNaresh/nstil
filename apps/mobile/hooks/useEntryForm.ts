@@ -9,26 +9,29 @@ import type { EntryType, JournalEntry } from "@/types";
 const MAX_TAGS = 10;
 
 interface EntryFormState {
-  readonly body: string;
   readonly title: string;
+  readonly body: string;
   readonly moodScore: MoodValue | null;
   readonly tags: string[];
   readonly entryType: EntryType;
+  readonly entryDate: Date;
 }
 
 interface UseEntryFormReturn {
-  readonly body: string;
   readonly title: string;
+  readonly body: string;
   readonly moodScore: MoodValue | null;
   readonly tags: string[];
   readonly entryType: EntryType;
+  readonly entryDate: Date;
   readonly bodyError: string | undefined;
   readonly isSubmitting: boolean;
   readonly canSubmit: boolean;
-  readonly setBody: (text: string) => void;
   readonly setTitle: (text: string) => void;
+  readonly setBody: (text: string) => void;
   readonly setMoodScore: (mood: MoodValue) => void;
   readonly setEntryType: (type: EntryType) => void;
+  readonly setEntryDate: (date: Date) => void;
   readonly addTag: (tag: string) => void;
   readonly removeTag: (tag: string) => void;
   readonly handleSubmit: () => void;
@@ -38,19 +41,21 @@ interface UseEntryFormReturn {
 function buildInitialState(entry?: JournalEntry): EntryFormState {
   if (!entry) {
     return {
-      body: "",
       title: "",
+      body: "",
       moodScore: null,
       tags: [],
       entryType: "journal",
+      entryDate: new Date(),
     };
   }
   return {
-    body: entry.body,
     title: entry.title,
+    body: entry.body,
     moodScore: entry.mood_score as MoodValue | null,
     tags: [...entry.tags],
     entryType: entry.entry_type,
+    entryDate: new Date(entry.created_at),
   };
 }
 
@@ -61,20 +66,26 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
 
   const initial = useMemo(() => buildInitialState(entry), [entry]);
 
-  const [body, setBody] = useState(initial.body);
   const [title, setTitle] = useState(initial.title);
+  const [body, setBody] = useState(initial.body);
   const [moodScore, setMoodScore] = useState<MoodValue | null>(initial.moodScore);
   const [tags, setTags] = useState<string[]>(initial.tags);
   const [entryType, setEntryType] = useState<EntryType>(initial.entryType);
+  const [entryDate, setEntryDate] = useState<Date>(initial.entryDate);
   const [bodyError, setBodyError] = useState<string | undefined>(undefined);
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const canSubmit = body.trim().length > 0 && !isSubmitting;
+  const canSubmit = !isSubmitting;
 
-  const handleSetBody = useCallback((text: string) => {
-    setBody(text);
-    setBodyError(undefined);
-  }, []);
+  const handleBodyChange = useCallback(
+    (text: string) => {
+      setBody(text);
+      if (bodyError && text.trim()) {
+        setBodyError(undefined);
+      }
+    },
+    [bodyError],
+  );
 
   const addTag = useCallback((tag: string) => {
     setTags((prev) => {
@@ -95,6 +106,7 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
     }
 
     const trimmedTitle = title.trim();
+    const dateIso = entryDate.toISOString();
     const onError = () => {
       Alert.alert("Unable to save", "Please check your connection and try again.");
     };
@@ -109,6 +121,7 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
             mood_score: moodScore ?? undefined,
             tags,
             entry_type: entryType,
+            created_at: dateIso,
           },
         },
         { onSuccess: () => router.back(), onError },
@@ -121,25 +134,28 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
           mood_score: moodScore ?? undefined,
           tags: tags.length > 0 ? tags : undefined,
           entry_type: entryType,
+          created_at: dateIso,
         },
         { onSuccess: () => router.back(), onError },
       );
     }
-  }, [body, title, moodScore, tags, entryType, entry, createMutation, updateMutation, router]);
+  }, [body, title, moodScore, tags, entryType, entryDate, entry, createMutation, updateMutation, router]);
 
   return {
-    body,
     title,
+    body,
     moodScore,
     tags,
     entryType,
+    entryDate,
     bodyError,
     isSubmitting,
     canSubmit,
-    setBody: handleSetBody,
     setTitle,
+    setBody: handleBodyChange,
     setMoodScore,
     setEntryType,
+    setEntryDate,
     addTag,
     removeTag,
     handleSubmit,

@@ -1,13 +1,22 @@
 import * as Haptics from "expo-haptics";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 
 import { AppText } from "@/components/ui/AppText";
 import { Icon } from "@/components/ui/Icon";
-import { colors, radius, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { easing, radius, spacing } from "@/styles";
 
 import { getTabIcon } from "./tabIcons";
 import type { TabBarItemProps } from "./types";
+
+const INDICATOR_HEIGHT = 3;
+const INDICATOR_WIDTH = 20;
 
 export function TabBarItem({
   label,
@@ -19,9 +28,20 @@ export function TabBarItem({
   accessibilityState,
   badge,
 }: TabBarItemProps) {
+  const { colors } = useTheme();
   const TabIcon = getTabIcon(routeName);
   const iconColor = isFocused ? colors.accent : colors.textTertiary;
   const textColor = isFocused ? colors.accent : colors.textTertiary;
+  const indicatorScale = useSharedValue(isFocused ? 1 : 0);
+
+  useEffect(() => {
+    indicatorScale.value = withSpring(isFocused ? 1 : 0, easing.spring);
+  }, [isFocused, indicatorScale]);
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: indicatorScale.value }],
+    opacity: indicatorScale.value,
+  }));
 
   const handlePress = useCallback(() => {
     if (!isFocused) {
@@ -39,10 +59,17 @@ export function TabBarItem({
       accessibilityState={accessibilityState}
       style={styles.item}
     >
+      <Animated.View
+        style={[
+          styles.indicator,
+          { backgroundColor: colors.accent },
+          indicatorStyle,
+        ]}
+      />
       <View style={styles.iconContainer}>
         <Icon icon={TabIcon} size="sm" color={iconColor} />
         {badge != null && badge > 0 ? (
-          <View style={styles.badge}>
+          <View style={[styles.badge, { backgroundColor: colors.error }]}>
             <AppText variant="caption" color={colors.textPrimary}>
               {badge > 99 ? "99+" : String(badge)}
             </AppText>
@@ -64,6 +91,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: 2,
   },
+  indicator: {
+    width: INDICATOR_WIDTH,
+    height: INDICATOR_HEIGHT,
+    borderRadius: INDICATOR_HEIGHT / 2,
+    marginBottom: 2,
+  },
   iconContainer: {
     position: "relative",
   },
@@ -71,7 +104,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -4,
     right: -10,
-    backgroundColor: colors.error,
     borderRadius: radius.sm,
     minWidth: 16,
     height: 16,

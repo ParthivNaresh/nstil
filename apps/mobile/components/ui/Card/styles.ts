@@ -1,34 +1,34 @@
 import { StyleSheet, type ViewStyle } from "react-native";
 
-import { colors, opacity, radius, spacing } from "@/styles";
+import { radius, spacing } from "@/styles";
+import type { ColorPalette } from "@/styles/palettes";
 
 import type { CardVariant } from "./types";
 
-const baseCard: ViewStyle = {
-  borderWidth: 1,
-  borderColor: colors.glassBorder,
-  borderRadius: radius.xl,
-  padding: spacing.md,
-  overflow: "hidden",
-};
+function baseCard(colors: ColorPalette): ViewStyle {
+  return {
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    borderRadius: radius.xl,
+    padding: spacing.md,
+  };
+}
 
-const variantStyles: Record<CardVariant, ViewStyle> = {
-  glass: {
-    ...baseCard,
-    backgroundColor: colors.glass,
-  },
-  elevated: {
-    ...baseCard,
-    backgroundColor: colors.surfaceElevated,
-  },
-};
-
-export function getCardVariantStyle(variant: CardVariant): ViewStyle {
-  return variantStyles[variant];
+export function getCardVariantStyle(
+  variant: CardVariant,
+  colors: ColorPalette,
+): ViewStyle {
+  const base = baseCard(colors);
+  switch (variant) {
+    case "glass":
+      return { ...base, backgroundColor: colors.glass };
+    case "elevated":
+      return { ...base, backgroundColor: colors.surfaceElevated };
+  }
 }
 
 export const cardStyles = StyleSheet.create({
-  pressable: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
   },
@@ -37,6 +37,5 @@ export const cardStyles = StyleSheet.create({
   },
   chevron: {
     marginLeft: spacing.sm,
-    opacity: opacity.muted,
   },
 });

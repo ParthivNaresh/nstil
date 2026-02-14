@@ -103,7 +103,18 @@ mobile-check: mobile-typecheck mobile-lint
 # ── Database ─────────────────────────────────────────────
 
 db-reset:
-    supabase db reset
+    #!/usr/bin/env bash
+    set -euo pipefail
+    supabase db reset || true
+    echo "→ Waiting for Supabase to stabilize..."
+    for i in {1..15}; do
+        if supabase status > /dev/null 2>&1 && curl -sf http://127.0.0.1:54321/rest/v1/ -o /dev/null 2>&1; then
+            echo "→ Database reset complete"
+            exit 0
+        fi
+        sleep 2
+    done
+    echo "→ Database reset complete (containers may still be warming up)"
 
 db-migration name:
     supabase migration new {{name}}

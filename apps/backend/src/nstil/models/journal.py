@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from uuid import UUID
 
@@ -19,15 +19,35 @@ MAX_TAG_COUNT = 10
 MAX_LOCATION_LENGTH = 200
 MIN_MOOD = 1
 MAX_MOOD = 5
+FUTURE_TOLERANCE = timedelta(minutes=1)
+
+
+def _validate_not_future(v: datetime | None) -> datetime | None:
+    if v is None:
+        return None
+    if v.tzinfo is None:
+        v = v.replace(tzinfo=UTC)
+    if v > datetime.now(UTC) + FUTURE_TOLERANCE:
+        msg = "Date cannot be in the future"
+        raise ValueError(msg)
+    return v
 
 
 class JournalEntryCreate(BaseModel):
+    journal_id: UUID = Field(...)
     title: str = Field(default="", max_length=MAX_TITLE_LENGTH)
     body: str = Field(..., min_length=1, max_length=MAX_BODY_LENGTH)
     mood_score: int | None = Field(default=None, ge=MIN_MOOD, le=MAX_MOOD)
     tags: list[str] = Field(default_factory=list)
     location: str | None = Field(default=None, max_length=MAX_LOCATION_LENGTH)
     entry_type: EntryType = Field(default=EntryType.JOURNAL)
+    is_pinned: bool = Field(default=False)
+    created_at: datetime | None = Field(default=None)
+
+    @field_validator("created_at")
+    @classmethod
+    def validate_created_at(cls, v: datetime | None) -> datetime | None:
+        return _validate_not_future(v)
 
     @field_validator("tags")
     @classmethod
@@ -58,12 +78,20 @@ class JournalEntryCreate(BaseModel):
 
 
 class JournalEntryUpdate(BaseModel):
+    journal_id: UUID | None = Field(default=None)
     title: str | None = Field(default=None, max_length=MAX_TITLE_LENGTH)
     body: str | None = Field(default=None, min_length=1, max_length=MAX_BODY_LENGTH)
     mood_score: int | None = Field(default=None, ge=MIN_MOOD, le=MAX_MOOD)
     tags: list[str] | None = Field(default=None)
     location: str | None = Field(default=None, max_length=MAX_LOCATION_LENGTH)
     entry_type: EntryType | None = Field(default=None)
+    is_pinned: bool | None = Field(default=None)
+    created_at: datetime | None = Field(default=None)
+
+    @field_validator("created_at")
+    @classmethod
+    def validate_created_at(cls, v: datetime | None) -> datetime | None:
+        return _validate_not_future(v)
 
     @model_validator(mode="after")
     def at_least_one_field(self) -> "JournalEntryUpdate":
@@ -109,10 +137,10 @@ class JournalEntryUpdate(BaseModel):
             return None
         return v.strip()
 
-    def to_update_dict(self) -> dict[str, str | int | list[str]]:
+    def to_update_dict(self) -> dict[str, str | int | bool | list[str]]:
         return {
             k: v
-            for k, v in self.model_dump().items()
+            for k, v in self.model_dump(mode="json").items()
             if v is not None
         }
 
@@ -120,12 +148,14 @@ class JournalEntryUpdate(BaseModel):
 class JournalEntryRow(BaseModel):
     id: UUID
     user_id: UUID
+    journal_id: UUID
     title: str
     body: str
     mood_score: int | None
     tags: list[str]
     location: str | None
     entry_type: str
+    is_pinned: bool
     metadata: dict[str, object]
     created_at: datetime
     updated_at: datetime
@@ -137,12 +167,14 @@ class JournalEntryRow(BaseModel):
 class JournalEntryResponse(BaseModel):
     id: UUID
     user_id: UUID
+    journal_id: UUID
     title: str
     body: str
     mood_score: int | None
     tags: list[str]
     location: str | None
     entry_type: str
+    is_pinned: bool
     created_at: datetime
     updated_at: datetime
 
@@ -151,12 +183,14 @@ class JournalEntryResponse(BaseModel):
         return cls(
             id=row.id,
             user_id=row.user_id,
+            journal_id=row.journal_id,
             title=row.title,
             body=row.body,
             mood_score=row.mood_score,
             tags=row.tags,
             location=row.location,
             entry_type=row.entry_type,
+            is_pinned=row.is_pinned,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )
