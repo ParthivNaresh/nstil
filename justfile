@@ -1,5 +1,48 @@
 # NStil task runner
 
+# ── High-level commands ──────────────────────────────────
+
+doctor:
+    ./scripts/doctor.sh
+
+dev:
+    ./scripts/dev.sh
+
+infra-up:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "→ Stopping stale Docker containers..."
+    docker compose down --remove-orphans 2>/dev/null || true
+    echo "→ Starting Redis..."
+    docker compose up redis -d
+    echo "→ Starting Supabase..."
+    supabase start
+    echo "→ Infrastructure ready"
+
+infra-down:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "→ Stopping Supabase..."
+    supabase stop
+    echo "→ Stopping Docker containers..."
+    docker compose down --remove-orphans
+    echo "→ Infrastructure stopped"
+
+infra-status:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "── Supabase ──"
+    supabase status 2>&1 || echo "Supabase not running"
+    echo ""
+    echo "── Docker ──"
+    docker ps --format 'table {{"{{"}}.Names{{"}}"}}\t{{"{{"}}.Ports{{"}}"}}\t{{"{{"}}.Status{{"}}"}}' 2>&1
+    echo ""
+    echo "── Backend ──"
+    curl -m 2 -s http://localhost:8000/api/v1/health 2>/dev/null || echo "Backend not running"
+    echo ""
+
+check: backend-check mobile-check
+
 # ── Setup ───────────────────────────────────────────────
 
 install: backend-install mobile-install
@@ -59,25 +102,8 @@ mobile-check: mobile-typecheck mobile-lint
 
 # ── Database ─────────────────────────────────────────────
 
-db-start:
-    supabase start
-
-db-stop:
-    supabase stop
-
 db-reset:
     supabase db reset
 
 db-migration name:
     supabase migration new {{name}}
-
-# ── Infrastructure ───────────────────────────────────────
-
-up:
-    docker compose up -d
-
-down:
-    docker compose down
-
-build:
-    docker compose build

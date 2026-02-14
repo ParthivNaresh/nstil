@@ -1,17 +1,16 @@
-import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 
 import { ApiError, NoSessionError } from "./errors";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
+const NO_CONTENT = 204;
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const session = useAuthStore.getState().session;
 
   if (!session?.access_token) {
     throw new NoSessionError();
@@ -37,6 +36,10 @@ export async function apiFetch<T>(
     }
 
     throw error;
+  }
+
+  if (response.status === NO_CONTENT) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;

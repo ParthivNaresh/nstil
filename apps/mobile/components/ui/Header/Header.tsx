@@ -9,7 +9,7 @@ import { colors, spacing } from "@/styles";
 
 import type { HeaderProps } from "./types";
 
-const HEADER_HEIGHT = 44;
+export const HEADER_ROW_HEIGHT = 44;
 const BACK_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
 export function Header({
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   row: {
-    height: HEADER_HEIGHT,
+    height: HEADER_ROW_HEIGHT,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   right: {
-    width: 44,
+    minWidth: 44,
     alignItems: "flex-end",
     justifyContent: "center",
   },

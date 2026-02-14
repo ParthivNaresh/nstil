@@ -12,5 +12,10 @@ router = APIRouter()
 async def health_check(
     redis_pool: Annotated[aioredis.Redis, Depends(get_redis)],
 ) -> dict[str, str]:
-    await redis_pool.ping()
-    return {"status": "ok"}
+    try:
+        await redis_pool.ping()
+        redis_status = "ok"
+    except Exception:
+        redis_status = "unavailable"
+
+    return {"status": "ok", "redis": redis_status}
