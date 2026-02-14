@@ -42,9 +42,13 @@ class EntryCacheService(BaseCacheService):
         await self._delete(entry_key(user_id, entry_id))
 
     async def get_list(
-        self, user_id: UUID, cursor: str | None, limit: int
+        self,
+        user_id: UUID,
+        cursor: str | None,
+        limit: int,
+        journal_id: str | None = None,
     ) -> tuple[list[JournalEntryRow], bool] | None:
-        data = await self._get(entry_list_key(user_id, cursor, limit))
+        data = await self._get(entry_list_key(user_id, cursor, limit, journal_id))
         if data is None:
             return None
         try:
@@ -66,21 +70,27 @@ class EntryCacheService(BaseCacheService):
         limit: int,
         rows: list[JournalEntryRow],
         has_more: bool,
+        journal_id: str | None = None,
     ) -> None:
         payload = json.dumps({
             "items": [row.model_dump(mode="json") for row in rows],
             "has_more": has_more,
         })
         await self._set(
-            entry_list_key(user_id, cursor, limit),
+            entry_list_key(user_id, cursor, limit, journal_id),
             payload,
             ENTRY_LIST_TTL_SECONDS,
         )
 
     async def get_search(
-        self, user_id: UUID, query: str, cursor: str | None, limit: int
+        self,
+        user_id: UUID,
+        query: str,
+        cursor: str | None,
+        limit: int,
+        journal_id: str | None = None,
     ) -> tuple[list[JournalEntryRow], bool] | None:
-        data = await self._get(search_key(user_id, query, cursor, limit))
+        data = await self._get(search_key(user_id, query, cursor, limit, journal_id))
         if data is None:
             return None
         try:
@@ -103,13 +113,14 @@ class EntryCacheService(BaseCacheService):
         limit: int,
         rows: list[JournalEntryRow],
         has_more: bool,
+        journal_id: str | None = None,
     ) -> None:
         payload = json.dumps({
             "items": [row.model_dump(mode="json") for row in rows],
             "has_more": has_more,
         })
         await self._set(
-            search_key(user_id, query, cursor, limit),
+            search_key(user_id, query, cursor, limit, journal_id),
             payload,
             SEARCH_TTL_SECONDS,
         )

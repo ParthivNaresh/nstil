@@ -10,9 +10,11 @@ from nstil.config import Settings
 from nstil.core.exceptions import InvalidTokenError, TokenExpiredError
 from nstil.core.security import verify_jwt
 from nstil.models import UserPayload
-from nstil.services.cache import EntryCacheService
+from nstil.services.cache import EntryCacheService, SpaceCacheService
 from nstil.services.cached_journal import CachedJournalService
+from nstil.services.cached_space import CachedSpaceService
 from nstil.services.journal import JournalService
+from nstil.services.space import JournalSpaceService
 
 bearer_scheme = HTTPBearer()
 
@@ -38,12 +40,27 @@ def get_cache_service(
     return EntryCacheService(redis)
 
 
+def get_space_cache_service(
+    redis: Annotated[aioredis.Redis, Depends(get_redis)],
+) -> SpaceCacheService:
+    return SpaceCacheService(redis)
+
+
 def get_journal_service(
     supabase: Annotated[AsyncClient, Depends(get_supabase)],
     cache: Annotated[EntryCacheService, Depends(get_cache_service)],
 ) -> CachedJournalService:
     db_service = JournalService(supabase)
     return CachedJournalService(db_service, cache)
+
+
+def get_space_service(
+    supabase: Annotated[AsyncClient, Depends(get_supabase)],
+    space_cache: Annotated[SpaceCacheService, Depends(get_space_cache_service)],
+    entry_cache: Annotated[EntryCacheService, Depends(get_cache_service)],
+) -> CachedSpaceService:
+    db_service = JournalSpaceService(supabase)
+    return CachedSpaceService(db_service, space_cache, entry_cache)
 
 
 def get_current_user(

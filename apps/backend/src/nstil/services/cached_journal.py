@@ -34,14 +34,22 @@ class CachedJournalService:
         return row
 
     async def list_entries(
-        self, user_id: UUID, params: CursorParams
+        self,
+        user_id: UUID,
+        params: CursorParams,
+        journal_id: UUID | None = None,
     ) -> tuple[list[JournalEntryRow], bool]:
-        cached = await self._cache.get_list(user_id, params.cursor, params.limit)
+        journal_id_str = str(journal_id) if journal_id else None
+        cached = await self._cache.get_list(
+            user_id, params.cursor, params.limit, journal_id_str
+        )
         if cached is not None:
             return cached
 
-        rows, has_more = await self._db.list_entries(user_id, params)
-        await self._cache.set_list(user_id, params.cursor, params.limit, rows, has_more)
+        rows, has_more = await self._db.list_entries(user_id, params, journal_id)
+        await self._cache.set_list(
+            user_id, params.cursor, params.limit, rows, has_more, journal_id_str
+        )
         return rows, has_more
 
     async def update(
@@ -53,17 +61,22 @@ class CachedJournalService:
         return row
 
     async def search(
-        self, user_id: UUID, params: SearchParams
+        self,
+        user_id: UUID,
+        params: SearchParams,
+        journal_id: UUID | None = None,
     ) -> tuple[list[JournalEntryRow], bool]:
+        journal_id_str = str(journal_id) if journal_id else None
         cached = await self._cache.get_search(
-            user_id, params.query, params.cursor, params.limit
+            user_id, params.query, params.cursor, params.limit, journal_id_str
         )
         if cached is not None:
             return cached
 
-        rows, has_more = await self._db.search(user_id, params)
+        rows, has_more = await self._db.search(user_id, params, journal_id)
         await self._cache.set_search(
-            user_id, params.query, params.cursor, params.limit, rows, has_more
+            user_id, params.query, params.cursor, params.limit, rows, has_more,
+            journal_id_str,
         )
         return rows, has_more
 

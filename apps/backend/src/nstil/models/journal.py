@@ -34,6 +34,7 @@ def _validate_not_future(v: datetime | None) -> datetime | None:
 
 
 class JournalEntryCreate(BaseModel):
+    journal_id: UUID = Field(...)
     title: str = Field(default="", max_length=MAX_TITLE_LENGTH)
     body: str = Field(..., min_length=1, max_length=MAX_BODY_LENGTH)
     mood_score: int | None = Field(default=None, ge=MIN_MOOD, le=MAX_MOOD)
@@ -77,6 +78,7 @@ class JournalEntryCreate(BaseModel):
 
 
 class JournalEntryUpdate(BaseModel):
+    journal_id: UUID | None = Field(default=None)
     title: str | None = Field(default=None, max_length=MAX_TITLE_LENGTH)
     body: str | None = Field(default=None, min_length=1, max_length=MAX_BODY_LENGTH)
     mood_score: int | None = Field(default=None, ge=MIN_MOOD, le=MAX_MOOD)
@@ -146,6 +148,7 @@ class JournalEntryUpdate(BaseModel):
 class JournalEntryRow(BaseModel):
     id: UUID
     user_id: UUID
+    journal_id: UUID
     title: str
     body: str
     mood_score: int | None
@@ -164,6 +167,7 @@ class JournalEntryRow(BaseModel):
 class JournalEntryResponse(BaseModel):
     id: UUID
     user_id: UUID
+    journal_id: UUID
     title: str
     body: str
     mood_score: int | None
@@ -179,6 +183,7 @@ class JournalEntryResponse(BaseModel):
         return cls(
             id=row.id,
             user_id=row.user_id,
+            journal_id=row.journal_id,
             title=row.title,
             body=row.body,
             mood_score=row.mood_score,

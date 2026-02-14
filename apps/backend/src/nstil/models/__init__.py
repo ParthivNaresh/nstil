@@ -8,15 +8,27 @@ from nstil.models.journal import (
     JournalEntryUpdate,
 )
 from nstil.models.pagination import CursorParams, SearchParams
+from nstil.models.space import (
+    JournalSpaceCreate,
+    JournalSpaceListResponse,
+    JournalSpaceResponse,
+    JournalSpaceRow,
+    JournalSpaceUpdate,
+)
 
 __all__ = [
     "CursorParams",
-    "SearchParams",
     "EntryType",
     "JournalEntryCreate",
     "JournalEntryListResponse",
     "JournalEntryResponse",
     "JournalEntryRow",
     "JournalEntryUpdate",
+    "JournalSpaceCreate",
+    "JournalSpaceListResponse",
+    "JournalSpaceResponse",
+    "JournalSpaceRow",
+    "JournalSpaceUpdate",
+    "SearchParams",
     "UserPayload",
 ]

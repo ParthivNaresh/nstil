@@ -4,9 +4,10 @@ from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
-from tests.factories import DEFAULT_USER_ID, make_entry_row, make_token
+from tests.factories import DEFAULT_JOURNAL_ID, DEFAULT_USER_ID, make_entry_row, make_token
 
 ENTRIES_URL = "/api/v1/entries"
+JID = DEFAULT_JOURNAL_ID
 
 
 def _auth_headers(sub: str = DEFAULT_USER_ID) -> dict[str, str]:
@@ -22,7 +23,7 @@ class TestCreateEntry:
 
         response = client.post(
             ENTRIES_URL,
-            json={"body": "Hello world"},
+            json={"journal_id": JID, "body": "Hello world"},
             headers=_auth_headers(),
         )
 
@@ -31,6 +32,7 @@ class TestCreateEntry:
         assert data["body"] == "Hello world"
         assert data["id"] == str(row.id)
         assert data["user_id"] == DEFAULT_USER_ID
+        assert data["journal_id"] == JID
         mock_journal_service.create.assert_called_once()
 
     def test_create_all_fields(
@@ -49,6 +51,7 @@ class TestCreateEntry:
         response = client.post(
             ENTRIES_URL,
             json={
+                "journal_id": JID,
                 "title": "My Day",
                 "body": "Great day today",
                 "mood_score": 5,
@@ -70,7 +73,7 @@ class TestCreateEntry:
     def test_create_empty_body_rejected(self, client: TestClient) -> None:
         response = client.post(
             ENTRIES_URL,
-            json={"body": ""},
+            json={"journal_id": JID, "body": ""},
             headers=_auth_headers(),
         )
         assert response.status_code == 422
@@ -78,7 +81,15 @@ class TestCreateEntry:
     def test_create_missing_body_rejected(self, client: TestClient) -> None:
         response = client.post(
             ENTRIES_URL,
-            json={"title": "No body"},
+            json={"journal_id": JID, "title": "No body"},
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 422
+
+    def test_create_missing_journal_id_rejected(self, client: TestClient) -> None:
+        response = client.post(
+            ENTRIES_URL,
+            json={"body": "test"},
             headers=_auth_headers(),
         )
         assert response.status_code == 422
@@ -86,7 +97,7 @@ class TestCreateEntry:
     def test_create_mood_out_of_range(self, client: TestClient) -> None:
         response = client.post(
             ENTRIES_URL,
-            json={"body": "test", "mood_score": 6},
+            json={"journal_id": JID, "body": "test", "mood_score": 6},
             headers=_auth_headers(),
         )
         assert response.status_code == 422
@@ -94,7 +105,7 @@ class TestCreateEntry:
     def test_create_too_many_tags(self, client: TestClient) -> None:
         response = client.post(
             ENTRIES_URL,
-            json={"body": "test", "tags": [f"tag{i}" for i in range(11)]},
+            json={"journal_id": JID, "body": "test", "tags": [f"tag{i}" for i in range(11)]},
             headers=_auth_headers(),
         )
         assert response.status_code == 422
@@ -108,7 +119,7 @@ class TestCreateEntry:
 
         response = client.post(
             ENTRIES_URL,
-            json={"body": "test"},
+            json={"journal_id": JID, "body": "test"},
             headers=_auth_headers(sub=custom_user),
         )
 
@@ -117,7 +128,7 @@ class TestCreateEntry:
         assert str(call_args[0][0]) == custom_user
 
     def test_create_requires_auth(self, client: TestClient) -> None:
-        response = client.post(ENTRIES_URL, json={"body": "test"})
+        response = client.post(ENTRIES_URL, json={"journal_id": JID, "body": "test"})
         assert response.status_code in (401, 403)
 
 
@@ -137,6 +148,7 @@ class TestGetEntry:
         data = response.json()
         assert data["id"] == str(row.id)
         assert data["body"] == row.body
+        assert data["journal_id"] == str(row.journal_id)
 
     def test_get_not_found(
         self, client: TestClient, mock_journal_service: AsyncMock
@@ -222,6 +234,25 @@ class TestListEntries:
         assert response.status_code == 200
         mock_journal_service.list_entries.assert_called_once()
 
+    def test_list_filtered_by_journal(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        journal_uuid = uuid.UUID(JID)
+        rows = [make_entry_row(journal_id=JID, body="Filtered")]
+        mock_journal_service.list_entries.return_value = (rows, False)
+
+        response = client.get(
+            ENTRIES_URL,
+            params={"journal_id": JID},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 1
+        call_args = mock_journal_service.list_entries.call_args
+        assert call_args.kwargs["journal_id"] == journal_uuid
+
     def test_list_requires_auth(self, client: TestClient) -> None:
         response = client.get(ENTRIES_URL)
         assert response.status_code in (401, 403)
@@ -260,6 +291,22 @@ class TestUpdateEntry:
         assert data["title"] == "New"
         assert data["body"] == "New body"
         assert data["mood_score"] == 5
+
+    def test_update_journal_id(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        new_journal = "00000000-0000-0000-0000-000000000020"
+        row = make_entry_row(journal_id=new_journal)
+        mock_journal_service.update.return_value = row
+
+        response = client.patch(
+            f"{ENTRIES_URL}/{row.id}",
+            json={"journal_id": new_journal},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["journal_id"] == new_journal
 
     def test_update_not_found(
         self, client: TestClient, mock_journal_service: AsyncMock
@@ -374,6 +421,25 @@ class TestSearchEntries:
         )
         assert response.status_code == 422
 
+    def test_search_filtered_by_journal(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        journal_uuid = uuid.UUID(JID)
+        rows = [make_entry_row(journal_id=JID, body="Filtered result")]
+        mock_journal_service.search.return_value = (rows, False)
+
+        response = client.get(
+            SEARCH_URL,
+            params={"q": "filtered", "journal_id": JID},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 1
+        call_args = mock_journal_service.search.call_args
+        assert call_args.kwargs["journal_id"] == journal_uuid
+
     def test_search_requires_auth(self, client: TestClient) -> None:
         response = client.get(SEARCH_URL, params={"q": "test"})
         assert response.status_code in (401, 403)
@@ -388,7 +454,7 @@ class TestPinEntry:
 
         response = client.post(
             ENTRIES_URL,
-            json={"body": "Pinned entry", "is_pinned": True},
+            json={"journal_id": JID, "body": "Pinned entry", "is_pinned": True},
             headers=_auth_headers(),
         )
 
@@ -403,7 +469,7 @@ class TestPinEntry:
 
         response = client.post(
             ENTRIES_URL,
-            json={"body": "Normal entry"},
+            json={"journal_id": JID, "body": "Normal entry"},
             headers=_auth_headers(),
         )
 
@@ -477,7 +543,7 @@ class TestBackdateEntry:
 
         response = client.post(
             ENTRIES_URL,
-            json={"body": "Backdated", "created_at": past.isoformat()},
+            json={"journal_id": JID, "body": "Backdated", "created_at": past.isoformat()},
             headers=_auth_headers(),
         )
 
@@ -492,7 +558,7 @@ class TestBackdateEntry:
 
         response = client.post(
             ENTRIES_URL,
-            json={"body": "Normal"},
+            json={"journal_id": JID, "body": "Normal"},
             headers=_auth_headers(),
         )
 
@@ -503,7 +569,7 @@ class TestBackdateEntry:
         future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
         response = client.post(
             ENTRIES_URL,
-            json={"body": "test", "created_at": future},
+            json={"journal_id": JID, "body": "test", "created_at": future},
             headers=_auth_headers(),
         )
         assert response.status_code == 422

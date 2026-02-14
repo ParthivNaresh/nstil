@@ -38,9 +38,12 @@ async def list_entries(
     service: Annotated[CachedJournalService, Depends(get_journal_service)],
     cursor: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    journal_id: Annotated[UUID | None, Query()] = None,
 ) -> JournalEntryListResponse:
     params = CursorParams(cursor=cursor, limit=limit)
-    rows, has_more = await service.list_entries(UUID(user.sub), params)
+    rows, has_more = await service.list_entries(
+        UUID(user.sub), params, journal_id=journal_id
+    )
     items = [JournalEntryResponse.from_row(row) for row in rows]
     next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
     return JournalEntryListResponse(
@@ -57,6 +60,7 @@ async def search_entries(
     q: Annotated[str, Query(min_length=1, max_length=200)],
     cursor: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    journal_id: Annotated[UUID | None, Query()] = None,
 ) -> JournalEntryListResponse:
     stripped = q.strip()
     if not stripped:
@@ -65,7 +69,9 @@ async def search_entries(
             detail="Search query must not be blank",
         )
     params = SearchParams(query=stripped, cursor=cursor, limit=limit)
-    rows, has_more = await service.search(UUID(user.sub), params)
+    rows, has_more = await service.search(
+        UUID(user.sub), params, journal_id=journal_id
+    )
     items = [JournalEntryResponse.from_row(row) for row in rows]
     next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
     return JournalEntryListResponse(
