@@ -7,7 +7,8 @@ const en = {
     },
   },
   tabs: {
-    journal: "Journal",
+    home: "Home",
+    history: "History",
     insights: "Insights",
     settings: "Settings",
   },
@@ -16,10 +17,21 @@ const en = {
     authenticated: "Authenticated",
     signOut: "Sign Out",
   },
+  settings: {
+    appearance: "Appearance",
+    theme: "Theme",
+    themeModes: {
+      dark: "Dark",
+      light: "Light",
+      oled: "OLED",
+      auto: "Auto",
+    },
+  },
   journal: {
     emptyTitle: "No entries yet",
     emptySubtitle: "Your entries will appear here",
     emptyAction: "Write your first entry",
+    date: "Date",
     newEntry: "New Entry",
     editEntry: "Edit Entry",
     save: "Save",
@@ -49,6 +61,14 @@ const en = {
     validation: {
       bodyRequired: "Entry body cannot be empty",
     },
+  },
+  history: {
+    searchPlaceholder: "Search entries...",
+    emptyTitle: "No entries yet",
+    emptySubtitle: "Your entries will appear here",
+    emptyAction: "Write your first entry",
+    searchEmptyTitle: "No results",
+    searchEmptySubtitle: "Try a different search term",
   },
   insights: {
     emptyTitle: "No insights yet",

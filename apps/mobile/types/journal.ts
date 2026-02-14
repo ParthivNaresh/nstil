@@ -9,6 +9,7 @@ export interface JournalEntry {
   readonly tags: string[];
   readonly location: string | null;
   readonly entry_type: EntryType;
+  readonly is_pinned: boolean;
   readonly created_at: string;
   readonly updated_at: string;
 }
@@ -20,6 +21,8 @@ export interface JournalEntryCreate {
   readonly tags?: string[];
   readonly location?: string;
   readonly entry_type?: EntryType;
+  readonly is_pinned?: boolean;
+  readonly created_at?: string;
 }
 
 export interface JournalEntryUpdate {
@@ -29,4 +32,6 @@ export interface JournalEntryUpdate {
   readonly tags?: string[];
   readonly location?: string;
   readonly entry_type?: EntryType;
+  readonly is_pinned?: boolean;
+  readonly created_at?: string;
 }

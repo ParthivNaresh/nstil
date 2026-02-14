@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from uuid import UUID
 
@@ -19,6 +19,18 @@ MAX_TAG_COUNT = 10
 MAX_LOCATION_LENGTH = 200
 MIN_MOOD = 1
 MAX_MOOD = 5
+FUTURE_TOLERANCE = timedelta(minutes=1)
+
+
+def _validate_not_future(v: datetime | None) -> datetime | None:
+    if v is None:
+        return None
+    if v.tzinfo is None:
+        v = v.replace(tzinfo=UTC)
+    if v > datetime.now(UTC) + FUTURE_TOLERANCE:
+        msg = "Date cannot be in the future"
+        raise ValueError(msg)
+    return v
 
 
 class JournalEntryCreate(BaseModel):
@@ -28,6 +40,13 @@ class JournalEntryCreate(BaseModel):
     tags: list[str] = Field(default_factory=list)
     location: str | None = Field(default=None, max_length=MAX_LOCATION_LENGTH)
     entry_type: EntryType = Field(default=EntryType.JOURNAL)
+    is_pinned: bool = Field(default=False)
+    created_at: datetime | None = Field(default=None)
+
+    @field_validator("created_at")
+    @classmethod
+    def validate_created_at(cls, v: datetime | None) -> datetime | None:
+        return _validate_not_future(v)
 
     @field_validator("tags")
     @classmethod
@@ -64,6 +83,13 @@ class JournalEntryUpdate(BaseModel):
     tags: list[str] | None = Field(default=None)
     location: str | None = Field(default=None, max_length=MAX_LOCATION_LENGTH)
     entry_type: EntryType | None = Field(default=None)
+    is_pinned: bool | None = Field(default=None)
+    created_at: datetime | None = Field(default=None)
+
+    @field_validator("created_at")
+    @classmethod
+    def validate_created_at(cls, v: datetime | None) -> datetime | None:
+        return _validate_not_future(v)
 
     @model_validator(mode="after")
     def at_least_one_field(self) -> "JournalEntryUpdate":
@@ -109,10 +135,10 @@ class JournalEntryUpdate(BaseModel):
             return None
         return v.strip()
 
-    def to_update_dict(self) -> dict[str, str | int | list[str]]:
+    def to_update_dict(self) -> dict[str, str | int | bool | list[str]]:
         return {
             k: v
-            for k, v in self.model_dump().items()
+            for k, v in self.model_dump(mode="json").items()
             if v is not None
         }
 
@@ -126,6 +152,7 @@ class JournalEntryRow(BaseModel):
     tags: list[str]
     location: str | None
     entry_type: str
+    is_pinned: bool
     metadata: dict[str, object]
     created_at: datetime
     updated_at: datetime
@@ -143,6 +170,7 @@ class JournalEntryResponse(BaseModel):
     tags: list[str]
     location: str | None
     entry_type: str
+    is_pinned: bool
     created_at: datetime
     updated_at: datetime
 
@@ -157,6 +185,7 @@ class JournalEntryResponse(BaseModel):
             tags=row.tags,
             location=row.location,
             entry_type=row.entry_type,
+            is_pinned=row.is_pinned,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )

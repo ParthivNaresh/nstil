@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from "lucide-react-native";
 import { Pressable, StyleSheet } from "react-native";
 
-import { colors } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
 
 interface SecureToggleProps {
   isSecure: boolean;
@@ -14,6 +14,7 @@ const ICON_SIZE = 20;
 const HIT_SLOP = 8;
 
 export function SecureToggle({ isSecure, onToggle, showLabel, hideLabel }: SecureToggleProps) {
+  const { colors } = useTheme();
   const Icon = isSecure ? EyeOff : Eye;
 
   return (

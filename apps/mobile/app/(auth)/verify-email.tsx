@@ -6,10 +6,12 @@ import { StyleSheet, View } from "react-native";
 import { AuthFooterLink } from "@/components/auth";
 import { AppText, Button, Card, ScreenContainer } from "@/components/ui";
 import { useVerifyEmail } from "@/hooks";
+import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/stores/authStore";
-import { colors, spacing } from "@/styles";
+import { spacing } from "@/styles";
 
 export default function VerifyEmailScreen() {
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
@@ -35,7 +37,7 @@ export default function VerifyEmailScreen() {
       : t("auth.verifyEmail.resend");
 
   return (
-    <ScreenContainer scrollable={false} centered>
+    <ScreenContainer scrollable={false} centered ambient={false}>
       <View style={styles.content}>
         <View style={styles.header}>
           <AppText variant="h1">{t("auth.verifyEmail.title")}</AppText>

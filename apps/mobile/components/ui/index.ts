@@ -1,3 +1,6 @@
+export { AmbientBackground } from "./AmbientBackground";
+export type { AmbientBackgroundProps } from "./AmbientBackground";
+
 export { AppText } from "./AppText";
 export type { AppTextProps } from "./AppText";
 
@@ -13,14 +16,14 @@ export type { ButtonProps, ButtonVariant } from "./Button";
 export { Card, CardFooter, CardHeader } from "./Card";
 export type { CardFooterProps, CardHeaderProps, CardProps, CardVariant } from "./Card";
 
-export { DatePicker } from "./DatePicker";
-export type { DatePickerMode, DatePickerProps } from "./DatePicker";
-
 export { Divider } from "./Divider";
 export type { DividerProps } from "./Divider";
 
 export { EmptyState } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
+
+export { GradientBackground } from "./GradientBackground";
+export type { GradientBackgroundProps, GradientPoint } from "./GradientBackground";
 
 export { Header, HeaderAction, HEADER_ROW_HEIGHT } from "./Header";
 export type { HeaderActionProps, HeaderProps } from "./Header";

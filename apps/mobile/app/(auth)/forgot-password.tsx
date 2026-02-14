@@ -4,9 +4,11 @@ import { StyleSheet, View } from "react-native";
 import { AuthFooterLink } from "@/components/auth";
 import { AppText, Button, Card, ScreenContainer, TextInput } from "@/components/ui";
 import { useForgotPassword } from "@/hooks";
-import { colors, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/styles";
 
 export default function ForgotPasswordScreen() {
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const {
     email,
@@ -25,7 +27,7 @@ export default function ForgotPasswordScreen() {
         : t("auth.forgotPassword.resend");
 
     return (
-      <ScreenContainer scrollable={false} centered>
+      <ScreenContainer scrollable={false} centered ambient={false}>
         <View style={styles.content}>
           <View style={styles.header}>
             <AppText variant="h1">
@@ -66,7 +68,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <ScreenContainer scrollable={false} centered>
+    <ScreenContainer scrollable={false} centered ambient={false}>
       <View style={styles.content}>
         <View style={styles.header}>
           <AppText variant="h1">{t("auth.forgotPassword.title")}</AppText>

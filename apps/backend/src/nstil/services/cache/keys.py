@@ -16,3 +16,13 @@ def entry_list_key(user_id: UUID, cursor: str | None, limit: int) -> str:
 
 def entry_list_pattern(user_id: UUID) -> str:
     return f"{KEY_PREFIX}:user:{user_id}:entries:list:*"
+
+
+def search_key(user_id: UUID, query: str, cursor: str | None, limit: int) -> str:
+    raw = f"{query}:{cursor or ''}:{limit}"
+    query_hash = hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()[:12]
+    return f"{KEY_PREFIX}:user:{user_id}:entries:search:{query_hash}"
+
+
+def search_pattern(user_id: UUID) -> str:
+    return f"{KEY_PREFIX}:user:{user_id}:entries:search:*"

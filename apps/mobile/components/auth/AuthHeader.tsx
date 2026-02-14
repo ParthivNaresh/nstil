@@ -1,11 +1,14 @@
 import { StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
-import { colors, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/styles";
 
 import type { AuthHeaderProps } from "./types";
 
 export function AuthHeader({ title, subtitle }: AuthHeaderProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container}>
       <AppText variant="h1">{title}</AppText>
@@ -20,5 +23,6 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
 });

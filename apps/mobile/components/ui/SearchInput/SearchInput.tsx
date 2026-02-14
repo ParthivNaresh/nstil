@@ -1,5 +1,5 @@
 import { Search, X } from "lucide-react-native";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -8,7 +8,8 @@ import {
 } from "react-native";
 
 import { Icon } from "@/components/ui/Icon";
-import { colors, radius, spacing, typography } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { radius, spacing, typography } from "@/styles";
 
 import type { SearchInputProps } from "./types";
 
@@ -20,58 +21,63 @@ export function SearchInput({
   onSearch,
   placeholder = "Search...",
   debounceMs = DEFAULT_DEBOUNCE_MS,
-  accessibilityLabel,
   testID,
 }: SearchInputProps) {
+  const { colors, keyboardAppearance } = useTheme();
+  const [localValue, setLocalValue] = useState(value ?? "");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!onSearch) return;
-
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+    if (value !== undefined) {
+      setLocalValue(value);
     }
+  }, [value]);
 
-    timerRef.current = setTimeout(() => {
-      onSearch(value);
-    }, debounceMs);
+  const handleChangeText = useCallback(
+    (text: string) => {
+      setLocalValue(text);
+      onChangeText?.(text);
 
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+      if (onSearch) {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => onSearch(text), debounceMs);
       }
-    };
-  }, [value, onSearch, debounceMs]);
+    },
+    [onChangeText, onSearch, debounceMs],
+  );
 
   const handleClear = useCallback(() => {
-    onChangeText("");
-    onSearch?.("");
-  }, [onChangeText, onSearch]);
+    handleChangeText("");
+  }, [handleChangeText]);
 
   return (
-    <View style={styles.container} testID={testID}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.glass, borderColor: colors.glassBorder },
+      ]}
+      testID={testID}
+    >
       <View style={styles.iconLeft}>
         <Icon icon={Search} size="sm" color={colors.textTertiary} />
       </View>
       <RNTextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChangeText}
+        style={[styles.input, { color: colors.textPrimary }]}
+        value={localValue}
+        onChangeText={handleChangeText}
         placeholder={placeholder}
         placeholderTextColor={colors.textTertiary}
         selectionColor={colors.accent}
-        keyboardAppearance="dark"
+        keyboardAppearance={keyboardAppearance}
         returnKeyType="search"
         autoCapitalize="none"
         autoCorrect={false}
-        accessibilityLabel={accessibilityLabel ?? placeholder}
       />
-      {value.length > 0 ? (
+      {localValue.length > 0 ? (
         <Pressable
           onPress={handleClear}
           style={styles.clearButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
+          hitSlop={8}
           accessibilityLabel="Clear search"
         >
           <Icon icon={X} size="xs" color={colors.textTertiary} />
@@ -85,25 +91,21 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.glass,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
     borderRadius: radius.md,
     height: 44,
   },
   iconLeft: {
-    paddingLeft: spacing.md,
+    paddingLeft: spacing.sm,
   },
   input: {
     ...typography.body,
-    color: colors.textPrimary,
     flex: 1,
     paddingHorizontal: spacing.sm,
     height: "100%",
   },
   clearButton: {
-    paddingRight: spacing.md,
-    paddingLeft: spacing.sm,
+    paddingHorizontal: spacing.sm,
     height: "100%",
     justifyContent: "center",
   },

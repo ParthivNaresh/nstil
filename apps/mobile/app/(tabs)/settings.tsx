@@ -3,12 +3,15 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 
-import { AppText, Avatar, Button, ScreenContainer } from "@/components/ui";
+import { ThemePicker } from "@/components/settings";
+import { AppText, Avatar, Button, Card, Divider, ScreenContainer } from "@/components/ui";
+import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/stores/authStore";
-import { colors, spacing } from "@/styles";
+import { spacing } from "@/styles";
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
+  const { colors, mode, setMode } = useTheme();
   const router = useRouter();
   const signOut = useAuthStore((s) => s.signOut);
   const session = useAuthStore((s) => s.session);
@@ -27,22 +30,29 @@ export default function SettingsScreen() {
   }, [signOut, router]);
 
   return (
-    <ScreenContainer centered>
+    <ScreenContainer>
       <View style={styles.content}>
-        <Avatar email={userEmail} size="lg" />
-        <AppText variant="h2">{t("tabs.settings")}</AppText>
-        <AppText variant="bodySmall" color={colors.textSecondary}>
-          {userEmail}
-        </AppText>
-        <View style={styles.signOutContainer}>
-          <Button
-            title={t("home.signOut")}
-            onPress={handleSignOut}
-            variant="secondary"
-            loading={isSigningOut}
-            disabled={isSigningOut}
-          />
+        <View style={styles.profile}>
+          <Avatar email={userEmail} size="lg" />
+          <AppText variant="h2">{t("tabs.settings")}</AppText>
+          <AppText variant="bodySmall" color={colors.textSecondary}>
+            {userEmail}
+          </AppText>
         </View>
+
+        <Card>
+          <ThemePicker currentMode={mode} onSelect={setMode} />
+        </Card>
+
+        <Divider />
+
+        <Button
+          title={t("home.signOut")}
+          onPress={handleSignOut}
+          variant="secondary"
+          loading={isSigningOut}
+          disabled={isSigningOut}
+        />
       </View>
     </ScreenContainer>
   );
@@ -50,12 +60,12 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    alignItems: "center",
     paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
+    paddingTop: spacing.xl,
+    gap: spacing.lg,
   },
-  signOutContainer: {
-    marginTop: spacing.xl,
-    width: "100%",
+  profile: {
+    alignItems: "center",
+    gap: spacing.sm,
   },
 });

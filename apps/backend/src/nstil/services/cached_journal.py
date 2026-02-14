@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from nstil.models.journal import JournalEntryCreate, JournalEntryRow, JournalEntryUpdate
-from nstil.models.pagination import CursorParams
+from nstil.models.pagination import CursorParams, SearchParams
 from nstil.services.cache.entry_cache import EntryCacheService
 from nstil.services.journal import JournalService
 
@@ -33,14 +33,14 @@ class CachedJournalService:
             await self._cache.set_entry(user_id, entry_id, row)
         return row
 
-    async def list(
+    async def list_entries(
         self, user_id: UUID, params: CursorParams
     ) -> tuple[list[JournalEntryRow], bool]:
         cached = await self._cache.get_list(user_id, params.cursor, params.limit)
         if cached is not None:
             return cached
 
-        rows, has_more = await self._db.list(user_id, params)
+        rows, has_more = await self._db.list_entries(user_id, params)
         await self._cache.set_list(user_id, params.cursor, params.limit, rows, has_more)
         return rows, has_more
 
@@ -51,6 +51,21 @@ class CachedJournalService:
         if row is not None:
             await self._cache.invalidate_all(user_id, entry_id)
         return row
+
+    async def search(
+        self, user_id: UUID, params: SearchParams
+    ) -> tuple[list[JournalEntryRow], bool]:
+        cached = await self._cache.get_search(
+            user_id, params.query, params.cursor, params.limit
+        )
+        if cached is not None:
+            return cached
+
+        rows, has_more = await self._db.search(user_id, params)
+        await self._cache.set_search(
+            user_id, params.query, params.cursor, params.limit, rows, has_more
+        )
+        return rows, has_more
 
     async def soft_delete(self, user_id: UUID, entry_id: UUID) -> bool:
         deleted = await self._db.soft_delete(user_id, entry_id)

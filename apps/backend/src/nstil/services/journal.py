@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from supabase import AsyncClient
 
 from nstil.models.journal import JournalEntryCreate, JournalEntryRow, JournalEntryUpdate
-from nstil.models.pagination import CursorParams
+from nstil.models.pagination import CursorParams, SearchParams
 
 TABLE = "journal_entries"
 
@@ -14,7 +15,7 @@ class JournalService:
         self._client = client
 
     async def create(self, user_id: UUID, data: JournalEntryCreate) -> JournalEntryRow:
-        payload = {
+        payload: dict[str, str | int | bool | list[str] | None] = {
             "user_id": str(user_id),
             "title": data.title,
             "body": data.body,
@@ -22,7 +23,10 @@ class JournalService:
             "tags": data.tags,
             "location": data.location,
             "entry_type": data.entry_type.value,
+            "is_pinned": data.is_pinned,
         }
+        if data.created_at is not None:
+            payload["created_at"] = data.created_at.isoformat()
         result = await (
             self._client.table(TABLE)
             .insert(payload)
@@ -44,7 +48,7 @@ class JournalService:
             return None
         return JournalEntryRow.model_validate(result.data[0])
 
-    async def list(
+    async def list_entries(
         self, user_id: UUID, params: CursorParams
     ) -> tuple[list[JournalEntryRow], bool]:
         query = (
@@ -52,6 +56,7 @@ class JournalService:
             .select("*")
             .eq("user_id", str(user_id))
             .is_("deleted_at", "null")
+            .order("is_pinned", desc=True)
             .order("created_at", desc=True)
             .limit(params.limit + 1)
         )
@@ -86,6 +91,30 @@ class JournalService:
         if not result.data:
             return None
         return JournalEntryRow.model_validate(result.data[0])
+
+    async def search(
+        self, user_id: UUID, params: SearchParams
+    ) -> tuple[list[JournalEntryRow], bool]:
+        rpc_params: dict[str, str | int] = {
+            "p_user_id": str(user_id),
+            "p_query": params.query,
+            "p_limit": params.limit + 1,
+        }
+        if params.cursor:
+            rpc_params["p_cursor"] = params.cursor
+
+        result = await self._client.rpc(
+            "search_journal_entries", rpc_params
+        ).execute()
+
+        data: list[dict[str, Any]] = result.data  # type: ignore[assignment]
+        rows = [JournalEntryRow.model_validate(row) for row in data]
+
+        has_more = len(rows) > params.limit
+        if has_more:
+            rows = rows[: params.limit]
+
+        return rows, has_more
 
     async def soft_delete(self, user_id: UUID, entry_id: UUID) -> bool:
         now = datetime.now(UTC).isoformat()

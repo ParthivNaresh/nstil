@@ -7,10 +7,11 @@ from nstil.models.journal import (
     JournalEntryRow,
     JournalEntryUpdate,
 )
-from nstil.models.pagination import CursorParams
+from nstil.models.pagination import CursorParams, SearchParams
 
 __all__ = [
     "CursorParams",
+    "SearchParams",
     "EntryType",
     "JournalEntryCreate",
     "JournalEntryListResponse",

@@ -106,11 +106,11 @@ class TestCachedList:
         mock_cache.get_list.return_value = (rows, False)
         params = CursorParams(cursor=None, limit=20)
 
-        result_rows, has_more = await service.list(USER_ID, params)
+        result_rows, has_more = await service.list_entries(USER_ID, params)
 
         assert result_rows == rows
         assert has_more is False
-        mock_db.list.assert_not_called()
+        mock_db.list_entries.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_cache_miss_queries_db(
@@ -118,10 +118,10 @@ class TestCachedList:
     ) -> None:
         rows = [make_entry_row(user_id=str(USER_ID))]
         mock_cache.get_list.return_value = None
-        mock_db.list.return_value = (rows, True)
+        mock_db.list_entries.return_value = (rows, True)
         params = CursorParams(cursor=None, limit=20)
 
-        result_rows, has_more = await service.list(USER_ID, params)
+        result_rows, has_more = await service.list_entries(USER_ID, params)
 
         assert result_rows == rows
         assert has_more is True

@@ -1,6 +1,7 @@
 import { StyleSheet, type TextStyle, type ViewStyle } from "react-native";
 
-import { colors, opacity, radius, spacing, typography } from "@/styles";
+import { opacity, radius, spacing, typography } from "@/styles";
+import type { ColorPalette } from "@/styles/palettes";
 
 import type { ButtonVariant } from "./types";
 
@@ -26,43 +27,32 @@ const baseText: TextStyle = {
   fontWeight: "600",
 };
 
-const variantStyles: Record<ButtonVariant, ButtonStyles> = {
-  primary: {
-    container: {
-      ...baseContainer,
-      backgroundColor: colors.accent,
-    },
-    text: {
-      ...baseText,
-      color: colors.textPrimary,
-    },
-  },
-  secondary: {
-    container: {
-      ...baseContainer,
-      backgroundColor: "transparent",
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-    },
-    text: {
-      ...baseText,
-      color: colors.accent,
-    },
-  },
-  ghost: {
-    container: {
-      ...baseContainer,
-      backgroundColor: "transparent",
-    },
-    text: {
-      ...baseText,
-      color: colors.accent,
-    },
-  },
-};
-
-export function getVariantStyles(variant: ButtonVariant): ButtonStyles {
-  return variantStyles[variant];
+export function getVariantStyles(
+  variant: ButtonVariant,
+  colors: ColorPalette,
+): ButtonStyles {
+  switch (variant) {
+    case "primary":
+      return {
+        container: { ...baseContainer, backgroundColor: colors.accent },
+        text: { ...baseText, color: colors.textPrimary },
+      };
+    case "secondary":
+      return {
+        container: {
+          ...baseContainer,
+          backgroundColor: "transparent",
+          borderWidth: 1,
+          borderColor: colors.glassBorder,
+        },
+        text: { ...baseText, color: colors.accent },
+      };
+    case "ghost":
+      return {
+        container: { ...baseContainer, backgroundColor: "transparent" },
+        text: { ...baseText, color: colors.accent },
+      };
+  }
 }
 
 export const buttonStyles = StyleSheet.create({

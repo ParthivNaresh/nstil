@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
 export interface ScreenContainerProps {
-  children: ReactNode;
-  scrollable?: boolean;
-  centered?: boolean;
+  readonly children: ReactNode;
+  readonly scrollable?: boolean;
+  readonly centered?: boolean;
+  readonly ambient?: boolean;
 }

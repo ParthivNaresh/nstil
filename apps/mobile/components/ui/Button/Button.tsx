@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Text } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -8,6 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
+import { useTheme } from "@/hooks/useTheme";
 import { easing } from "@/styles";
 
 import { ButtonSpinner } from "./ButtonSpinner";
@@ -26,9 +27,13 @@ export function Button({
   accessibilityLabel,
   testID,
 }: ButtonProps) {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
   const isDisabled = disabled || loading;
-  const variantStyle = getVariantStyles(variant);
+  const variantStyle = useMemo(
+    () => getVariantStyles(variant, colors),
+    [variant, colors],
+  );
 
   const handlePress = useCallback(() => {
     if (isDisabled) return;

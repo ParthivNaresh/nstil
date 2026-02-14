@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { ChevronRight } from "lucide-react-native";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { View } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -10,7 +10,8 @@ import Animated, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import { Icon } from "@/components/ui/Icon";
-import { colors, easing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { easing } from "@/styles";
 
 import { cardStyles, getCardVariantStyle } from "./styles";
 import type { CardProps } from "./types";
@@ -26,8 +27,12 @@ export function Card({
   accessibilityLabel,
   testID,
 }: CardProps) {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
-  const variantStyle = getCardVariantStyle(variant);
+  const variantStyle = useMemo(
+    () => getCardVariantStyle(variant, colors),
+    [variant, colors],
+  );
 
   const handlePress = useCallback(() => {
     if (!onPress) return;
@@ -53,7 +58,7 @@ export function Card({
   }));
 
   const content = onPress ? (
-    <View style={cardStyles.pressable}>
+    <View style={cardStyles.row}>
       <View style={cardStyles.content}>{children}</View>
       {showChevron ? (
         <View style={cardStyles.chevron}>

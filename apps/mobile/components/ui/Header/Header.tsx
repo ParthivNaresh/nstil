@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "@/components/ui/AppText";
 import { Icon } from "@/components/ui/Icon";
-import { colors, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/styles";
 
 import type { HeaderProps } from "./types";
 
@@ -18,6 +19,7 @@ export function Header({
   rightAction,
   transparent = false,
 }: HeaderProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const content = (
@@ -52,9 +54,9 @@ export function Header({
   }
 
   return (
-    <BlurView intensity={40} tint="dark" style={styles.blur}>
+    <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={styles.blur}>
       {content}
-      <View style={styles.borderBottom} />
+      <View style={[styles.borderBottom, { backgroundColor: colors.border }]} />
     </BlurView>
   );
 }
@@ -90,6 +92,5 @@ const styles = StyleSheet.create({
   },
   borderBottom: {
     height: 1,
-    backgroundColor: colors.border,
   },
 });

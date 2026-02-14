@@ -159,7 +159,7 @@ class TestListEntries:
     def test_list_empty(
         self, client: TestClient, mock_journal_service: AsyncMock
     ) -> None:
-        mock_journal_service.list.return_value = ([], False)
+        mock_journal_service.list_entries.return_value = ([], False)
 
         response = client.get(ENTRIES_URL, headers=_auth_headers())
 
@@ -173,7 +173,7 @@ class TestListEntries:
         self, client: TestClient, mock_journal_service: AsyncMock
     ) -> None:
         rows = [make_entry_row(body=f"Entry {i}") for i in range(3)]
-        mock_journal_service.list.return_value = (rows, False)
+        mock_journal_service.list_entries.return_value = (rows, False)
 
         response = client.get(ENTRIES_URL, headers=_auth_headers())
 
@@ -193,7 +193,7 @@ class TestListEntries:
             )
             for i in range(2)
         ]
-        mock_journal_service.list.return_value = (rows, True)
+        mock_journal_service.list_entries.return_value = (rows, True)
 
         response = client.get(
             ENTRIES_URL,
@@ -210,7 +210,7 @@ class TestListEntries:
     def test_list_with_cursor(
         self, client: TestClient, mock_journal_service: AsyncMock
     ) -> None:
-        mock_journal_service.list.return_value = ([], False)
+        mock_journal_service.list_entries.return_value = ([], False)
         cursor = datetime.now(UTC).isoformat()
 
         response = client.get(
@@ -220,7 +220,7 @@ class TestListEntries:
         )
 
         assert response.status_code == 200
-        mock_journal_service.list.assert_called_once()
+        mock_journal_service.list_entries.assert_called_once()
 
     def test_list_requires_auth(self, client: TestClient) -> None:
         response = client.get(ENTRIES_URL)
@@ -288,6 +288,254 @@ class TestUpdateEntry:
             json={"title": "test"},
         )
         assert response.status_code in (401, 403)
+
+
+SEARCH_URL = f"{ENTRIES_URL}/search"
+
+
+class TestSearchEntries:
+    def test_search_returns_results(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        rows = [make_entry_row(title="Morning walk", body="Walked in the park")]
+        mock_journal_service.search.return_value = (rows, False)
+
+        response = client.get(
+            SEARCH_URL,
+            params={"q": "morning"},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 1
+        assert data["items"][0]["title"] == "Morning walk"
+        assert data["has_more"] is False
+        mock_journal_service.search.assert_called_once()
+
+    def test_search_empty_results(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        mock_journal_service.search.return_value = ([], False)
+
+        response = client.get(
+            SEARCH_URL,
+            params={"q": "nonexistent"},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["items"] == []
+        assert data["has_more"] is False
+
+    def test_search_with_pagination(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        now = datetime.now(UTC)
+        rows = [
+            make_entry_row(body=f"Result {i}", created_at=now - timedelta(hours=i))
+            for i in range(2)
+        ]
+        mock_journal_service.search.return_value = (rows, True)
+
+        response = client.get(
+            SEARCH_URL,
+            params={"q": "result", "limit": 2},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 2
+        assert data["has_more"] is True
+        assert data["next_cursor"] is not None
+
+    def test_search_empty_query_rejected(self, client: TestClient) -> None:
+        response = client.get(
+            SEARCH_URL,
+            params={"q": ""},
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 422
+
+    def test_search_missing_query_rejected(self, client: TestClient) -> None:
+        response = client.get(
+            SEARCH_URL,
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 422
+
+    def test_search_whitespace_only_rejected(self, client: TestClient) -> None:
+        response = client.get(
+            SEARCH_URL,
+            params={"q": "   "},
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 422
+
+    def test_search_requires_auth(self, client: TestClient) -> None:
+        response = client.get(SEARCH_URL, params={"q": "test"})
+        assert response.status_code in (401, 403)
+
+
+class TestPinEntry:
+    def test_create_pinned(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        row = make_entry_row(body="Pinned entry", is_pinned=True)
+        mock_journal_service.create.return_value = row
+
+        response = client.post(
+            ENTRIES_URL,
+            json={"body": "Pinned entry", "is_pinned": True},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 201
+        assert response.json()["is_pinned"] is True
+
+    def test_create_defaults_unpinned(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        row = make_entry_row(body="Normal entry", is_pinned=False)
+        mock_journal_service.create.return_value = row
+
+        response = client.post(
+            ENTRIES_URL,
+            json={"body": "Normal entry"},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 201
+        assert response.json()["is_pinned"] is False
+
+    def test_pin_via_update(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        row = make_entry_row(is_pinned=True)
+        mock_journal_service.update.return_value = row
+
+        response = client.patch(
+            f"{ENTRIES_URL}/{row.id}",
+            json={"is_pinned": True},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["is_pinned"] is True
+
+    def test_unpin_via_update(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        row = make_entry_row(is_pinned=False)
+        mock_journal_service.update.return_value = row
+
+        response = client.patch(
+            f"{ENTRIES_URL}/{row.id}",
+            json={"is_pinned": False},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["is_pinned"] is False
+
+    def test_pinned_entries_in_list_response(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        now = datetime.now(UTC)
+        rows = [
+            make_entry_row(
+                body="Pinned",
+                is_pinned=True,
+                created_at=now - timedelta(hours=2),
+            ),
+            make_entry_row(
+                body="Recent unpinned",
+                is_pinned=False,
+                created_at=now,
+            ),
+        ]
+        mock_journal_service.list_entries.return_value = (rows, False)
+
+        response = client.get(ENTRIES_URL, headers=_auth_headers())
+
+        assert response.status_code == 200
+        items = response.json()["items"]
+        assert len(items) == 2
+        assert items[0]["is_pinned"] is True
+        assert items[1]["is_pinned"] is False
+
+
+class TestBackdateEntry:
+    def test_create_with_custom_date(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        past = datetime(2025, 1, 15, 10, 30, tzinfo=UTC)
+        row = make_entry_row(body="Backdated", created_at=past)
+        mock_journal_service.create.return_value = row
+
+        response = client.post(
+            ENTRIES_URL,
+            json={"body": "Backdated", "created_at": past.isoformat()},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 201
+        assert response.json()["created_at"] == "2025-01-15T10:30:00Z"
+
+    def test_create_without_date_defaults(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        row = make_entry_row(body="Normal")
+        mock_journal_service.create.return_value = row
+
+        response = client.post(
+            ENTRIES_URL,
+            json={"body": "Normal"},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 201
+        assert "created_at" in response.json()
+
+    def test_create_future_date_rejected(self, client: TestClient) -> None:
+        future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+        response = client.post(
+            ENTRIES_URL,
+            json={"body": "test", "created_at": future},
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 422
+
+    def test_update_date(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        past = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+        row = make_entry_row(created_at=past)
+        mock_journal_service.update.return_value = row
+
+        response = client.patch(
+            f"{ENTRIES_URL}/{row.id}",
+            json={"created_at": past.isoformat()},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["created_at"] == "2025-06-01T12:00:00Z"
+
+    def test_update_future_date_rejected(
+        self, client: TestClient, mock_journal_service: AsyncMock
+    ) -> None:
+        row = make_entry_row()
+        future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+
+        response = client.patch(
+            f"{ENTRIES_URL}/{row.id}",
+            json={"created_at": future},
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 422
 
 
 class TestDeleteEntry:

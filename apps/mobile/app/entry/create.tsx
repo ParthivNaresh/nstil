@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useCallback } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,28 +11,34 @@ import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
 
 import { EntryForm } from "@/components/journal";
-import { Header, HeaderAction } from "@/components/ui";
-import { useEntryForm, useHeaderHeight } from "@/hooks";
-import { colors, spacing } from "@/styles";
+import { AmbientBackground, Header, HeaderAction } from "@/components/ui";
+import { useEntryForm, useHeaderHeight, useTheme } from "@/hooks";
+import { spacing } from "@/styles";
 
 export default function CreateEntryScreen() {
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
   const form = useEntryForm();
 
+  const handleSave = useCallback(() => {
+    form.handleSubmit();
+  }, [form]);
+
   const saveAction = (
     <HeaderAction
       title={t("journal.save")}
-      onPress={form.handleSubmit}
+      onPress={handleSave}
       loading={form.isSubmitting}
       disabled={!form.canSubmit}
     />
   );
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="light" />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <AmbientBackground />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Header
         title={t("journal.newEntry")}
         onBack={router.back}
@@ -56,12 +63,14 @@ export default function CreateEntryScreen() {
               moodScore={form.moodScore}
               tags={form.tags}
               entryType={form.entryType}
+              entryDate={form.entryDate}
               bodyError={form.bodyError}
               maxTags={form.maxTags}
               onBodyChange={form.setBody}
               onTitleChange={form.setTitle}
               onMoodChange={form.setMoodScore}
               onEntryTypeChange={form.setEntryType}
+              onDateChange={form.setEntryDate}
               onAddTag={form.addTag}
               onRemoveTag={form.removeTag}
             />
@@ -75,7 +84,6 @@ export default function CreateEntryScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   flex: {
     flex: 1,
