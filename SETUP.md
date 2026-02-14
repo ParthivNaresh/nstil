@@ -43,8 +43,8 @@ cp apps/mobile/.env.example apps/mobile/.env
 ### Backend (`apps/backend/.env`)
 
 ```
-SUPABASE_URL=http://localhost:54321
-SUPABASE_SERVICE_KEY=<your-service-key>
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_KEY=<your-secret-key>
 SUPABASE_JWT_SECRET=<your-jwt-secret>
 REDIS_URL=redis://localhost:6379
 CORS_ORIGINS=["http://localhost:8081"]
@@ -54,31 +54,49 @@ DEBUG=true
 ### Mobile (`apps/mobile/.env`)
 
 ```
-EXPO_PUBLIC_SUPABASE_URL=http://localhost:54321
-EXPO_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
+EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<your-publishable-key>
 EXPO_PUBLIC_API_URL=http://localhost:8000
 ```
 
-To get your Supabase keys, run `supabase start` (see step 3). The CLI prints a table with your local keys:
+To get your Supabase keys, run `just infra-up` (see step 3). The CLI prints a table with your local keys:
 
 | Supabase status label | Env var |
 |---|---|
-| API URL | `SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_URL` |
-| Authentication Publishable key | `EXPO_PUBLIC_SUPABASE_ANON_KEY` |
-| Authentication Secret key | `SUPABASE_SERVICE_KEY` |
+| Project URL | `SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_URL` |
+| Publishable key | `EXPO_PUBLIC_SUPABASE_ANON_KEY` |
+| Secret key | `SUPABASE_SERVICE_KEY` |
 | JWT Secret | `SUPABASE_JWT_SECRET` |
 
-You can retrieve these later with `supabase status`.
+You can retrieve these later with `supabase status` or `supabase status -o env`.
 
-## 3. Start Supabase (local)
+**Note:** Newer Supabase CLI versions sign user JWTs with ES256 (asymmetric). The backend fetches the JWKS public key from Supabase on startup, so the `SUPABASE_JWT_SECRET` is used as a fallback for HS256 tokens only.
+
+## 3. Start infrastructure
 
 ```sh
-just db-start
+just infra-up
 ```
 
-This starts a local Supabase instance (Postgres, Auth, Storage, etc.) and applies all migrations in `supabase/migrations/`. The output will print your local API keys — use them to fill in the `.env` files from step 2.
+This single command:
+1. Stops any stale Docker containers
+2. Starts Redis via Docker Compose
+3. Starts local Supabase (Postgres, Auth, Storage, etc.)
+4. Applies all migrations from `supabase/migrations/`
 
-To reset the database and re-run migrations at any time:
+To check the status of all services:
+
+```sh
+just infra-status
+```
+
+To stop everything:
+
+```sh
+just infra-down
+```
+
+To reset the database and re-run migrations (wipes all data including user accounts):
 
 ```sh
 just db-reset
@@ -89,29 +107,16 @@ just db-reset
 ### Install dependencies
 
 ```sh
-cd apps/backend
-uv sync --all-extras
+just backend-install
 ```
-
-This creates a `.venv` in `apps/backend/` and installs all production + dev dependencies.
 
 ### Verify
 
 ```sh
-just backend-lint       # ruff linter
-just backend-typecheck  # mypy strict mode
-just backend-test       # pytest
+just backend-check   # runs lint + typecheck + tests
 ```
 
 ### Run the dev server
-
-Start Redis first (either via Docker or Supabase's bundled Redis):
-
-```sh
-docker compose up redis -d
-```
-
-Then start the backend:
 
 ```sh
 just backend-dev
@@ -121,25 +126,33 @@ The API is now running at `http://localhost:8000`. Verify with:
 
 ```sh
 curl http://localhost:8000/api/v1/health
-# {"status":"ok"}
+# {"status":"ok","redis":"ok"}
 ```
+
+### One-command dev start
+
+To start infrastructure + backend in one command:
+
+```sh
+just dev
+```
+
+This runs `infra-up` then `backend-dev`.
 
 ## 5. Mobile setup
 
 ### Install dependencies
 
 ```sh
-cd apps/mobile
-npm install --legacy-peer-deps
+just mobile-install
 ```
 
-The `--legacy-peer-deps` flag is needed due to a peer dependency conflict between expo-router's react-dom and the project's React version.
+The `--legacy-peer-deps` flag is used automatically due to a peer dependency conflict between expo-router's react-dom and the project's React version.
 
 ### Verify
 
 ```sh
-just mobile-typecheck   # TypeScript
-just mobile-lint        # ESLint
+just mobile-check   # runs typecheck + lint
 ```
 
 ### Generate the native iOS project
@@ -162,50 +175,11 @@ pod install
 
 ### Run on iOS Simulator
 
-You have two options:
-
-**Option A: Expo CLI (recommended for development)**
-
 ```sh
-cd apps/mobile
-npx expo run:ios
+just mobile-ios
 ```
 
 This builds the native project and launches it in the iOS Simulator automatically. It also starts the Metro bundler for fast refresh.
-
-**Option B: Xcode**
-
-1. Open the Xcode workspace:
-   ```sh
-   open apps/mobile/ios/NStil.xcworkspace
-   ```
-2. Select a simulator device from the toolbar (e.g. "iPhone 16 Pro").
-3. Press **Cmd+R** to build and run.
-4. In a separate terminal, start Metro:
-   ```sh
-   cd apps/mobile
-   npx expo start --dev-client
-   ```
-
-The app will connect to the Metro bundler for live reload.
-
-## 6. Docker (full stack)
-
-To run the backend, worker, and Redis together:
-
-```sh
-# Build images
-just build
-
-# Start all services
-just up
-
-# View logs
-docker compose logs -f
-
-# Stop
-just down
-```
 
 ## Quick Reference
 
@@ -213,26 +187,34 @@ All commands run from the repo root via the `justfile`:
 
 | Command | Description |
 |---------|-------------|
+| **High-level** | |
+| `just dev` | Start infrastructure + backend dev server |
+| `just infra-up` | Start Redis + Supabase (stops stale containers first) |
+| `just infra-down` | Stop all infrastructure |
+| `just infra-status` | Check status of all services |
+| `just check` | Run all backend + mobile checks |
+| `just install` | Install all dependencies |
+| **Backend** | |
 | `just backend-dev` | Start FastAPI dev server with hot reload |
+| `just backend-check` | Lint + typecheck + test |
 | `just backend-lint` | Lint Python with ruff |
 | `just backend-format` | Auto-format Python with ruff |
 | `just backend-typecheck` | Type-check Python with mypy |
 | `just backend-test` | Run pytest |
+| **Mobile** | |
+| `just mobile-ios` | Build and run on iOS Simulator |
+| `just mobile-check` | Typecheck + lint |
 | `just mobile-dev` | Start Expo dev server |
 | `just mobile-lint` | Lint TypeScript with ESLint |
 | `just mobile-typecheck` | Type-check with tsc |
-| `just mobile-install` | Install npm dependencies |
-| `just db-start` | Start local Supabase |
-| `just db-stop` | Stop local Supabase |
+| **Database** | |
 | `just db-reset` | Reset DB and re-run migrations |
-| `just up` | Docker compose up (backend + worker + Redis) |
-| `just down` | Docker compose down |
-| `just build` | Docker compose build |
+| `just db-migration <name>` | Create a new migration file |
 
 ## Troubleshooting
 
 **`npm install` fails with ERESOLVE errors**
-Use `npm install --legacy-peer-deps`. This is a known peer conflict from expo-router pulling in react-dom.
+Use `npm install --legacy-peer-deps`. This is handled automatically by `just mobile-install`.
 
 **`pod install` fails with Reanimated/worklets error**
 Reanimated 4.x requires `react-native-worklets` as a peer dependency. Install it with `npx expo install react-native-worklets`, then re-run `pod install`. If you see other version conflicts, try `pod install --repo-update`.
@@ -240,8 +222,17 @@ Reanimated 4.x requires `react-native-worklets` as a peer dependency. Install it
 **Xcode build fails with signing errors**
 Open the `.xcworkspace` in Xcode, go to Signing & Capabilities, and select your development team. For simulator-only builds, you can use any team.
 
-**`just backend-dev` can't connect to Redis**
-Make sure Redis is running: `docker compose up redis -d` or `just db-start` (Supabase includes Redis).
+**Backend returns "Invalid token" for all authenticated requests**
+The backend needs to fetch JWKS from Supabase on startup. Ensure Supabase is running before starting the backend. If you started the backend first, restart it after `just infra-up`.
+
+**Backend health check returns 500**
+Redis is not running. Run `just infra-up` to start all infrastructure.
+
+**"No active session" error in the mobile app**
+The Supabase session is not being stored. Check that `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `apps/mobile/.env` match the values from `supabase status`.
+
+**Port 8000 conflict**
+`just infra-up` only starts Redis from Docker Compose (not the backend container). If you previously ran `just up` (which starts the backend container too), stop it with `docker stop nstil-backend-1 nstil-worker-1`.
 
 **Supabase keys**
-After `just db-start`, the CLI prints all keys. You can also retrieve them later with `supabase status`.
+After `just infra-up`, retrieve keys with `supabase status` or `supabase status -o env`.

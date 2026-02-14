@@ -1,2 +1,3 @@
-export { Header } from "./Header";
-export type { HeaderProps } from "./types";
+export { Header, HEADER_ROW_HEIGHT } from "./Header";
+export { HeaderAction } from "./HeaderAction";
+export type { HeaderActionProps, HeaderProps } from "./types";

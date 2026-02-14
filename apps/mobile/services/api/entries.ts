@@ -1,0 +1,55 @@
+import type {
+  CursorParams,
+  JournalEntry,
+  JournalEntryCreate,
+  JournalEntryUpdate,
+  PaginatedResponse,
+} from "@/types";
+
+import { apiFetch } from "./client";
+
+const ENTRIES_PATH = "/api/v1/entries";
+
+export function createEntry(
+  data: JournalEntryCreate,
+): Promise<JournalEntry> {
+  return apiFetch<JournalEntry>(ENTRIES_PATH, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function getEntry(id: string): Promise<JournalEntry> {
+  return apiFetch<JournalEntry>(`${ENTRIES_PATH}/${id}`);
+}
+
+export function listEntries(
+  params?: CursorParams,
+): Promise<PaginatedResponse<JournalEntry>> {
+  const searchParams = new URLSearchParams();
+  if (params?.cursor) {
+    searchParams.set("cursor", params.cursor);
+  }
+  if (params?.limit !== undefined) {
+    searchParams.set("limit", String(params.limit));
+  }
+  const query = searchParams.toString();
+  const path = query ? `${ENTRIES_PATH}?${query}` : ENTRIES_PATH;
+  return apiFetch<PaginatedResponse<JournalEntry>>(path);
+}
+
+export function updateEntry(
+  id: string,
+  data: JournalEntryUpdate,
+): Promise<JournalEntry> {
+  return apiFetch<JournalEntry>(`${ENTRIES_PATH}/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteEntry(id: string): Promise<void> {
+  return apiFetch<void>(`${ENTRIES_PATH}/${id}`, {
+    method: "DELETE",
+  });
+}

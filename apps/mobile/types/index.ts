@@ -1,3 +1,4 @@
+export type { CursorParams, PaginatedResponse } from "./api";
 export type {
   DeepLinkType,
   ResetPasswordFormData,
@@ -6,3 +7,9 @@ export type {
   ValidationError,
   VerifyEmailRouteParams,
 } from "./auth";
+export type {
+  EntryType,
+  JournalEntry,
+  JournalEntryCreate,
+  JournalEntryUpdate,
+} from "./journal";

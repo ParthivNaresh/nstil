@@ -22,8 +22,8 @@ export type { DividerProps } from "./Divider";
 export { EmptyState } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 
-export { Header } from "./Header";
-export type { HeaderProps } from "./Header";
+export { Header, HeaderAction, HEADER_ROW_HEIGHT } from "./Header";
+export type { HeaderActionProps, HeaderProps } from "./Header";
 
 export { Icon } from "./Icon";
 export type { IconProps, IconSize } from "./Icon";

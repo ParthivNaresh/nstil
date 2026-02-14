@@ -6,3 +6,10 @@ export interface HeaderProps {
   rightAction?: ReactNode;
   transparent?: boolean;
 }
+
+export interface HeaderActionProps {
+  title: string;
+  onPress: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+}
