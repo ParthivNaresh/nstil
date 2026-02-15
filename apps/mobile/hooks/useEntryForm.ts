@@ -1,32 +1,30 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useCreateEntry, useUpdateEntry } from "@/hooks/useEntries";
+import { useImagePicker } from "@/hooks/useImagePicker";
+import { queryKeys } from "@/lib/queryKeys";
+import { deleteMedia, uploadMedia } from "@/services/api/media";
 import type {
+  EntryMedia,
   EntryType,
   JournalEntry,
   JournalSpace,
+  LocalImage,
   MoodCategory,
   MoodSpecific,
 } from "@/types";
 
 const MAX_TAGS = 10;
-
-interface EntryFormState {
-  readonly title: string;
-  readonly body: string;
-  readonly moodCategory: MoodCategory | null;
-  readonly moodSpecific: MoodSpecific | null;
-  readonly tags: string[];
-  readonly entryType: EntryType;
-  readonly entryDate: Date;
-}
+const MAX_IMAGES = 10;
 
 interface UseEntryFormOptions {
   readonly entry?: JournalEntry;
   readonly journals?: JournalSpace[];
   readonly initialDate?: Date;
+  readonly existingMedia?: EntryMedia[];
 }
 
 interface UseEntryFormReturn {
@@ -41,6 +39,10 @@ interface UseEntryFormReturn {
   readonly bodyError: string | undefined;
   readonly isSubmitting: boolean;
   readonly canSubmit: boolean;
+  readonly localImages: LocalImage[];
+  readonly existingMedia: EntryMedia[];
+  readonly removedMediaIds: ReadonlySet<string>;
+  readonly maxImages: number;
   readonly setTitle: (text: string) => void;
   readonly setBody: (text: string) => void;
   readonly setMoodCategory: (category: MoodCategory) => void;
@@ -50,11 +52,24 @@ interface UseEntryFormReturn {
   readonly setJournalId: (id: string) => void;
   readonly addTag: (tag: string) => void;
   readonly removeTag: (tag: string) => void;
+  readonly handlePickImages: () => void;
+  readonly removeLocalImage: (localId: string) => void;
+  readonly removeExistingMedia: (mediaId: string) => void;
   readonly handleSubmit: () => void;
   readonly maxTags: number;
 }
 
-function buildInitialState(entry?: JournalEntry, initialDate?: Date): EntryFormState {
+interface InitialFormState {
+  readonly title: string;
+  readonly body: string;
+  readonly moodCategory: MoodCategory | null;
+  readonly moodSpecific: MoodSpecific | null;
+  readonly tags: string[];
+  readonly entryType: EntryType;
+  readonly entryDate: Date;
+}
+
+function buildInitialState(entry?: JournalEntry, initialDate?: Date): InitialFormState {
   if (!entry) {
     return {
       title: "",
@@ -91,8 +106,9 @@ function resolveInitialJournalId(
 }
 
 export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormReturn {
-  const { entry, journals, initialDate } = options;
+  const { entry, journals, initialDate, existingMedia: initialMedia = [] } = options;
   const router = useRouter();
+  const queryClient = useQueryClient();
   const createMutation = useCreateEntry();
   const updateMutation = useUpdateEntry();
 
@@ -113,6 +129,19 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     resolveInitialJournalId(entry, journals),
   );
   const [bodyError, setBodyError] = useState<string | undefined>(undefined);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const [localImages, setLocalImages] = useState<LocalImage[]>([]);
+  const [existingMedia] = useState<EntryMedia[]>(initialMedia);
+  const [removedMediaIds, setRemovedMediaIds] = useState<Set<string>>(new Set());
+
+  const visibleExistingCount = existingMedia.length - removedMediaIds.size;
+  const totalImageCount = visibleExistingCount + localImages.length;
+
+  const { pickImages } = useImagePicker({
+    currentCount: totalImageCount,
+    maxImages: MAX_IMAGES,
+  });
 
   useEffect(() => {
     if (!journalId && journals && journals.length > 0) {
@@ -120,7 +149,7 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     }
   }, [journalId, journals]);
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || isUploading;
   const canSubmit = !isSubmitting && !!journalId;
 
   const handleBodyChange = useCallback(
@@ -157,6 +186,45 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     setTags((prev) => prev.filter((t) => t !== tag));
   }, []);
 
+  const handlePickImages = useCallback(async () => {
+    const picked = await pickImages();
+    if (picked.length > 0) {
+      setLocalImages((prev) => [...prev, ...picked]);
+    }
+  }, [pickImages]);
+
+  const removeLocalImage = useCallback((localId: string) => {
+    setLocalImages((prev) => prev.filter((img) => img.localId !== localId));
+  }, []);
+
+  const removeExistingMedia = useCallback((mediaId: string) => {
+    setRemovedMediaIds((prev) => new Set(prev).add(mediaId));
+  }, []);
+
+  const processMediaChanges = useCallback(
+    async (entryId: string) => {
+      const deletePromises = Array.from(removedMediaIds).map((mediaId) =>
+        deleteMedia(entryId, mediaId).catch(() => undefined),
+      );
+      await Promise.all(deletePromises);
+
+      for (const image of localImages) {
+        await uploadMedia({
+          entryId,
+          uri: image.uri,
+          fileName: image.fileName,
+          contentType: image.contentType,
+        });
+      }
+    },
+    [localImages, removedMediaIds],
+  );
+
+  const invalidateAfterSave = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.entries.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.media.all });
+  }, [queryClient]);
+
   const handleSubmit = useCallback(() => {
     const trimmedBody = body.trim();
     if (!trimmedBody) {
@@ -166,8 +234,25 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
 
     const trimmedTitle = title.trim();
     const dateIso = entryDate.toISOString();
+    const hasMediaChanges = localImages.length > 0 || removedMediaIds.size > 0;
+
     const onError = () => {
       Alert.alert("Unable to save", "Please check your connection and try again.");
+    };
+
+    const finishAndNavigateBack = async (entryId: string) => {
+      if (hasMediaChanges) {
+        setIsUploading(true);
+        try {
+          await processMediaChanges(entryId);
+        } catch {
+          Alert.alert("Media Error", "Some images may not have been saved.");
+        } finally {
+          setIsUploading(false);
+        }
+      }
+      invalidateAfterSave();
+      router.back();
     };
 
     if (entry) {
@@ -185,7 +270,12 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
             created_at: dateIso,
           },
         },
-        { onSuccess: () => router.back(), onError },
+        {
+          onSuccess: () => {
+            void finishAndNavigateBack(entry.id);
+          },
+          onError,
+        },
       );
     } else {
       createMutation.mutate(
@@ -199,10 +289,15 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
           entry_type: entryType,
           created_at: dateIso,
         },
-        { onSuccess: () => router.back(), onError },
+        {
+          onSuccess: (createdEntry) => {
+            void finishAndNavigateBack(createdEntry.id);
+          },
+          onError,
+        },
       );
     }
-  }, [body, title, moodCategory, moodSpecific, tags, entryType, entryDate, journalId, entry, createMutation, updateMutation, router]);
+  }, [body, title, moodCategory, moodSpecific, tags, entryType, entryDate, journalId, entry, localImages, removedMediaIds, createMutation, updateMutation, router, processMediaChanges, invalidateAfterSave]);
 
   return {
     title,
@@ -216,6 +311,10 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     bodyError,
     isSubmitting,
     canSubmit,
+    localImages,
+    existingMedia,
+    removedMediaIds,
+    maxImages: MAX_IMAGES,
     setTitle,
     setBody: handleBodyChange,
     setMoodCategory,
@@ -225,6 +324,9 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     setJournalId,
     addTag,
     removeTag,
+    handlePickImages,
+    removeLocalImage,
+    removeExistingMedia,
     handleSubmit,
     maxTags: MAX_TAGS,
   };

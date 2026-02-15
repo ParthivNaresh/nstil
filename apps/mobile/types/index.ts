@@ -17,6 +17,14 @@ export type {
   MoodSpecific,
 } from "./journal";
 export type {
+  EntryMedia,
+  EntryMediaListResponse,
+  LocalImage,
+  MediaContentType,
+  MediaPreview,
+  MediaPreviewItem,
+} from "./media";
+export type {
   JournalSpace,
   JournalSpaceCreate,
   JournalSpaceListResponse,

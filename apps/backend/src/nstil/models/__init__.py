@@ -8,6 +8,13 @@ from nstil.models.journal import (
     JournalEntryRow,
     JournalEntryUpdate,
 )
+from nstil.models.media import (
+    EntryMediaListResponse,
+    EntryMediaResponse,
+    EntryMediaRow,
+    MediaPreview,
+    MediaPreviewItem,
+)
 from nstil.models.mood import MoodCategory, MoodSpecific
 from nstil.models.pagination import CursorParams, SearchParams
 from nstil.models.space import (
@@ -23,6 +30,11 @@ __all__ = [
     "CalendarParams",
     "CalendarResponse",
     "CursorParams",
+    "EntryMediaListResponse",
+    "EntryMediaResponse",
+    "EntryMediaRow",
+    "MediaPreview",
+    "MediaPreviewItem",
     "EntryType",
     "JournalEntryCreate",
     "JournalEntryListResponse",

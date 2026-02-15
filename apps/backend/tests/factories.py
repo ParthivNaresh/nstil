@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from jose import jwt  # type: ignore[import-untyped]
 
 from nstil.models.journal import JournalEntryRow
+from nstil.models.media import EntryMediaRow
 from nstil.models.space import JournalSpaceRow
 
 DEFAULT_SECRET = "test-secret"
@@ -71,6 +72,39 @@ def make_entry_row(
         created_at=created_at or now,
         updated_at=updated_at or now,
         deleted_at=deleted_at,
+    )
+
+
+def make_media_row(
+    *,
+    user_id: str = DEFAULT_USER_ID,
+    entry_id: str | None = None,
+    media_id: str | None = None,
+    storage_path: str | None = None,
+    file_name: str = "photo.jpg",
+    content_type: str = "image/jpeg",
+    size_bytes: int = 1024,
+    width: int | None = 800,
+    height: int | None = 600,
+    sort_order: int = 0,
+    created_at: datetime | None = None,
+) -> EntryMediaRow:
+    now = datetime.now(UTC)
+    eid = uuid.UUID(entry_id) if entry_id else uuid.uuid4()
+    mid = uuid.UUID(media_id) if media_id else uuid.uuid4()
+    path = storage_path or f"{user_id}/{eid}/{mid}.jpg"
+    return EntryMediaRow(
+        id=mid,
+        entry_id=eid,
+        user_id=uuid.UUID(user_id),
+        storage_path=path,
+        file_name=file_name,
+        content_type=content_type,
+        size_bytes=size_bytes,
+        width=width,
+        height=height,
+        sort_order=sort_order,
+        created_at=created_at or now,
     )
 
 

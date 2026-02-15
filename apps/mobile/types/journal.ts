@@ -1,3 +1,5 @@
+import type { MediaPreview } from "./media";
+
 export type EntryType = "journal" | "reflection" | "gratitude" | "freewrite";
 
 export type MoodCategory = "happy" | "calm" | "sad" | "anxious" | "angry";
@@ -21,6 +23,7 @@ export interface JournalEntry {
   readonly location: string | null;
   readonly entry_type: EntryType;
   readonly is_pinned: boolean;
+  readonly media_preview: MediaPreview | null;
   readonly created_at: string;
   readonly updated_at: string;
 }

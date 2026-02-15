@@ -15,19 +15,24 @@ import { Header, HeaderAction, Skeleton } from "@/components/ui";
 import {
   useEntry,
   useEntryForm,
+  useEntryMedia,
   useHeaderHeight,
   useJournals,
   useTheme,
 } from "@/hooks";
 import { spacing } from "@/styles";
+import type { EntryMedia } from "@/types";
 
 export default function EditEntryScreen() {
   const { t } = useTranslation();
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: entry, isLoading } = useEntry(id);
+  const { data: entry, isLoading: entryLoading } = useEntry(id);
+  const { data: mediaResponse, isLoading: mediaLoading } = useEntryMedia(id);
+
+  const isLoading = entryLoading || mediaLoading;
 
   if (isLoading || !entry) {
     return (
@@ -41,17 +46,31 @@ export default function EditEntryScreen() {
     );
   }
 
-  return <EditEntryForm entryId={id} />;
+  return (
+    <EditEntryForm
+      entryId={id}
+      existingMediaItems={mediaResponse?.items ?? []}
+    />
+  );
 }
 
-function EditEntryForm({ entryId }: { readonly entryId: string }) {
+interface EditEntryFormProps {
+  readonly entryId: string;
+  readonly existingMediaItems: EntryMedia[];
+}
+
+function EditEntryForm({ entryId, existingMediaItems }: EditEntryFormProps) {
   const { t } = useTranslation();
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
   const { data: entry } = useEntry(entryId);
   const { data: journals = [] } = useJournals();
-  const form = useEntryForm({ entry, journals });
+  const form = useEntryForm({
+    entry,
+    journals,
+    existingMedia: existingMediaItems,
+  });
 
   const handleSave = useCallback(() => {
     form.handleSubmit();
@@ -99,6 +118,10 @@ function EditEntryForm({ entryId }: { readonly entryId: string }) {
               entryDate={form.entryDate}
               bodyError={form.bodyError}
               maxTags={form.maxTags}
+              localImages={form.localImages}
+              existingMedia={form.existingMedia}
+              removedMediaIds={form.removedMediaIds}
+              maxImages={form.maxImages}
               onJournalChange={form.setJournalId}
               onBodyChange={form.setBody}
               onTitleChange={form.setTitle}
@@ -108,6 +131,9 @@ function EditEntryForm({ entryId }: { readonly entryId: string }) {
               onDateChange={form.setEntryDate}
               onAddTag={form.addTag}
               onRemoveTag={form.removeTag}
+              onPickImages={form.handlePickImages}
+              onRemoveLocalImage={form.removeLocalImage}
+              onRemoveExistingMedia={form.removeExistingMedia}
             />
           </View>
         </ScrollView>

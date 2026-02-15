@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Divider, MoodSelector, TextArea, TextInput } from "@/components/ui";
 import { EntryDatePicker } from "@/components/journal/EntryDatePicker";
 import { EntryTypeSelector } from "@/components/journal/EntryTypeSelector";
+import { ImageAttachmentStrip } from "@/components/journal/ImageAttachmentStrip";
 import { JournalPicker } from "@/components/journal/JournalPicker";
 import { TagInput } from "@/components/journal/TagInput";
 import { useTheme } from "@/hooks/useTheme";
@@ -24,6 +25,10 @@ export function EntryForm({
   entryDate,
   bodyError,
   maxTags,
+  localImages,
+  existingMedia,
+  removedMediaIds,
+  maxImages,
   onJournalChange,
   onBodyChange,
   onTitleChange,
@@ -33,6 +38,9 @@ export function EntryForm({
   onDateChange,
   onAddTag,
   onRemoveTag,
+  onPickImages,
+  onRemoveLocalImage,
+  onRemoveExistingMedia,
 }: EntryFormProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -69,6 +77,16 @@ export function EntryForm({
         value={title}
         onChangeText={onTitleChange}
         variant="flat"
+      />
+
+      <ImageAttachmentStrip
+        localImages={localImages}
+        existingMedia={existingMedia}
+        removedMediaIds={removedMediaIds}
+        onPickImages={onPickImages}
+        onRemoveLocal={onRemoveLocalImage}
+        onRemoveExisting={onRemoveExistingMedia}
+        maxImages={maxImages}
       />
 
       <Divider color={colors.border} />

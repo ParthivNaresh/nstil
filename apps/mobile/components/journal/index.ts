@@ -15,6 +15,9 @@ export type { EntryDetailContentProps } from "./EntryDetail";
 export { EntryForm } from "./EntryForm";
 export type { EntryFormProps } from "./EntryForm";
 
+export { ImageAttachmentStrip } from "./ImageAttachmentStrip";
+export type { ImageAttachmentStripProps } from "./ImageAttachmentStrip";
+
 export { JournalFilterBar } from "./JournalFilterBar";
 export type { JournalFilterBarProps } from "./JournalFilterBar";
 

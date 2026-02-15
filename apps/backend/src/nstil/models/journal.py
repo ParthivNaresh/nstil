@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from nstil.models.media import MediaPreview
 from nstil.models.mood import MoodCategory, MoodSpecific, validate_mood_pair
 
 
@@ -189,11 +190,16 @@ class JournalEntryResponse(BaseModel):
     location: str | None
     entry_type: str
     is_pinned: bool
+    media_preview: MediaPreview | None
     created_at: datetime
     updated_at: datetime
 
     @classmethod
-    def from_row(cls, row: JournalEntryRow) -> "JournalEntryResponse":
+    def from_row(
+        cls,
+        row: JournalEntryRow,
+        media_preview: MediaPreview | None = None,
+    ) -> "JournalEntryResponse":
         return cls(
             id=row.id,
             user_id=row.user_id,
@@ -206,6 +212,7 @@ class JournalEntryResponse(BaseModel):
             location=row.location,
             entry_type=row.entry_type,
             is_pinned=row.is_pinned,
+            media_preview=media_preview,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )

@@ -1,4 +1,11 @@
-import type { EntryType, JournalSpace, MoodCategory, MoodSpecific } from "@/types";
+import type {
+  EntryMedia,
+  EntryType,
+  JournalSpace,
+  LocalImage,
+  MoodCategory,
+  MoodSpecific,
+} from "@/types";
 
 export interface EntryFormProps {
   readonly journals: JournalSpace[];
@@ -12,6 +19,10 @@ export interface EntryFormProps {
   readonly entryDate: Date;
   readonly bodyError: string | undefined;
   readonly maxTags: number;
+  readonly localImages: LocalImage[];
+  readonly existingMedia: EntryMedia[];
+  readonly removedMediaIds: ReadonlySet<string>;
+  readonly maxImages: number;
   readonly onJournalChange: (id: string) => void;
   readonly onBodyChange: (text: string) => void;
   readonly onTitleChange: (text: string) => void;
@@ -21,4 +32,7 @@ export interface EntryFormProps {
   readonly onDateChange: (date: Date) => void;
   readonly onAddTag: (tag: string) => void;
   readonly onRemoveTag: (tag: string) => void;
+  readonly onPickImages: () => void;
+  readonly onRemoveLocalImage: (localId: string) => void;
+  readonly onRemoveExistingMedia: (mediaId: string) => void;
 }

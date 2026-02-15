@@ -13,6 +13,12 @@ export { useEntryForm } from "./useEntryForm";
 export { useForgotPassword } from "./useForgotPassword";
 export { useFormField } from "./useFormField";
 export { useHeaderHeight } from "./useHeaderHeight";
+export { useImagePicker } from "./useImagePicker";
+export {
+  useDeleteMedia,
+  useEntryMedia,
+  useUploadMedia,
+} from "./useMedia";
 export {
   useCreateJournal,
   useDeleteJournal,

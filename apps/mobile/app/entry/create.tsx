@@ -35,7 +35,7 @@ function buildDateWithCurrentTime(dateString: string): Date {
 
 export default function CreateEntryScreen() {
   const { t } = useTranslation();
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
   const params = useLocalSearchParams<{ date?: string }>();
@@ -94,6 +94,10 @@ export default function CreateEntryScreen() {
               entryDate={form.entryDate}
               bodyError={form.bodyError}
               maxTags={form.maxTags}
+              localImages={form.localImages}
+              existingMedia={form.existingMedia}
+              removedMediaIds={form.removedMediaIds}
+              maxImages={form.maxImages}
               onJournalChange={form.setJournalId}
               onBodyChange={form.setBody}
               onTitleChange={form.setTitle}
@@ -103,6 +107,9 @@ export default function CreateEntryScreen() {
               onDateChange={form.setEntryDate}
               onAddTag={form.addTag}
               onRemoveTag={form.removeTag}
+              onPickImages={form.handlePickImages}
+              onRemoveLocalImage={form.removeLocalImage}
+              onRemoveExistingMedia={form.removeExistingMedia}
             />
           </View>
         </ScrollView>

@@ -16,6 +16,12 @@ export const queryKeys = {
     calendar: (year: number, month: number) =>
       [...queryKeys.entries.calendars(), { year, month }] as const,
   },
+  media: {
+    all: ["media"] as const,
+    lists: () => [...queryKeys.media.all, "list"] as const,
+    list: (entryId: string) =>
+      [...queryKeys.media.lists(), entryId] as const,
+  },
   journals: {
     all: ["journals"] as const,
     lists: () => [...queryKeys.journals.all, "list"] as const,

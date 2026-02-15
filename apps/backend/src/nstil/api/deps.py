@@ -14,6 +14,7 @@ from nstil.services.cache import EntryCacheService, SpaceCacheService
 from nstil.services.cached_journal import CachedJournalService
 from nstil.services.cached_space import CachedSpaceService
 from nstil.services.journal import JournalService
+from nstil.services.media import MediaService
 from nstil.services.space import JournalSpaceService
 
 bearer_scheme = HTTPBearer()
@@ -61,6 +62,12 @@ def get_space_service(
 ) -> CachedSpaceService:
     db_service = JournalSpaceService(supabase)
     return CachedSpaceService(db_service, space_cache, entry_cache)
+
+
+def get_media_service(
+    supabase: Annotated[AsyncClient, Depends(get_supabase)],
+) -> MediaService:
+    return MediaService(supabase)
 
 
 def get_current_user(

@@ -40,6 +40,16 @@ export const styles = StyleSheet.create({
     width: MOOD_DOT_SIZE,
     height: MOOD_DOT_SIZE,
   },
+  bodyRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  bodyText: {
+    flex: 1,
+    flexShrink: 1,
+  },
   tags: {
     flexDirection: "row",
     flexWrap: "wrap",

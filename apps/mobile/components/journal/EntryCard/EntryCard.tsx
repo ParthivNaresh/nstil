@@ -12,6 +12,7 @@ import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { getMoodGradient } from "@/lib/moodColors";
 import { getMoodDisplayLabel } from "@/lib/moodUtils";
 
+import { MediaPreviewCluster } from "./MediaPreviewCluster";
 import { MoodAccent } from "./MoodAccent";
 import { styles } from "./styles";
 import type { EntryCardProps } from "./types";
@@ -26,6 +27,12 @@ export function EntryCard({ entry, onPress }: EntryCardProps) {
   const hasMood = entry.mood_category !== null;
   const moodLabel = getMoodDisplayLabel(entry.mood_category, entry.mood_specific);
   const gradient = hasMood ? getMoodGradient(entry.mood_category) : null;
+
+  const mediaPreview = entry.media_preview;
+  const hasMedia =
+    mediaPreview !== null &&
+    mediaPreview.total_count > 0 &&
+    mediaPreview.items.length > 0;
 
   const handlePress = useCallback(() => {
     onPress(entry.id);
@@ -82,13 +89,20 @@ export function EntryCard({ entry, onPress }: EntryCardProps) {
           </AppText>
         ) : null}
 
-        <AppText
-          variant="body"
-          color={colors.textSecondary}
-          numberOfLines={BODY_PREVIEW_LINES}
-        >
-          {entry.body}
-        </AppText>
+        <View style={styles.bodyRow}>
+          <View style={styles.bodyText}>
+            <AppText
+              variant="body"
+              color={colors.textSecondary}
+              numberOfLines={BODY_PREVIEW_LINES}
+            >
+              {entry.body}
+            </AppText>
+          </View>
+          {hasMedia && mediaPreview ? (
+            <MediaPreviewCluster preview={mediaPreview} />
+          ) : null}
+        </View>
 
         {entry.tags.length > 0 ? (
           <View style={styles.tags}>
