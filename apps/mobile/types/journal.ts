@@ -3,6 +3,7 @@ export type EntryType = "journal" | "reflection" | "gratitude" | "freewrite";
 export interface JournalEntry {
   readonly id: string;
   readonly user_id: string;
+  readonly journal_id: string;
   readonly title: string;
   readonly body: string;
   readonly mood_score: number | null;
@@ -15,6 +16,7 @@ export interface JournalEntry {
 }
 
 export interface JournalEntryCreate {
+  readonly journal_id: string;
   readonly body: string;
   readonly title?: string;
   readonly mood_score?: number;
@@ -26,6 +28,7 @@ export interface JournalEntryCreate {
 }
 
 export interface JournalEntryUpdate {
+  readonly journal_id?: string;
   readonly title?: string;
   readonly body?: string;
   readonly mood_score?: number;

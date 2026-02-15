@@ -1,7 +1,9 @@
 import type { MoodValue } from "@/components/ui/MoodSelector/types";
-import type { EntryType } from "@/types";
+import type { EntryType, JournalSpace } from "@/types";
 
 export interface EntryFormProps {
+  readonly journals: JournalSpace[];
+  readonly journalId: string;
   readonly body: string;
   readonly title: string;
   readonly moodScore: MoodValue | null;
@@ -10,6 +12,7 @@ export interface EntryFormProps {
   readonly entryDate: Date;
   readonly bodyError: string | undefined;
   readonly maxTags: number;
+  readonly onJournalChange: (id: string) => void;
   readonly onBodyChange: (text: string) => void;
   readonly onTitleChange: (text: string) => void;
   readonly onMoodChange: (mood: MoodValue) => void;

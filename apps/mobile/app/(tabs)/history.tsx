@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import { AnimatedEntryCard, EntryCardSkeleton } from "@/components/journal";
+import { AnimatedEntryCard, EntryCardSkeleton, JournalFilterBar } from "@/components/journal";
 import {
   AmbientBackground,
   EmptyState,
@@ -22,6 +22,7 @@ import {
 import {
   useEntries,
   useHeaderHeight,
+  useJournals,
   useSearchEntries,
   useTheme,
 } from "@/hooks";
@@ -43,10 +44,12 @@ export default function HistoryScreen() {
   const headerHeight = useHeaderHeight();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedJournalId, setSelectedJournalId] = useState<string | null>(null);
   const isSearching = searchQuery.trim().length > 0;
 
-  const listQuery = useEntries();
-  const searchQueryResult = useSearchEntries(searchQuery);
+  const { data: journals = [] } = useJournals();
+  const listQuery = useEntries(selectedJournalId ?? undefined);
+  const searchQueryResult = useSearchEntries(searchQuery, selectedJournalId ?? undefined);
 
   const activeQuery = isSearching ? searchQueryResult : listQuery;
 
@@ -115,6 +118,14 @@ export default function HistoryScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder={t("history.searchPlaceholder")}
+        />
+      </View>
+
+      <View style={styles.filterWrapper}>
+        <JournalFilterBar
+          journals={journals}
+          selectedId={selectedJournalId}
+          onSelect={setSelectedJournalId}
         />
       </View>
 

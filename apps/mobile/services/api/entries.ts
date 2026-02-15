@@ -11,6 +11,14 @@ import { apiFetch } from "./client";
 
 const ENTRIES_PATH = "/api/v1/entries";
 
+interface ListEntriesParams extends CursorParams {
+  readonly journalId?: string;
+}
+
+interface SearchEntriesParams extends SearchParams {
+  readonly journalId?: string;
+}
+
 export function createEntry(
   data: JournalEntryCreate,
 ): Promise<JournalEntry> {
@@ -25,7 +33,7 @@ export function getEntry(id: string): Promise<JournalEntry> {
 }
 
 export function listEntries(
-  params?: CursorParams,
+  params?: ListEntriesParams,
 ): Promise<PaginatedResponse<JournalEntry>> {
   const searchParams = new URLSearchParams();
   if (params?.cursor) {
@@ -33,6 +41,9 @@ export function listEntries(
   }
   if (params?.limit !== undefined) {
     searchParams.set("limit", String(params.limit));
+  }
+  if (params?.journalId) {
+    searchParams.set("journal_id", params.journalId);
   }
   const query = searchParams.toString();
   const path = query ? `${ENTRIES_PATH}?${query}` : ENTRIES_PATH;
@@ -50,7 +61,7 @@ export function updateEntry(
 }
 
 export function searchEntries(
-  params: SearchParams,
+  params: SearchEntriesParams,
 ): Promise<PaginatedResponse<JournalEntry>> {
   const searchParams = new URLSearchParams();
   searchParams.set("q", params.query);
@@ -59,6 +70,9 @@ export function searchEntries(
   }
   if (params.limit !== undefined) {
     searchParams.set("limit", String(params.limit));
+  }
+  if (params.journalId) {
+    searchParams.set("journal_id", params.journalId);
   }
   return apiFetch<PaginatedResponse<JournalEntry>>(
     `${ENTRIES_PATH}/search?${searchParams.toString()}`,

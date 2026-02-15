@@ -21,7 +21,8 @@ class TestJournalEntryCreate:
         entry = JournalEntryCreate(journal_id=JID, body="Hello")
         assert entry.body == "Hello"
         assert entry.title == ""
-        assert entry.mood_score is None
+        assert entry.mood_category is None
+        assert entry.mood_specific is None
         assert entry.tags == []
         assert entry.location is None
         assert entry.entry_type == EntryType.JOURNAL
@@ -31,14 +32,41 @@ class TestJournalEntryCreate:
             journal_id=JID,
             title="My Day",
             body="Great day",
-            mood_score=5,
+            mood_category="happy",
+            mood_specific="grateful",
             tags=["happy"],
             location="NYC",
             entry_type=EntryType.GRATITUDE,
         )
         assert entry.title == "My Day"
-        assert entry.mood_score == 5
+        assert entry.mood_category == "happy"
+        assert entry.mood_specific == "grateful"
         assert entry.entry_type == EntryType.GRATITUDE
+
+    def test_mood_category_only(self) -> None:
+        entry = JournalEntryCreate(journal_id=JID, body="test", mood_category="sad")
+        assert entry.mood_category == "sad"
+        assert entry.mood_specific is None
+
+    def test_mood_specific_without_category_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="mood_specific requires mood_category"):
+            JournalEntryCreate(journal_id=JID, body="test", mood_specific="grateful")
+
+    def test_mood_specific_wrong_category_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="not valid for category"):
+            JournalEntryCreate(
+                journal_id=JID, body="test", mood_category="happy", mood_specific="stressed"
+            )
+
+    def test_invalid_mood_category_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            JournalEntryCreate(journal_id=JID, body="test", mood_category="ecstatic")
+
+    def test_invalid_mood_specific_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            JournalEntryCreate(
+                journal_id=JID, body="test", mood_category="happy", mood_specific="blissful"
+            )
 
     def test_body_stripped(self) -> None:
         entry = JournalEntryCreate(journal_id=JID, body="  hello  ")
@@ -55,14 +83,6 @@ class TestJournalEntryCreate:
     def test_empty_body_rejected(self) -> None:
         with pytest.raises(ValidationError):
             JournalEntryCreate(journal_id=JID, body="")
-
-    def test_mood_below_min_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            JournalEntryCreate(journal_id=JID, body="test", mood_score=0)
-
-    def test_mood_above_max_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            JournalEntryCreate(journal_id=JID, body="test", mood_score=6)
 
     def test_tags_stripped(self) -> None:
         entry = JournalEntryCreate(journal_id=JID, body="test", tags=["  happy  ", "  sad  "])
@@ -120,19 +140,35 @@ class TestJournalEntryUpdate:
         assert update.body is None
 
     def test_multiple_fields(self) -> None:
-        update = JournalEntryUpdate(title="New", body="Updated body", mood_score=4)
+        update = JournalEntryUpdate(
+            title="New", body="Updated body", mood_category="happy", mood_specific="proud"
+        )
         assert update.title == "New"
         assert update.body == "Updated body"
-        assert update.mood_score == 4
+        assert update.mood_category == "happy"
+        assert update.mood_specific == "proud"
+
+    def test_mood_category_only(self) -> None:
+        update = JournalEntryUpdate(mood_category="anxious")
+        assert update.mood_category == "anxious"
+        assert update.mood_specific is None
+
+    def test_mood_specific_without_category_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="mood_specific requires mood_category"):
+            JournalEntryUpdate(mood_specific="stressed")
+
+    def test_mood_specific_wrong_category_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="not valid for category"):
+            JournalEntryUpdate(mood_category="sad", mood_specific="excited")
 
     def test_empty_update_rejected(self) -> None:
         with pytest.raises(ValidationError, match="At least one field"):
             JournalEntryUpdate()
 
     def test_to_update_dict_excludes_none(self) -> None:
-        update = JournalEntryUpdate(title="New", mood_score=3)
+        update = JournalEntryUpdate(title="New", mood_category="calm")
         result = update.to_update_dict()
-        assert result == {"title": "New", "mood_score": 3}
+        assert result == {"title": "New", "mood_category": "calm"}
         assert "body" not in result
         assert "tags" not in result
 
@@ -180,7 +216,8 @@ class TestJournalEntryResponse:
         row = make_entry_row(
             title="Test",
             body="Body",
-            mood_score=4,
+            mood_category="happy",
+            mood_specific="excited",
             tags=["tag1"],
             location="NYC",
         )
@@ -190,7 +227,8 @@ class TestJournalEntryResponse:
         assert response.journal_id == row.journal_id
         assert response.title == "Test"
         assert response.body == "Body"
-        assert response.mood_score == 4
+        assert response.mood_category == "happy"
+        assert response.mood_specific == "excited"
         assert response.tags == ["tag1"]
         assert response.location == "NYC"
         assert response.created_at == row.created_at

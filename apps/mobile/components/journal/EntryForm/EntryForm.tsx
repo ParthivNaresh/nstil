@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Divider, MoodSelector, TextArea, TextInput } from "@/components/ui";
 import { EntryDatePicker } from "@/components/journal/EntryDatePicker";
 import { EntryTypeSelector } from "@/components/journal/EntryTypeSelector";
+import { JournalPicker } from "@/components/journal/JournalPicker";
 import { TagInput } from "@/components/journal/TagInput";
 import { useTheme } from "@/hooks/useTheme";
 import { spacing } from "@/styles";
@@ -12,6 +13,8 @@ import { spacing } from "@/styles";
 import type { EntryFormProps } from "./types";
 
 export function EntryForm({
+  journals,
+  journalId,
   body,
   title,
   moodScore,
@@ -20,6 +23,7 @@ export function EntryForm({
   entryDate,
   bodyError,
   maxTags,
+  onJournalChange,
   onBodyChange,
   onTitleChange,
   onMoodChange,
@@ -35,6 +39,12 @@ export function EntryForm({
 
   return (
     <View style={styles.container}>
+      <JournalPicker
+        journals={journals}
+        selectedId={journalId}
+        onSelect={onJournalChange}
+      />
+
       <EntryDatePicker
         value={entryDate}
         onChange={onDateChange}

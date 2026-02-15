@@ -22,13 +22,14 @@ import {
 
 const DEFAULT_PAGE_SIZE = 20;
 
-export function useEntries() {
+export function useEntries(journalId?: string) {
   return useInfiniteQuery<PaginatedResponse<JournalEntry>>({
-    queryKey: queryKeys.entries.lists(),
+    queryKey: queryKeys.entries.list(undefined, undefined, journalId),
     queryFn: ({ pageParam }) =>
       listEntries({
         cursor: pageParam as string | undefined,
         limit: DEFAULT_PAGE_SIZE,
+        journalId,
       }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) =>
@@ -100,16 +101,17 @@ export function useTogglePin() {
   });
 }
 
-export function useSearchEntries(query: string) {
+export function useSearchEntries(query: string, journalId?: string) {
   const trimmed = query.trim();
 
   return useInfiniteQuery<PaginatedResponse<JournalEntry>>({
-    queryKey: queryKeys.entries.search(trimmed),
+    queryKey: queryKeys.entries.search(trimmed, journalId),
     queryFn: ({ pageParam }) =>
       searchEntries({
         query: trimmed,
         cursor: pageParam as string | undefined,
         limit: DEFAULT_PAGE_SIZE,
+        journalId,
       }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) =>

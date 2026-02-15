@@ -1,10 +1,10 @@
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 
 import { useCreateEntry, useUpdateEntry } from "@/hooks/useEntries";
 import type { MoodValue } from "@/components/ui/MoodSelector/types";
-import type { EntryType, JournalEntry } from "@/types";
+import type { EntryType, JournalEntry, JournalSpace } from "@/types";
 
 const MAX_TAGS = 10;
 
@@ -17,6 +17,11 @@ interface EntryFormState {
   readonly entryDate: Date;
 }
 
+interface UseEntryFormOptions {
+  readonly entry?: JournalEntry;
+  readonly journals?: JournalSpace[];
+}
+
 interface UseEntryFormReturn {
   readonly title: string;
   readonly body: string;
@@ -24,6 +29,7 @@ interface UseEntryFormReturn {
   readonly tags: string[];
   readonly entryType: EntryType;
   readonly entryDate: Date;
+  readonly journalId: string;
   readonly bodyError: string | undefined;
   readonly isSubmitting: boolean;
   readonly canSubmit: boolean;
@@ -32,6 +38,7 @@ interface UseEntryFormReturn {
   readonly setMoodScore: (mood: MoodValue) => void;
   readonly setEntryType: (type: EntryType) => void;
   readonly setEntryDate: (date: Date) => void;
+  readonly setJournalId: (id: string) => void;
   readonly addTag: (tag: string) => void;
   readonly removeTag: (tag: string) => void;
   readonly handleSubmit: () => void;
@@ -59,7 +66,21 @@ function buildInitialState(entry?: JournalEntry): EntryFormState {
   };
 }
 
-export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
+function resolveInitialJournalId(
+  entry?: JournalEntry,
+  journals?: JournalSpace[],
+): string {
+  if (entry) {
+    return entry.journal_id;
+  }
+  if (journals && journals.length > 0) {
+    return journals[0].id;
+  }
+  return "";
+}
+
+export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormReturn {
+  const { entry, journals } = options;
   const router = useRouter();
   const createMutation = useCreateEntry();
   const updateMutation = useUpdateEntry();
@@ -72,10 +93,19 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
   const [tags, setTags] = useState<string[]>(initial.tags);
   const [entryType, setEntryType] = useState<EntryType>(initial.entryType);
   const [entryDate, setEntryDate] = useState<Date>(initial.entryDate);
+  const [journalId, setJournalId] = useState(() =>
+    resolveInitialJournalId(entry, journals),
+  );
   const [bodyError, setBodyError] = useState<string | undefined>(undefined);
 
+  useEffect(() => {
+    if (!journalId && journals && journals.length > 0) {
+      setJournalId(journals[0].id);
+    }
+  }, [journalId, journals]);
+
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const canSubmit = !isSubmitting;
+  const canSubmit = !isSubmitting && !!journalId;
 
   const handleBodyChange = useCallback(
     (text: string) => {
@@ -116,6 +146,7 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
         {
           id: entry.id,
           data: {
+            journal_id: journalId,
             body: trimmedBody,
             title: trimmedTitle || undefined,
             mood_score: moodScore ?? undefined,
@@ -129,6 +160,7 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
     } else {
       createMutation.mutate(
         {
+          journal_id: journalId,
           body: trimmedBody,
           title: trimmedTitle || undefined,
           mood_score: moodScore ?? undefined,
@@ -139,7 +171,7 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
         { onSuccess: () => router.back(), onError },
       );
     }
-  }, [body, title, moodScore, tags, entryType, entryDate, entry, createMutation, updateMutation, router]);
+  }, [body, title, moodScore, tags, entryType, entryDate, journalId, entry, createMutation, updateMutation, router]);
 
   return {
     title,
@@ -148,6 +180,7 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
     tags,
     entryType,
     entryDate,
+    journalId,
     bodyError,
     isSubmitting,
     canSubmit,
@@ -156,6 +189,7 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
     setMoodScore,
     setEntryType,
     setEntryDate,
+    setJournalId,
     addTag,
     removeTag,
     handleSubmit,

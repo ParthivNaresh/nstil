@@ -13,3 +13,9 @@ export type {
   JournalEntryCreate,
   JournalEntryUpdate,
 } from "./journal";
+export type {
+  JournalSpace,
+  JournalSpaceCreate,
+  JournalSpaceListResponse,
+  JournalSpaceUpdate,
+} from "./space";

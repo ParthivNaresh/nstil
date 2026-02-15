@@ -129,19 +129,21 @@ Let users set a custom date for entries.
 - [x] Tests — 12 new backend tests (model + API): create with custom date, default none, future rejected, naive gets UTC, update date, update future rejected, `to_update_dict` serialization. 148 total passing. Mobile: tsc ✅, eslint ✅
 - [ ] **Visual debt** — native iOS compact picker popover cannot be styled (system UI). Will be replaced with a custom Skia-rendered glass-morphism date/time picker in 4I alongside the History tab calendar (shared components)
 
-### Subphase 4G — Journals & Spaces
+### Subphase 4G — Journals & Spaces 🔄
 
 Separate spaces for different areas of life: "Work Stress," "Personal Growth," "Dream Logs."
 
-**Objectives:**
-
-- [ ] Backend — new `journals` table: `id`, `user_id`, `name` (max 100), `description` (max 500, nullable), `color` (hex, nullable), `icon` (Lucide name, nullable), `sort_order`, `created_at`, `updated_at`, `deleted_at`. RLS. Default journal auto-created on signup
-- [ ] Entry association — add `journal_id (uuid FK, nullable)` to `journal_entries`. Nullable for backwards compat. Migration backfills existing entries to default journal
-- [ ] Models — `JournalCreate`, `JournalUpdate`, `JournalRow`, `JournalResponse`, `JournalListResponse`. Entry models updated with `journal_id`
-- [ ] Service layer — `JournalSpaceService` (CRUD). `JournalService.list()` accepts optional `journal_id` filter
-- [ ] API — `POST/GET/PATCH/DELETE /api/v1/journals`. Entry list gets `journal_id` query param
-- [ ] Mobile — journal picker on entry form. Journal list screen. Journal-filtered entry list. Color-coded indicators on entry cards
-- [ ] Tests — backend: CRUD journals, filter entries by journal, default journal creation. Mobile: tsc + eslint
+- [x] **4G-1 — Database Schema & Migration** — `journals` table with RLS, `moddatetime` trigger, index on `(user_id, sort_order, created_at)`. `journal_id uuid NOT NULL FK` added to `journal_entries`. `handle_new_user()` trigger creates default "My Journal" on signup. `search_journal_entries` RPC updated with optional `p_journal_id` filter. Atomic `soft_delete_journal` RPC for cascade delete
+- [x] **4G-2 — Backend Models** — `JournalSpaceCreate`, `JournalSpaceUpdate` (shared validators extracted), `JournalSpaceRow`, `JournalSpaceResponse`, `JournalSpaceListResponse`. Entry models updated with `journal_id: UUID` (required on create, optional on update). Hex color validation, name/description stripping, icon normalization
+- [x] **4G-3 — Backend Service & Cache Layer** — `JournalSpaceService` (CRUD + atomic cascade soft_delete via RPC + `get_default`). `SpaceCacheService` + `space_keys.py`. `CachedSpaceService` with cache-first pattern. `JournalService.list_entries()` and `search()` accept optional `journal_id` filter. Cache keys incorporate `journal_id` for separate filtered/unfiltered caching
+- [x] **4G-4 — API Endpoints** — `POST/GET/GET/:id/PATCH/DELETE /api/v1/journals`. Entry list and search endpoints accept optional `journal_id` query param. `get_space_service` dependency with space cache + entry cache for cascade invalidation
+- [x] **4G-5 — Backend Tests** — 211 total passing. Model tests (18): create/update validation, hex color, stripping, response mapping. API tests (18): CRUD, auth, validation. Cached service tests (10): cache-first reads, invalidation, cascade delete. Entry tests updated with `journal_id` filter tests
+- [x] **4G-6 — Mobile Types & API Layer** — `JournalSpace`, `JournalSpaceCreate`, `JournalSpaceUpdate`, `JournalSpaceListResponse` types. `services/api/journals.ts` with full CRUD. `listEntries`/`searchEntries` accept optional `journalId`. Query keys updated with `journals` namespace and `journalId` in entry list/search keys
+- [x] **4G-7 — Mobile Hooks** — `useJournals`, `useJournal`, `useCreateJournal`, `useUpdateJournal`, `useDeleteJournal`. `useEntries(journalId?)` and `useSearchEntries(query, journalId?)` pass filter through
+- [x] **4G-8 — Journal Picker on Entry Form** — `JournalPicker` component (horizontal pill scroll with color dots, custom color tinting, haptic feedback). `EntryForm` updated with picker above date picker. `useEntryForm` refactored to accept `{ entry?, journals? }` options, manages `journalId` state, includes `journal_id` in payloads. Create/edit screens fetch journals
+- [x] **4G-9 — Journal Filter on History Screen** — `JournalFilterBar` component with "All" pill + journal pills. History screen filters entries and search by selected journal. Reuses `JournalPickerItem` for consistent pill styling
+- [ ] **4G-10 — Journal Management Screen** — settings → manage journals. List with color dots, edit/delete. Add journal button. Swipe-to-delete with confirmation
+- [ ] **4G-11 — Entry Card & Detail Journal Indicator** — journal name label on entry cards (when viewing "All"), journal badge on detail screen metadata row
 
 ### Subphase 4H — Enhanced Mood System
 

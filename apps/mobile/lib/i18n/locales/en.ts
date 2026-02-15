@@ -63,6 +63,7 @@ const en = {
     },
   },
   history: {
+    allJournals: "All",
     searchPlaceholder: "Search entries...",
     emptyTitle: "No entries yet",
     emptySubtitle: "Your entries will appear here",

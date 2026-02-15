@@ -10,6 +10,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
   },
+  filterWrapper: {
+    paddingBottom: spacing.sm,
+  },
   list: {
     paddingHorizontal: spacing.md,
   },

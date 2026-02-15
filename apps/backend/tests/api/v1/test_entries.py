@@ -41,7 +41,8 @@ class TestCreateEntry:
         row = make_entry_row(
             title="My Day",
             body="Great day today",
-            mood_score=5,
+            mood_category="happy",
+            mood_specific="grateful",
             tags=["happy", "work"],
             location="New York",
             entry_type="gratitude",
@@ -54,7 +55,8 @@ class TestCreateEntry:
                 "journal_id": JID,
                 "title": "My Day",
                 "body": "Great day today",
-                "mood_score": 5,
+                "mood_category": "happy",
+                "mood_specific": "grateful",
                 "tags": ["happy", "work"],
                 "location": "New York",
                 "entry_type": "gratitude",
@@ -65,7 +67,8 @@ class TestCreateEntry:
         assert response.status_code == 201
         data = response.json()
         assert data["title"] == "My Day"
-        assert data["mood_score"] == 5
+        assert data["mood_category"] == "happy"
+        assert data["mood_specific"] == "grateful"
         assert data["tags"] == ["happy", "work"]
         assert data["location"] == "New York"
         assert data["entry_type"] == "gratitude"
@@ -94,10 +97,31 @@ class TestCreateEntry:
         )
         assert response.status_code == 422
 
-    def test_create_mood_out_of_range(self, client: TestClient) -> None:
+    def test_create_invalid_mood_category_rejected(self, client: TestClient) -> None:
         response = client.post(
             ENTRIES_URL,
-            json={"journal_id": JID, "body": "test", "mood_score": 6},
+            json={"journal_id": JID, "body": "test", "mood_category": "ecstatic"},
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 422
+
+    def test_create_mood_specific_without_category_rejected(self, client: TestClient) -> None:
+        response = client.post(
+            ENTRIES_URL,
+            json={"journal_id": JID, "body": "test", "mood_specific": "grateful"},
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 422
+
+    def test_create_mood_wrong_pair_rejected(self, client: TestClient) -> None:
+        response = client.post(
+            ENTRIES_URL,
+            json={
+                "journal_id": JID,
+                "body": "test",
+                "mood_category": "happy",
+                "mood_specific": "stressed",
+            },
             headers=_auth_headers(),
         )
         assert response.status_code == 422
@@ -277,12 +301,19 @@ class TestUpdateEntry:
     def test_update_multiple_fields(
         self, client: TestClient, mock_journal_service: AsyncMock
     ) -> None:
-        row = make_entry_row(title="New", body="New body", mood_score=5)
+        row = make_entry_row(
+            title="New", body="New body", mood_category="happy", mood_specific="proud"
+        )
         mock_journal_service.update.return_value = row
 
         response = client.patch(
             f"{ENTRIES_URL}/{row.id}",
-            json={"title": "New", "body": "New body", "mood_score": 5},
+            json={
+                "title": "New",
+                "body": "New body",
+                "mood_category": "happy",
+                "mood_specific": "proud",
+            },
             headers=_auth_headers(),
         )
 
@@ -290,7 +321,8 @@ class TestUpdateEntry:
         data = response.json()
         assert data["title"] == "New"
         assert data["body"] == "New body"
-        assert data["mood_score"] == 5
+        assert data["mood_category"] == "happy"
+        assert data["mood_specific"] == "proud"
 
     def test_update_journal_id(
         self, client: TestClient, mock_journal_service: AsyncMock

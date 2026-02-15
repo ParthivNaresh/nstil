@@ -10,6 +10,12 @@ export type { EntryDetailContentProps } from "./EntryDetail";
 export { EntryForm } from "./EntryForm";
 export type { EntryFormProps } from "./EntryForm";
 
+export { JournalFilterBar } from "./JournalFilterBar";
+export type { JournalFilterBarProps } from "./JournalFilterBar";
+
+export { JournalPicker } from "./JournalPicker";
+export type { JournalPickerProps } from "./JournalPicker";
+
 export { EntryTypeSelector } from "./EntryTypeSelector";
 export type { EntryTypeSelectorProps } from "./EntryTypeSelector";
 

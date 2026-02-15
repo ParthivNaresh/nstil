@@ -12,7 +12,12 @@ import { useTranslation } from "react-i18next";
 
 import { EntryForm } from "@/components/journal";
 import { AmbientBackground, Header, HeaderAction } from "@/components/ui";
-import { useEntryForm, useHeaderHeight, useTheme } from "@/hooks";
+import {
+  useEntryForm,
+  useHeaderHeight,
+  useJournals,
+  useTheme,
+} from "@/hooks";
 import { spacing } from "@/styles";
 
 export default function CreateEntryScreen() {
@@ -20,7 +25,8 @@ export default function CreateEntryScreen() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
-  const form = useEntryForm();
+  const { data: journals = [] } = useJournals();
+  const form = useEntryForm({ journals });
 
   const handleSave = useCallback(() => {
     form.handleSubmit();
@@ -58,6 +64,8 @@ export default function CreateEntryScreen() {
         >
           <View style={styles.content}>
             <EntryForm
+              journals={journals}
+              journalId={form.journalId}
               body={form.body}
               title={form.title}
               moodScore={form.moodScore}
@@ -66,6 +74,7 @@ export default function CreateEntryScreen() {
               entryDate={form.entryDate}
               bodyError={form.bodyError}
               maxTags={form.maxTags}
+              onJournalChange={form.setJournalId}
               onBodyChange={form.setBody}
               onTitleChange={form.setTitle}
               onMoodChange={form.setMoodScore}

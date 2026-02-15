@@ -12,7 +12,13 @@ import { useTranslation } from "react-i18next";
 
 import { EntryForm } from "@/components/journal";
 import { AmbientBackground, Header, HeaderAction, Skeleton } from "@/components/ui";
-import { useEntry, useEntryForm, useHeaderHeight, useTheme } from "@/hooks";
+import {
+  useEntry,
+  useEntryForm,
+  useHeaderHeight,
+  useJournals,
+  useTheme,
+} from "@/hooks";
 import { spacing } from "@/styles";
 
 export default function EditEntryScreen() {
@@ -45,7 +51,8 @@ function EditEntryForm({ entryId }: { readonly entryId: string }) {
   const router = useRouter();
   const headerHeight = useHeaderHeight();
   const { data: entry } = useEntry(entryId);
-  const form = useEntryForm(entry);
+  const { data: journals = [] } = useJournals();
+  const form = useEntryForm({ entry, journals });
 
   const handleSave = useCallback(() => {
     form.handleSubmit();
@@ -83,6 +90,8 @@ function EditEntryForm({ entryId }: { readonly entryId: string }) {
         >
           <View style={styles.content}>
             <EntryForm
+              journals={journals}
+              journalId={form.journalId}
               body={form.body}
               title={form.title}
               moodScore={form.moodScore}
@@ -91,6 +100,7 @@ function EditEntryForm({ entryId }: { readonly entryId: string }) {
               entryDate={form.entryDate}
               bodyError={form.bodyError}
               maxTags={form.maxTags}
+              onJournalChange={form.setJournalId}
               onBodyChange={form.setBody}
               onTitleChange={form.setTitle}
               onMoodChange={form.setMoodScore}

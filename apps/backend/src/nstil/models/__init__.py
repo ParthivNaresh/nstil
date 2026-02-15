@@ -7,6 +7,7 @@ from nstil.models.journal import (
     JournalEntryRow,
     JournalEntryUpdate,
 )
+from nstil.models.mood import MoodCategory, MoodSpecific
 from nstil.models.pagination import CursorParams, SearchParams
 from nstil.models.space import (
     JournalSpaceCreate,
@@ -29,6 +30,8 @@ __all__ = [
     "JournalSpaceResponse",
     "JournalSpaceRow",
     "JournalSpaceUpdate",
+    "MoodCategory",
+    "MoodSpecific",
     "SearchParams",
     "UserPayload",
 ]
