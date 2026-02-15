@@ -37,3 +37,11 @@ def search_key(
 
 def search_pattern(user_id: UUID) -> str:
     return f"{KEY_PREFIX}:user:{user_id}:entries:search:*"
+
+
+def calendar_key(user_id: UUID, year: int, month: int, timezone: str = "UTC") -> str:
+    return f"{KEY_PREFIX}:user:{user_id}:calendar:{year}:{month}:{timezone}"
+
+
+def calendar_pattern(user_id: UUID) -> str:
+    return f"{KEY_PREFIX}:user:{user_id}:calendar:*"

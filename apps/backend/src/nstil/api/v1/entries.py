@@ -1,3 +1,4 @@
+from datetime import UTC, date, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -5,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from nstil.api.deps import get_current_user, get_journal_service
 from nstil.models import (
+    CalendarParams,
+    CalendarResponse,
     CursorParams,
     JournalEntryCreate,
     JournalEntryListResponse,
@@ -13,6 +16,7 @@ from nstil.models import (
     SearchParams,
     UserPayload,
 )
+from nstil.models.calendar import compute_streak
 from nstil.services.cached_journal import CachedJournalService
 
 router = APIRouter(prefix="/entries", tags=["entries"])
@@ -39,10 +43,13 @@ async def list_entries(
     cursor: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     journal_id: Annotated[UUID | None, Query()] = None,
+    entry_date: Annotated[date | None, Query(alias="date")] = None,
+    timezone: Annotated[str, Query(max_length=50)] = "UTC",
 ) -> JournalEntryListResponse:
     params = CursorParams(cursor=cursor, limit=limit)
     rows, has_more = await service.list_entries(
-        UUID(user.sub), params, journal_id=journal_id
+        UUID(user.sub), params, journal_id=journal_id,
+        entry_date=entry_date, timezone=timezone,
     )
     items = [JournalEntryResponse.from_row(row) for row in rows]
     next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
@@ -50,6 +57,28 @@ async def list_entries(
         items=items,
         next_cursor=next_cursor,
         has_more=has_more,
+    )
+
+
+@router.get("/calendar", response_model=CalendarResponse)
+async def get_calendar(
+    user: Annotated[UserPayload, Depends(get_current_user)],
+    service: Annotated[CachedJournalService, Depends(get_journal_service)],
+    year: Annotated[int, Query(ge=2020, le=2100)],
+    month: Annotated[int, Query(ge=1, le=12)],
+    timezone: Annotated[str, Query(max_length=50)] = "UTC",
+) -> CalendarResponse:
+    params = CalendarParams(year=year, month=month, timezone=timezone)
+    days = await service.get_calendar(UUID(user.sub), params)
+    total = sum(d.entry_count for d in days)
+    today = datetime.now(UTC).date()
+    streak = compute_streak(days, today)
+    return CalendarResponse(
+        year=year,
+        month=month,
+        days=days,
+        total_entries=total,
+        streak=streak,
     )
 
 

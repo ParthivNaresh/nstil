@@ -58,18 +58,18 @@ export function EntryForm({
         value={body}
         onChangeText={onBodyChange}
         error={bodyError ? t(bodyError) : undefined}
+        variant="flat"
         showCount
         minHeight={160}
         maxHeight={400}
       />
 
-      <View style={styles.section}>
-        <TextInput
-          label={t("journal.title")}
-          value={title}
-          onChangeText={onTitleChange}
-        />
-      </View>
+      <TextInput
+        label={t("journal.title")}
+        value={title}
+        onChangeText={onTitleChange}
+        variant="flat"
+      />
 
       <Divider color={colors.border} />
 

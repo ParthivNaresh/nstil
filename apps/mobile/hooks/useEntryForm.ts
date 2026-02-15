@@ -26,6 +26,7 @@ interface EntryFormState {
 interface UseEntryFormOptions {
   readonly entry?: JournalEntry;
   readonly journals?: JournalSpace[];
+  readonly initialDate?: Date;
 }
 
 interface UseEntryFormReturn {
@@ -53,7 +54,7 @@ interface UseEntryFormReturn {
   readonly maxTags: number;
 }
 
-function buildInitialState(entry?: JournalEntry): EntryFormState {
+function buildInitialState(entry?: JournalEntry, initialDate?: Date): EntryFormState {
   if (!entry) {
     return {
       title: "",
@@ -62,7 +63,7 @@ function buildInitialState(entry?: JournalEntry): EntryFormState {
       moodSpecific: null,
       tags: [],
       entryType: "journal",
-      entryDate: new Date(),
+      entryDate: initialDate ?? new Date(),
     };
   }
   return {
@@ -90,12 +91,12 @@ function resolveInitialJournalId(
 }
 
 export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormReturn {
-  const { entry, journals } = options;
+  const { entry, journals, initialDate } = options;
   const router = useRouter();
   const createMutation = useCreateEntry();
   const updateMutation = useUpdateEntry();
 
-  const initial = useMemo(() => buildInitialState(entry), [entry]);
+  const initial = useMemo(() => buildInitialState(entry, initialDate), [entry, initialDate]);
 
   const [title, setTitle] = useState(initial.title);
   const [body, setBody] = useState(initial.body);

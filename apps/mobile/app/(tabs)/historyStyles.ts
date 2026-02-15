@@ -6,15 +6,21 @@ export const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  searchWrapper: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
+  listHeader: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  filterWrapper: {
-    paddingBottom: spacing.sm,
+  calendarWrapper: {
+    paddingHorizontal: 0,
+  },
+  actionBarWrapper: {
+    paddingTop: spacing.xs,
   },
   list: {
     paddingHorizontal: spacing.md,
+  },
+  emptyList: {
+    flexGrow: 1,
   },
   cardWrapper: {
     marginBottom: spacing.sm,
@@ -22,6 +28,7 @@ export const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
+    paddingVertical: spacing.xl,
   },
   separator: {
     height: spacing.md,

@@ -1,9 +1,11 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from supabase import AsyncClient
 
+from nstil.models.calendar import CalendarDay, CalendarParams
 from nstil.models.journal import JournalEntryCreate, JournalEntryRow, JournalEntryUpdate
 from nstil.models.pagination import CursorParams, SearchParams
 
@@ -55,6 +57,8 @@ class JournalService:
         user_id: UUID,
         params: CursorParams,
         journal_id: UUID | None = None,
+        entry_date: date | None = None,
+        timezone: str = "UTC",
     ) -> tuple[list[JournalEntryRow], bool]:
         query = (
             self._client.table(TABLE)
@@ -68,6 +72,13 @@ class JournalService:
 
         if journal_id is not None:
             query = query.eq("journal_id", str(journal_id))
+
+        if entry_date is not None:
+            tz = ZoneInfo(timezone)
+            day_start = datetime(entry_date.year, entry_date.month, entry_date.day, tzinfo=tz)
+            day_end = day_start + timedelta(days=1)
+            query = query.gte("created_at", day_start.astimezone(UTC).isoformat())
+            query = query.lt("created_at", day_end.astimezone(UTC).isoformat())
 
         if params.cursor:
             query = query.lt("created_at", params.cursor)
@@ -128,6 +139,19 @@ class JournalService:
             rows = rows[: params.limit]
 
         return rows, has_more
+
+    async def get_calendar(
+        self, user_id: UUID, params: CalendarParams
+    ) -> list[CalendarDay]:
+        rpc_params: dict[str, str | int] = {
+            "p_user_id": str(user_id),
+            "p_year": params.year,
+            "p_month": params.month,
+            "p_timezone": params.timezone,
+        }
+        result = await self._client.rpc("get_calendar_data", rpc_params).execute()
+        data: list[dict[str, Any]] = result.data  # type: ignore[assignment]
+        return [CalendarDay.model_validate(row) for row in data]
 
     async def soft_delete(self, user_id: UUID, entry_id: UUID) -> bool:
         now = datetime.now(UTC).isoformat()

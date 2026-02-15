@@ -1,15 +1,19 @@
 import json
 from uuid import UUID
 
+from nstil.models.calendar import CalendarDay
 from nstil.models.journal import JournalEntryRow
 from nstil.observability import get_logger
 from nstil.services.cache.base import BaseCacheService
 from nstil.services.cache.constants import (
+    CALENDAR_TTL_SECONDS,
     ENTRY_LIST_TTL_SECONDS,
     ENTRY_TTL_SECONDS,
     SEARCH_TTL_SECONDS,
 )
 from nstil.services.cache.keys import (
+    calendar_key,
+    calendar_pattern,
     entry_key,
     entry_list_key,
     entry_list_pattern,
@@ -145,7 +149,40 @@ class EntryCacheService(BaseCacheService):
                 count=count,
             )
 
+    async def get_calendar(
+        self, user_id: UUID, year: int, month: int, timezone: str = "UTC"
+    ) -> list[CalendarDay] | None:
+        data = await self._get(calendar_key(user_id, year, month, timezone))
+        if data is None:
+            return None
+        try:
+            parsed: list[object] = json.loads(data)
+            return [CalendarDay.model_validate(item) for item in parsed]
+        except (json.JSONDecodeError, TypeError, ValueError):
+            logger.warning("cache.calendar.deserialize_failed", user_id=str(user_id))
+            return None
+
+    async def set_calendar(
+        self, user_id: UUID, year: int, month: int, days: list[CalendarDay],
+        timezone: str = "UTC",
+    ) -> None:
+        payload = json.dumps([day.model_dump(mode="json") for day in days])
+        await self._set(
+            calendar_key(user_id, year, month, timezone), payload, CALENDAR_TTL_SECONDS
+        )
+
+    async def invalidate_user_calendars(self, user_id: UUID) -> None:
+        pattern = calendar_pattern(user_id)
+        count = await self._delete_pattern(pattern)
+        if count > 0:
+            logger.debug(
+                "cache.calendars.invalidated",
+                user_id=str(user_id),
+                count=count,
+            )
+
     async def invalidate_all(self, user_id: UUID, entry_id: UUID) -> None:
         await self.invalidate_entry(user_id, entry_id)
         await self.invalidate_user_lists(user_id)
         await self.invalidate_user_searches(user_id)
+        await self.invalidate_user_calendars(user_id)

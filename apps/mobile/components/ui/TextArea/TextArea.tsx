@@ -26,6 +26,7 @@ export function TextArea({
   value,
   onChangeText,
   error,
+  variant = "outlined",
   maxLength,
   showCount = false,
   minHeight = DEFAULT_MIN_HEIGHT,
@@ -38,6 +39,7 @@ export function TextArea({
   const [isFocused, setIsFocused] = useState(false);
   const [contentHeight, setContentHeight] = useState(minHeight);
   const labelProgress = useSharedValue(value ? 1 : 0);
+  const isFlat = variant === "flat";
 
   const hasError = Boolean(error);
   const isActive = isFocused || Boolean(value);
@@ -74,13 +76,19 @@ export function TextArea({
       : colors.glassBorder;
 
   const inputContainerStyle = useMemo(
-    () => [styles.inputContainer, { borderColor, backgroundColor: colors.glass, minHeight }],
-    [borderColor, colors.glass, minHeight],
+    () =>
+      isFlat
+        ? [styles.flatContainer, { borderBottomColor: borderColor, minHeight }]
+        : [styles.inputContainer, { borderColor, backgroundColor: colors.glass, minHeight }],
+    [isFlat, borderColor, colors.glass, minHeight],
   );
 
   const inputStyle = useMemo(
-    () => [styles.input, { height: contentHeight, color: colors.textPrimary }],
-    [contentHeight, colors.textPrimary],
+    () => [
+      isFlat ? styles.flatInput : styles.input,
+      { height: contentHeight, color: colors.textPrimary },
+    ],
+    [isFlat, contentHeight, colors.textPrimary],
   );
 
   return (
@@ -131,10 +139,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.md,
   },
+  flatContainer: {
+    borderBottomWidth: 1,
+  },
   input: {
     ...typography.body,
     paddingHorizontal: spacing.md,
     paddingTop: 28,
+    paddingBottom: spacing.sm,
+  },
+  flatInput: {
+    ...typography.body,
+    paddingHorizontal: 0,
+    paddingTop: 24,
     paddingBottom: spacing.sm,
   },
   footer: {

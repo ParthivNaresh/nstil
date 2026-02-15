@@ -16,7 +16,7 @@ export default function SignInScreen() {
   const passwordRef = useRef<RNTextInput>(null);
 
   return (
-    <ScreenContainer ambient={false}>
+    <ScreenContainer>
       <View style={styles.content}>
         <AuthHeader
           title={t("auth.signIn.title")}

@@ -27,7 +27,7 @@ export default function ForgotPasswordScreen() {
         : t("auth.forgotPassword.resend");
 
     return (
-      <ScreenContainer scrollable={false} centered ambient={false}>
+      <ScreenContainer scrollable={false} centered>
         <View style={styles.content}>
           <View style={styles.header}>
             <AppText variant="h1">
@@ -68,7 +68,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <ScreenContainer scrollable={false} centered ambient={false}>
+    <ScreenContainer scrollable={false} centered>
       <View style={styles.content}>
         <View style={styles.header}>
           <AppText variant="h1">{t("auth.forgotPassword.title")}</AppText>

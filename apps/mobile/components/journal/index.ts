@@ -1,3 +1,8 @@
+export { Calendar } from "./Calendar";
+export type { CalendarProps } from "./Calendar";
+
+export { DayActionBar } from "./DayActionBar";
+
 export { AnimatedEntryCard, EntryCard, EntryCardSkeleton } from "./EntryCard";
 export type { EntryCardProps, EntryCardSkeletonProps } from "./EntryCard";
 

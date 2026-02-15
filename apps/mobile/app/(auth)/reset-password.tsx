@@ -14,7 +14,7 @@ export default function ResetPasswordScreen() {
   const confirmPasswordRef = useRef<RNTextInput>(null);
 
   return (
-    <ScreenContainer ambient={false}>
+    <ScreenContainer>
       <View style={styles.content}>
         <AuthHeader
           title={t("auth.resetPassword.title")}

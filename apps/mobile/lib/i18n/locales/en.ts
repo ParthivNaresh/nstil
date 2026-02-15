@@ -9,6 +9,7 @@ const en = {
   tabs: {
     home: "Home",
     history: "History",
+    create: "New",
     insights: "Insights",
     settings: "Settings",
   },
@@ -64,12 +65,19 @@ const en = {
   },
   history: {
     allJournals: "All",
+    searchTitle: "Search",
     searchPlaceholder: "Search entries...",
     emptyTitle: "No entries yet",
     emptySubtitle: "Your entries will appear here",
     emptyAction: "Write your first entry",
     searchEmptyTitle: "No results",
     searchEmptySubtitle: "Try a different search term",
+    dayEmptyTitle: "No entries",
+    dayEmptySubtitle: "How are you feeling today?",
+    dayEmptyAction: "Add your thoughts",
+    pastDayEmptyTitle: "Nothing recorded",
+    pastDayEmptySubtitle: "Add a reflection for this day",
+    pastDayEmptyAction: "Reflect on this day",
   },
   insights: {
     emptyTitle: "No insights yet",

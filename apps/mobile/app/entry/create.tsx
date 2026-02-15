@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useCallback } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useMemo } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,7 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
 
 import { EntryForm } from "@/components/journal";
-import { AmbientBackground, Header, HeaderAction } from "@/components/ui";
+import { Header, HeaderAction } from "@/components/ui";
 import {
   useEntryForm,
   useHeaderHeight,
@@ -20,13 +20,33 @@ import {
 } from "@/hooks";
 import { spacing } from "@/styles";
 
+function buildDateWithCurrentTime(dateString: string): Date {
+  const [yearStr, monthStr, dayStr] = dateString.split("-");
+  const now = new Date();
+  return new Date(
+    Number(yearStr),
+    Number(monthStr) - 1,
+    Number(dayStr),
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds(),
+  );
+}
+
 export default function CreateEntryScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const params = useLocalSearchParams<{ date?: string }>();
   const { data: journals = [] } = useJournals();
-  const form = useEntryForm({ journals });
+
+  const initialDate = useMemo(
+    () => (params.date ? buildDateWithCurrentTime(params.date) : undefined),
+    [params.date],
+  );
+
+  const form = useEntryForm({ journals, initialDate });
 
   const handleSave = useCallback(() => {
     form.handleSubmit();
@@ -42,8 +62,7 @@ export default function CreateEntryScreen() {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <AmbientBackground />
+    <View style={styles.root}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <Header
         title={t("journal.newEntry")}

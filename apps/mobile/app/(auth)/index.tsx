@@ -21,7 +21,7 @@ export default function WelcomeScreen() {
   }, [router]);
 
   return (
-    <ScreenContainer scrollable={false} centered ambient={false}>
+    <ScreenContainer scrollable={false} centered>
       <View style={styles.content}>
         <View style={styles.branding}>
           <AppText variant="h1" style={styles.title}>

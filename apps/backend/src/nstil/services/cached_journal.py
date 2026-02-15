@@ -1,5 +1,7 @@
+from datetime import date
 from uuid import UUID
 
+from nstil.models.calendar import CalendarDay, CalendarParams
 from nstil.models.journal import JournalEntryCreate, JournalEntryRow, JournalEntryUpdate
 from nstil.models.pagination import CursorParams, SearchParams
 from nstil.services.cache.entry_cache import EntryCacheService
@@ -19,6 +21,7 @@ class CachedJournalService:
         row = await self._db.create(user_id, data)
         await self._cache.set_entry(user_id, row.id, row)
         await self._cache.invalidate_user_lists(user_id)
+        await self._cache.invalidate_user_calendars(user_id)
         return row
 
     async def get_by_id(
@@ -38,7 +41,14 @@ class CachedJournalService:
         user_id: UUID,
         params: CursorParams,
         journal_id: UUID | None = None,
+        entry_date: date | None = None,
+        timezone: str = "UTC",
     ) -> tuple[list[JournalEntryRow], bool]:
+        if entry_date is not None:
+            return await self._db.list_entries(
+                user_id, params, journal_id, entry_date, timezone
+            )
+
         journal_id_str = str(journal_id) if journal_id else None
         cached = await self._cache.get_list(
             user_id, params.cursor, params.limit, journal_id_str
@@ -79,6 +89,21 @@ class CachedJournalService:
             journal_id_str,
         )
         return rows, has_more
+
+    async def get_calendar(
+        self, user_id: UUID, params: CalendarParams
+    ) -> list[CalendarDay]:
+        cached = await self._cache.get_calendar(
+            user_id, params.year, params.month, params.timezone
+        )
+        if cached is not None:
+            return cached
+
+        days = await self._db.get_calendar(user_id, params)
+        await self._cache.set_calendar(
+            user_id, params.year, params.month, days, params.timezone
+        )
+        return days
 
     async def soft_delete(self, user_id: UUID, entry_id: UUID) -> bool:
         deleted = await self._db.soft_delete(user_id, entry_id)

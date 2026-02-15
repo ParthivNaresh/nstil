@@ -1,3 +1,5 @@
+export { useCalendarRange } from "./useCalendar";
+export { useDayEntries } from "./useDayEntries";
 export {
   useCreateEntry,
   useDeleteEntry,

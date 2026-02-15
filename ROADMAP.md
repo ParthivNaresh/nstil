@@ -70,12 +70,15 @@ With the theme system in place, redesign existing screens to close the gap with 
 **Completed:**
 
 - [x] Entry form redesign — section dividers between form groups, increased textarea `minHeight` (180px), better vertical breathing room (`spacing.lg` gaps)
+- [x] Entry form flat inputs — `TextInput` and `TextArea` support `variant="flat"` (borderless, no background, subtle bottom line). Journal entry form uses flat variant so text sits directly on the ambient background
+- [x] Custom date/time picker — replaced native iOS compact picker with custom bottom sheet. `DateTimeTrigger` (minimal text line: "Feb 14, 2026 — 3:09 PM"). `DateTimePickerSheet` modal with `PickerCalendar` (single-month grid with prev/next navigation, fixed 6-row layout) + native time spinner. Smooth fade-in/out animation via shared `opacity` value. Future time prevention (spinner `maximumDate` on today + clamp on confirm). `sheet` color token added to all palettes
 - [x] Mood selector — Skia gradient-tinted backgrounds per mood (idle + selected states), 64px touch targets, colored border on selection, haptic feedback
 - [x] Entry type selector — pill shapes (`radius.full`), haptic feedback on selection, accent-colored selected state
 - [x] Journal list — mood-colored left accent border via Skia `MoodAccent`, staggered fade-in animation (`AnimatedEntryCard`), better typography hierarchy (date prominent, body secondary), increased card spacing
 - [x] Detail screen — full-width Skia gradient mood banner, metadata row with icons (Calendar, FileText, MapPin), tags as rounded pills, better section spacing
 - [x] Tab bar — animated active tab indicator (accent-colored pill, spring scale animation)
 - [x] Tag pills — consistent `radius.full` pill styling across EntryCard, EntryDetail, and TagInput
+- [x] Persistent ambient background — single `AmbientBackground` mounted at root layout. All `Stack`/`Tabs` layouts use transparent `contentStyle`/`sceneStyle`. Screen backgrounds removed. Skia shader runs once, continuously, behind all navigation
 - [x] Tests — tsc ✅, eslint ✅
 
 **Remaining:**
@@ -127,7 +130,7 @@ Let users set a custom date for entries.
 - [x] Service layer — `JournalService.create()` conditionally includes `created_at` in insert payload. When `None`, Postgres `DEFAULT now()` applies
 - [x] Mobile — `EntryDatePicker` component (journal-specific, not generic UI) using native iOS compact picker (`display="compact"`). Glass pill trigger with calendar icon. Border + icon shift to accent color when backdated. `useEntryForm` manages `entryDate` state, serializes to ISO on submit. Old generic `DatePicker` UI component deleted
 - [x] Tests — 12 new backend tests (model + API): create with custom date, default none, future rejected, naive gets UTC, update date, update future rejected, `to_update_dict` serialization. 148 total passing. Mobile: tsc ✅, eslint ✅
-- [ ] **Visual debt** — native iOS compact picker popover cannot be styled (system UI). Will be replaced with a custom Skia-rendered glass-morphism date/time picker in 4I alongside the History tab calendar (shared components)
+- [x] **Visual debt resolved** — native iOS compact picker replaced with custom `DateTimePickerSheet` bottom sheet (built in 4B). `PickerCalendar` with month navigation + native time spinner. `DateTimeTrigger` text line. Future time clamping. `sheet` palette token
 
 ### Subphase 4G — Journals & Spaces 🔄
 
@@ -163,17 +166,27 @@ Replace the 5-point emoji scale with a two-level category + sub-emotion system. 
 - [x] **useEntryForm** — Manages `moodCategory` and `moodSpecific` state. Clears specific when category changes. Sends both in create/update payloads
 - [x] **Tests** — tsc ✅, eslint ✅. Backend: ruff ✅, mypy ✅ (45 files), 231 tests ✅
 
-### Subphase 4I — Calendar, Date Picker & Mood History View
+### Subphase 4I — Calendar & Mood History View 🔄
 
-Monthly calendar showing mood logged each day — the signature feature of mood tracking apps. Also replaces the native iOS date picker with a custom Skia-rendered glass-morphism picker (shared components between calendar and entry form).
+Continuous-scroll mood calendar at the top of the History tab. Each day shows a Skia-rendered mood-colored circle. Timezone-aware aggregation. Custom date picker deferred to a later subphase.
 
-**Objectives:**
+**Completed:**
 
-- [ ] Custom date/time picker — Skia-rendered glass-morphism bottom sheet with scroll wheels for date and time selection. Replaces native iOS compact picker in `EntryDatePicker`. Shared primitives reused by calendar grid
-- [ ] Backend — `GET /api/v1/entries/calendar?year=2026&month=1`. Returns array of `{ date, mood_category, mood_specific, entry_count }` per day. Aggregated query grouped by date, dominant mood per day
-- [ ] Mobile — monthly grid with Skia-rendered mood-colored dots per day. Swipe to change months. Tap day → filtered entry list. Current day highlighted. Mood streak (consecutive days with entries). Lives in History tab
-- [ ] Cache — calendar data cached per user + month (5 min TTL). Invalidated on entry changes
-- [ ] Tests — backend: calendar aggregation, empty month, multiple entries per day. Mobile: tsc + eslint
+- [x] **Database migration** — `006_ADD_CALENDAR_RPC.sql`. `get_calendar_data` RPC function with `p_timezone` parameter. Groups entries by local date using `at time zone p_timezone`. Returns dominant mood (most recent entry per day via `row_number()`), entry count per day. Soft-deleted entries excluded
+- [x] **Backend models** — `models/calendar.py`: `CalendarParams` (year, month, timezone), `CalendarDay` (date, mood_category, mood_specific, entry_count), `CalendarResponse` (year, month, days sorted, total_entries, streak). `compute_streak()` function: consecutive days ending at today (or yesterday fallback)
+- [x] **Backend service** — `JournalService.get_calendar()` calls RPC with timezone. `CachedJournalService.get_calendar()` cache-first with 5-min TTL. Cache key includes timezone for per-timezone caching
+- [x] **Cache layer** — `calendar_key(user_id, year, month, timezone)`, `calendar_pattern(user_id)`. `invalidate_user_calendars()` on create/update/delete. `invalidate_all()` includes calendar invalidation. `create()` also invalidates calendars (bug fix — was missing)
+- [x] **API endpoint** — `GET /api/v1/entries/calendar?year=2026&month=2&timezone=America/Los_Angeles`. Returns `CalendarResponse`
+- [x] **Backend tests** — 253 total passing. Model tests (13): params validation, day model, response sorting, streak computation (empty, single, consecutive, gap, yesterday fallback). API tests (7): returns days, empty month, invalid month/year, missing params, auth required, user_id passthrough
+- [x] **Mobile types & API** — `types/calendar.ts` with `CalendarDay`, `CalendarResponse`. `services/api/calendar.ts` with `getCalendar(year, month, timezone)`. Query keys: `entries.calendars()`, `entries.calendar(year, month)`
+- [x] **Timezone handling** — Client reads IANA timezone via `Intl.DateTimeFormat().resolvedOptions().timeZone`, passes to API. RPC uses `at time zone p_timezone` for all date conversions. Entries display on the correct local date regardless of UTC offset
+- [x] **Calendar component** — Continuous vertical scroll calendar (not paginated). `buildMonthSection()` generates week rows per month. `generateMonthRange()` builds 6 past + 1 future months. Fixed-height scroll window (4 rows visible). Initial scroll position: current week at bottom. `useFocusEffect` resets scroll on tab re-focus
+- [x] **CalendarDayCell** — Skia `Circle` with `LinearGradient` fill for mood-colored days (25% opacity). Circular cells with breathing room between them. Today: accent fill + ring. Subtle glass border on mood cells. Entry dot (4px) below day number. Text hierarchy: `textPrimary` for entry days, `textSecondary` for regular days, dimmed for outside-month/future
+- [x] **CalendarHeader** — Month name + year, auto-updates based on scroll position via `onScroll` handler (detects which month occupies the viewport center)
+- [x] **useCalendarRange** — `useQueries` fetches 8 months in parallel. Merges all `CalendarDay` data into a single `Map<string, CalendarDay>`. Streak = max across all months
+- [x] **History tab integration** — Calendar in `ListHeaderComponent` of `FlatList`. Entire screen scrolls as one surface. Entry mutations (`useCreateEntry`, `useUpdateEntry`, `useDeleteEntry`, `useTogglePin`) all invalidate `queryKeys.entries.calendars()`
+- [x] **Visual polish** — Semi-transparent card background (`surface` at 35% opacity) lets ambient Skia blobs show through. Circular cells, mood gradient fills, entry dots, today accent ring
+- [x] **Tests** — tsc ✅, eslint ✅. Backend: ruff ✅, mypy ✅ (46 files), 253 tests ✅
 
 ### Subphase 4J — Media Attachments (Images)
 

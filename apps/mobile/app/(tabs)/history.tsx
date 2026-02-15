@@ -1,40 +1,43 @@
 import { useRouter } from "expo-router";
-import { BookOpen, Plus, SearchX } from "lucide-react-native";
+import { Feather, Search } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  View,
-} from "react-native";
+import { FlatList, Pressable, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import { AnimatedEntryCard, EntryCardSkeleton, JournalFilterBar } from "@/components/journal";
 import {
-  AmbientBackground,
+  AnimatedEntryCard,
+  Calendar,
+  DayActionBar,
+  EntryCardSkeleton,
+} from "@/components/journal";
+import {
   EmptyState,
   Header,
   Icon,
-  SearchInput,
 } from "@/components/ui";
 import {
-  useEntries,
+  useCalendarRange,
+  useDayEntries,
   useHeaderHeight,
-  useJournals,
-  useSearchEntries,
   useTheme,
 } from "@/hooks";
+import { formatDateString } from "@/lib/calendarUtils";
 import { spacing } from "@/styles";
 import type { JournalEntry } from "@/types";
 
 import { styles } from "./historyStyles";
 
-const SKELETON_COUNT = 4;
+const SKELETON_COUNT = 3;
 const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => String(i));
-const PAGINATION_THRESHOLD = 0.5;
+const DAY_SEARCH_THRESHOLD = 5;
 const EMPTY_ENTRIES: JournalEntry[] = [];
+
+function getTodayString(): string {
+  const now = new Date();
+  return formatDateString(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
 
 export default function HistoryScreen() {
   const { t } = useTranslation();
@@ -43,23 +46,36 @@ export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedJournalId, setSelectedJournalId] = useState<string | null>(null);
-  const isSearching = searchQuery.trim().length > 0;
+  const [selectedDate, setSelectedDate] = useState(getTodayString);
+  const [inlineSearch, setInlineSearch] = useState("");
 
-  const { data: journals = [] } = useJournals();
-  const listQuery = useEntries(selectedJournalId ?? undefined);
-  const searchQueryResult = useSearchEntries(searchQuery, selectedJournalId ?? undefined);
+  const calendarData = useCalendarRange();
+  const dayQuery = useDayEntries(selectedDate);
 
-  const activeQuery = isSearching ? searchQueryResult : listQuery;
-
-  const entries = useMemo<JournalEntry[]>(
-    () => activeQuery.data?.pages.flatMap((page) => page.items) ?? EMPTY_ENTRIES,
-    [activeQuery.data],
+  const dayEntries = useMemo<JournalEntry[]>(
+    () => dayQuery.data?.items ?? EMPTY_ENTRIES,
+    [dayQuery.data],
   );
 
-  const isInitialLoad = activeQuery.isLoading && !activeQuery.isError;
-  const isEmpty = !isInitialLoad && entries.length === 0;
+  const isInlineSearching = inlineSearch.trim().length > 0;
+
+  const displayEntries = useMemo<JournalEntry[]>(() => {
+    if (!isInlineSearching) return dayEntries;
+    const query = inlineSearch.trim().toLowerCase();
+    return dayEntries.filter(
+      (entry) =>
+        entry.title.toLowerCase().includes(query) ||
+        entry.body.toLowerCase().includes(query) ||
+        entry.tags.some((tag) => tag.toLowerCase().includes(query)),
+    );
+  }, [dayEntries, inlineSearch, isInlineSearching]);
+  const isFirstLoad = dayQuery.isLoading && !dayQuery.isPlaceholderData;
+  const hasEntries = dayEntries.length > 0;
+
+  const handleDayPress = useCallback((dateString: string) => {
+    setSelectedDate(dateString);
+    setInlineSearch("");
+  }, []);
 
   const handleEntryPress = useCallback(
     (id: string) => {
@@ -69,18 +85,17 @@ export default function HistoryScreen() {
   );
 
   const handleCreatePress = useCallback(() => {
-    router.push("/entry/create");
-  }, [router]);
-
-  const handleEndReached = useCallback(() => {
-    if (activeQuery.hasNextPage && !activeQuery.isFetchingNextPage) {
-      void activeQuery.fetchNextPage();
+    const today = getTodayString();
+    if (selectedDate < today) {
+      router.push({ pathname: "/entry/create", params: { date: selectedDate } });
+    } else {
+      router.push("/entry/create");
     }
-  }, [activeQuery]);
+  }, [router, selectedDate]);
 
-  const handleRefresh = useCallback(() => {
-    void activeQuery.refetch();
-  }, [activeQuery]);
+  const handleSearchPress = useCallback(() => {
+    router.push("/entry/search");
+  }, [router]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: JournalEntry; index: number }) => (
@@ -94,90 +109,113 @@ export default function HistoryScreen() {
     [],
   );
 
-  const createButton = (
-    <Pressable onPress={handleCreatePress} accessibilityLabel="Create entry">
-      <Icon icon={Plus} size="md" color={colors.accent} />
+  const searchButton = (
+    <Pressable onPress={handleSearchPress} accessibilityLabel="Search entries">
+      <Icon icon={Search} size="md" color={colors.accent} />
     </Pressable>
   );
 
-  const emptyIcon = isSearching ? SearchX : BookOpen;
-  const emptyTitle = isSearching
-    ? t("history.searchEmptyTitle")
-    : t("history.emptyTitle");
-  const emptySubtitle = isSearching
-    ? t("history.searchEmptySubtitle")
-    : t("history.emptySubtitle");
-
-  return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <AmbientBackground />
-      <Header title={t("tabs.history")} rightAction={createButton} />
-
-      <View style={[styles.searchWrapper, { paddingTop: headerHeight + spacing.sm }]}>
-        <SearchInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t("history.searchPlaceholder")}
-        />
+  const listHeader = useMemo(
+    () => (
+      <View style={styles.listHeader}>
+        <View style={styles.calendarWrapper}>
+          <Calendar
+            dayMap={calendarData.dayMap}
+            streak={calendarData.streak}
+            totalEntries={calendarData.totalEntries}
+            selectedDate={selectedDate}
+            onDayPress={handleDayPress}
+          />
+        </View>
+        {hasEntries ? (
+          <View style={styles.actionBarWrapper}>
+            <DayActionBar
+              selectedDate={selectedDate}
+              searchValue={inlineSearch}
+              onSearchChange={setInlineSearch}
+              onAddReflection={handleCreatePress}
+              showSearch={dayEntries.length >= DAY_SEARCH_THRESHOLD}
+              searchPlaceholder={t("history.searchPlaceholder")}
+            />
+          </View>
+        ) : null}
       </View>
+    ),
+    [
+      calendarData.dayMap,
+      calendarData.streak,
+      calendarData.totalEntries,
+      selectedDate,
+      handleDayPress,
+      hasEntries,
+      dayEntries.length,
+      inlineSearch,
+      handleCreatePress,
+      t,
+    ],
+  );
 
-      <View style={styles.filterWrapper}>
-        <JournalFilterBar
-          journals={journals}
-          selectedId={selectedJournalId}
-          onSelect={setSelectedJournalId}
-        />
-      </View>
+  const isPastDay = selectedDate < getTodayString();
 
-      {isInitialLoad ? (
-        <View style={styles.list}>
+  const emptyComponent = useMemo(
+    () =>
+      isFirstLoad ? (
+        <View>
           {SKELETON_IDS.map((id) => (
             <View key={id} style={styles.cardWrapper}>
               <EntryCardSkeleton />
             </View>
           ))}
         </View>
-      ) : isEmpty ? (
-        <View style={styles.emptyContainer}>
-          <EmptyState
-            icon={emptyIcon}
-            title={emptyTitle}
-            subtitle={emptySubtitle}
-            actionLabel={isSearching ? undefined : t("history.emptyAction")}
-            onAction={isSearching ? undefined : handleCreatePress}
-          />
-        </View>
       ) : (
-        <FlatList
-          data={entries}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: insets.bottom + spacing.lg },
-          ]}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={PAGINATION_THRESHOLD}
-          refreshControl={
-            <RefreshControl
-              refreshing={activeQuery.isRefetching && !activeQuery.isFetchingNextPage}
-              onRefresh={handleRefresh}
-              tintColor={colors.accent}
-              progressBackgroundColor={colors.surface}
-              progressViewOffset={headerHeight}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={ItemSeparator}
-          ListFooterComponent={
-            activeQuery.isFetchingNextPage ? (
-              <View style={styles.footer}>
-                <ActivityIndicator size="small" color={colors.accent} />
-              </View>
-            ) : null
-          }
-        />
-      )}
+        <Animated.View entering={FadeIn.duration(300)} style={styles.emptyContainer}>
+          <EmptyState
+            icon={Feather}
+            title={
+              isInlineSearching
+                ? t("history.searchEmptyTitle")
+                : t("history.dayEmptyTitle")
+            }
+            subtitle={
+              isInlineSearching
+                ? t("history.searchEmptySubtitle")
+                : undefined
+            }
+            actionLabel={
+              isInlineSearching
+                ? undefined
+                : isPastDay
+                  ? t("history.pastDayEmptyAction")
+                  : t("history.dayEmptySubtitle")
+            }
+            onAction={isInlineSearching ? undefined : handleCreatePress}
+            variant="minimal"
+          />
+        </Animated.View>
+      ),
+    [isFirstLoad, isInlineSearching, isPastDay, t, handleCreatePress],
+  );
+
+  return (
+    <View style={styles.root}>
+      <Header title={t("tabs.history")} rightAction={searchButton} />
+      <FlatList
+        data={displayEntries}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={emptyComponent}
+        contentContainerStyle={[
+          styles.list,
+          {
+            paddingTop: headerHeight + spacing.sm,
+            paddingBottom: insets.bottom + spacing.lg,
+          },
+          displayEntries.length === 0 && styles.emptyList,
+        ]}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={ItemSeparator}
+      />
     </View>
   );
 }

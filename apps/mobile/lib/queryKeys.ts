@@ -9,6 +9,12 @@ export const queryKeys = {
     searches: () => [...queryKeys.entries.all, "search"] as const,
     search: (query: string, journalId?: string) =>
       [...queryKeys.entries.searches(), { query, journalId }] as const,
+    dayEntries: () => [...queryKeys.entries.all, "day"] as const,
+    dayEntry: (date: string, journalId?: string) =>
+      [...queryKeys.entries.dayEntries(), { date, journalId }] as const,
+    calendars: () => [...queryKeys.entries.all, "calendar"] as const,
+    calendar: (year: number, month: number) =>
+      [...queryKeys.entries.calendars(), { year, month }] as const,
   },
   journals: {
     all: ["journals"] as const,

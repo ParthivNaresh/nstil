@@ -1,33 +1,52 @@
-alter table public.journal_entries
-    add column mood_category text,
-    add column mood_specific text;
-
-alter table public.journal_entries
-    add constraint journal_entries_mood_category_valid
-    check (mood_category in ('happy', 'calm', 'sad', 'anxious', 'angry'));
-
-alter table public.journal_entries
-    add constraint journal_entries_mood_specific_valid
-    check (mood_specific in (
-        'joyful', 'grateful', 'excited', 'proud',
-        'peaceful', 'content', 'relaxed', 'hopeful',
-        'down', 'lonely', 'disappointed', 'nostalgic',
-        'stressed', 'worried', 'overwhelmed', 'restless',
-        'frustrated', 'irritated', 'hurt', 'resentful'
-    ));
-
-alter table public.journal_entries
-    add constraint journal_entries_mood_specific_requires_category
-    check (mood_specific is null or mood_category is not null);
-
-update public.journal_entries set mood_category = 'angry'   where mood_score = 1;
-update public.journal_entries set mood_category = 'sad'     where mood_score = 2;
-update public.journal_entries set mood_category = 'calm'    where mood_score = 3;
-update public.journal_entries set mood_category = 'calm'    where mood_score = 4;
-update public.journal_entries set mood_category = 'happy'   where mood_score = 5;
-
-alter table public.journal_entries drop column mood_score;
-
-create index idx_journal_entries_mood
-    on public.journal_entries (user_id, mood_category)
-    where deleted_at is null and mood_category is not null;
+create or replace function public.get_calendar_data(
+    p_user_id uuid,
+    p_year int,
+    p_month int
+)
+returns table (
+    date text,
+    mood_category text,
+    mood_specific text,
+    entry_count bigint
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+    with daily_entries as (
+        select
+            to_char(e.created_at at time zone 'UTC', 'YYYY-MM-DD') as day,
+            e.mood_category,
+            e.mood_specific,
+            row_number() over (
+                partition by to_char(e.created_at at time zone 'UTC', 'YYYY-MM-DD')
+                order by e.created_at desc
+            ) as rn
+        from public.journal_entries e
+        where e.user_id = p_user_id
+          and e.deleted_at is null
+          and extract(year from e.created_at at time zone 'UTC') = p_year
+          and extract(month from e.created_at at time zone 'UTC') = p_month
+    ),
+    daily_counts as (
+        select
+            day,
+            count(*) as cnt
+        from daily_entries
+        group by day
+    ),
+    daily_mood as (
+        select day, mood_category, mood_specific
+        from daily_entries
+        where rn = 1
+    )
+    select
+        dc.day as date,
+        dm.mood_category,
+        dm.mood_specific,
+        dc.cnt as entry_count
+    from daily_counts dc
+    left join daily_mood dm on dc.day = dm.day
+    order by dc.day;
+$$;

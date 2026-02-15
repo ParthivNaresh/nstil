@@ -1,4 +1,5 @@
 from nstil.models.auth import UserPayload
+from nstil.models.calendar import CalendarDay, CalendarParams, CalendarResponse
 from nstil.models.journal import (
     EntryType,
     JournalEntryCreate,
@@ -18,6 +19,9 @@ from nstil.models.space import (
 )
 
 __all__ = [
+    "CalendarDay",
+    "CalendarParams",
+    "CalendarResponse",
     "CursorParams",
     "EntryType",
     "JournalEntryCreate",

@@ -11,7 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
 
 import { EntryForm } from "@/components/journal";
-import { AmbientBackground, Header, HeaderAction, Skeleton } from "@/components/ui";
+import { Header, HeaderAction, Skeleton } from "@/components/ui";
 import {
   useEntry,
   useEntryForm,
@@ -31,8 +31,7 @@ export default function EditEntryScreen() {
 
   if (isLoading || !entry) {
     return (
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
-        <AmbientBackground />
+      <View style={styles.root}>
         <StatusBar style={isDark ? "light" : "dark"} />
         <Header title={t("journal.editEntry")} onBack={router.back} />
         <View style={[styles.content, { paddingTop: headerHeight + spacing.md }]}>
@@ -68,8 +67,7 @@ function EditEntryForm({ entryId }: { readonly entryId: string }) {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <AmbientBackground />
+    <View style={styles.root}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <Header
         title={t("journal.editEntry")}

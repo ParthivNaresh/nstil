@@ -3,6 +3,7 @@ export interface ColorPalette {
   readonly surface: string;
   readonly surfaceElevated: string;
 
+  readonly sheet: string;
   readonly glass: string;
   readonly glassBorder: string;
   readonly glassHover: string;
@@ -31,6 +32,7 @@ export const darkPalette: ColorPalette = {
   surface: "#12121A",
   surfaceElevated: "#1A1A24",
 
+  sheet: "#1A1A24",
   glass: "rgba(255, 255, 255, 0.05)",
   glassBorder: "rgba(255, 255, 255, 0.08)",
   glassHover: "rgba(255, 255, 255, 0.10)",
@@ -59,6 +61,7 @@ export const lightPalette: ColorPalette = {
   surface: "#FFF0E6",
   surfaceElevated: "#F0D8C8",
 
+  sheet: "#FCEBD5",
   glass: "rgba(255, 240, 230, 0.70)",
   glassBorder: "rgba(0, 0, 0, 0.06)",
   glassHover: "rgba(255, 240, 230, 0.85)",
@@ -87,6 +90,7 @@ export const oledPalette: ColorPalette = {
   surface: "#0A0A0A",
   surfaceElevated: "#141414",
 
+  sheet: "#0A0A0A",
   glass: "rgba(255, 255, 255, 0.03)",
   glassBorder: "rgba(255, 255, 255, 0.10)",
   glassHover: "rgba(255, 255, 255, 0.06)",

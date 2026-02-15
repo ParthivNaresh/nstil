@@ -1,14 +1,7 @@
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
-import { Calendar } from "lucide-react-native";
-import { useCallback } from "react";
-import { View } from "react-native";
+import { useCallback, useState } from "react";
 
-import { Icon } from "@/components/ui/Icon";
-import { useTheme } from "@/hooks/useTheme";
-
-import { styles } from "./styles";
+import { DateTimePickerSheet } from "./DateTimePickerSheet";
+import { DateTimeTrigger } from "./DateTimeTrigger";
 import type { EntryDatePickerProps } from "./types";
 
 function isToday(date: Date): boolean {
@@ -25,38 +18,38 @@ export function EntryDatePicker({
   onChange,
   maximumDate,
 }: EntryDatePickerProps) {
-  const { colors, isDark } = useTheme();
+  const [sheetVisible, setSheetVisible] = useState(false);
 
-  const backdated = !isToday(value);
-  const iconColor = backdated ? colors.accent : colors.textTertiary;
-  const borderColor = backdated ? colors.accent : colors.glassBorder;
+  const handleOpen = useCallback(() => {
+    setSheetVisible(true);
+  }, []);
 
-  const handleChange = useCallback(
-    (_event: DateTimePickerEvent, selectedDate?: Date) => {
-      if (selectedDate) {
-        onChange(selectedDate);
-      }
+  const handleDismiss = useCallback(() => {
+    setSheetVisible(false);
+  }, []);
+
+  const handleConfirm = useCallback(
+    (date: Date) => {
+      onChange(date);
+      setSheetVisible(false);
     },
     [onChange],
   );
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.glass, borderColor },
-      ]}
-    >
-      <Icon icon={Calendar} size="xs" color={iconColor} />
-      <DateTimePicker
+    <>
+      <DateTimeTrigger
         value={value}
-        mode="datetime"
-        display="compact"
-        onChange={handleChange}
-        maximumDate={maximumDate}
-        themeVariant={isDark ? "dark" : "light"}
-        accentColor={colors.accent}
+        isBackdated={!isToday(value)}
+        onPress={handleOpen}
       />
-    </View>
+      <DateTimePickerSheet
+        visible={sheetVisible}
+        value={value}
+        maximumDate={maximumDate}
+        onConfirm={handleConfirm}
+        onDismiss={handleDismiss}
+      />
+    </>
   );
 }

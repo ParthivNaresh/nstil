@@ -13,6 +13,8 @@ const ENTRIES_PATH = "/api/v1/entries";
 
 interface ListEntriesParams extends CursorParams {
   readonly journalId?: string;
+  readonly date?: string;
+  readonly timezone?: string;
 }
 
 interface SearchEntriesParams extends SearchParams {
@@ -44,6 +46,12 @@ export function listEntries(
   }
   if (params?.journalId) {
     searchParams.set("journal_id", params.journalId);
+  }
+  if (params?.date) {
+    searchParams.set("date", params.date);
+  }
+  if (params?.timezone) {
+    searchParams.set("timezone", params.timezone);
   }
   const query = searchParams.toString();
   const path = query ? `${ENTRIES_PATH}?${query}` : ENTRIES_PATH;

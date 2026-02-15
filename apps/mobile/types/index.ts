@@ -7,6 +7,7 @@ export type {
   ValidationError,
   VerifyEmailRouteParams,
 } from "./auth";
+export type { CalendarDay, CalendarResponse } from "./calendar";
 export type {
   EntryType,
   JournalEntry,

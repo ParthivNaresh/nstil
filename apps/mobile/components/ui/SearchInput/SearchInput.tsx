@@ -21,6 +21,7 @@ export function SearchInput({
   onSearch,
   placeholder = "Search...",
   debounceMs = DEFAULT_DEBOUNCE_MS,
+  autoFocus,
   testID,
 }: SearchInputProps) {
   const { colors, keyboardAppearance } = useTheme();
@@ -72,6 +73,7 @@ export function SearchInput({
         returnKeyType="search"
         autoCapitalize="none"
         autoCorrect={false}
+        autoFocus={autoFocus}
       />
       {localValue.length > 0 ? (
         <Pressable

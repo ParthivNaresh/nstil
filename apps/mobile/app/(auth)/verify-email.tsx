@@ -37,7 +37,7 @@ export default function VerifyEmailScreen() {
       : t("auth.verifyEmail.resend");
 
   return (
-    <ScreenContainer scrollable={false} centered ambient={false}>
+    <ScreenContainer scrollable={false} centered>
       <View style={styles.content}>
         <View style={styles.header}>
           <AppText variant="h1">{t("auth.verifyEmail.title")}</AppText>

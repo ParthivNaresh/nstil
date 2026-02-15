@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { EntryDetailContent } from "@/components/journal";
-import { AmbientBackground, Button, EmptyState, Header, Icon, Skeleton } from "@/components/ui";
+import { Button, EmptyState, Header, Icon, Skeleton } from "@/components/ui";
 import { useDeleteEntry, useEntry, useHeaderHeight, useTheme, useTogglePin } from "@/hooks";
 import { spacing } from "@/styles";
 
@@ -74,8 +74,7 @@ export default function EntryDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
-        <AmbientBackground />
+      <View style={styles.root}>
         <StatusBar style={isDark ? "light" : "dark"} />
         <Header title="" onBack={router.back} />
         <View style={[styles.content, { paddingTop: headerHeight + spacing.lg }]}>
@@ -91,8 +90,7 @@ export default function EntryDetailScreen() {
 
   if (!entry) {
     return (
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
-        <AmbientBackground />
+      <View style={styles.root}>
         <StatusBar style={isDark ? "light" : "dark"} />
         <Header title="" onBack={router.back} />
         <View style={styles.emptyContainer}>
@@ -107,8 +105,7 @@ export default function EntryDetailScreen() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <AmbientBackground />
+    <View style={styles.root}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <Header title="" onBack={router.back} rightAction={headerActions} />
       <ScrollView

@@ -25,6 +25,7 @@ export function TextInput({
   value,
   onChangeText,
   error,
+  variant = "outlined",
   secureTextEntry = false,
   keyboardType = "default",
   autoCapitalize = "none",
@@ -40,6 +41,7 @@ export function TextInput({
   const [isFocused, setIsFocused] = useState(false);
   const [isSecureVisible, setIsSecureVisible] = useState(false);
   const labelProgress = useSharedValue(value ? 1 : 0);
+  const isFlat = variant === "flat";
 
   const hasError = Boolean(error);
   const isActive = isFocused || Boolean(value);
@@ -67,17 +69,20 @@ export function TextInput({
       : colors.glassBorder;
 
   const containerStyle = useMemo(
-    () => [styles.inputContainer, { borderColor, backgroundColor: colors.glass }],
-    [borderColor, colors.glass],
+    () =>
+      isFlat
+        ? [styles.flatContainer, { borderBottomColor: borderColor }]
+        : [styles.inputContainer, { borderColor, backgroundColor: colors.glass }],
+    [isFlat, borderColor, colors.glass],
   );
 
   const inputStyle = useMemo(
     () => [
-      styles.input,
+      isFlat ? styles.flatInput : styles.input,
       { color: colors.textPrimary },
       secureTextEntry && styles.inputWithToggle,
     ],
-    [colors.textPrimary, secureTextEntry],
+    [isFlat, colors.textPrimary, secureTextEntry],
   );
 
   return (
@@ -128,11 +133,23 @@ const styles = StyleSheet.create({
     height: 56,
     justifyContent: "center",
   },
+  flatContainer: {
+    borderBottomWidth: 1,
+    height: 48,
+    justifyContent: "center",
+  },
   input: {
     ...typography.body,
     paddingHorizontal: spacing.md,
     paddingTop: 22,
     paddingBottom: 8,
+    height: "100%",
+  },
+  flatInput: {
+    ...typography.body,
+    paddingHorizontal: 0,
+    paddingTop: 18,
+    paddingBottom: 6,
     height: "100%",
   },
   inputWithToggle: {

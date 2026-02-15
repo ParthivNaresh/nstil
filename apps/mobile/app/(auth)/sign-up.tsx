@@ -23,7 +23,7 @@ export default function SignUpScreen() {
   const confirmPasswordRef = useRef<RNTextInput>(null);
 
   return (
-    <ScreenContainer ambient={false}>
+    <ScreenContainer>
       <View style={styles.content}>
         <AuthHeader
           title={t("auth.signUp.title")}

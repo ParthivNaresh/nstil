@@ -22,6 +22,22 @@ import {
 
 const DEFAULT_PAGE_SIZE = 20;
 
+function useInvalidateEntryQueries() {
+  const queryClient = useQueryClient();
+
+  return () => {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.entries.lists(),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.entries.dayEntries(),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.entries.calendars(),
+    });
+  };
+}
+
 export function useEntries(journalId?: string) {
   return useInfiniteQuery<PaginatedResponse<JournalEntry>>({
     queryKey: queryKeys.entries.list(undefined, undefined, journalId),
@@ -46,20 +62,17 @@ export function useEntry(id: string) {
 }
 
 export function useCreateEntry() {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidateEntryQueries();
 
   return useMutation<JournalEntry, Error, JournalEntryCreate>({
     mutationFn: createEntry,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.entries.lists(),
-      });
-    },
+    onSuccess: invalidate,
   });
 }
 
 export function useUpdateEntry() {
   const queryClient = useQueryClient();
+  const invalidate = useInvalidateEntryQueries();
 
   return useMutation<
     JournalEntry,
@@ -72,15 +85,14 @@ export function useUpdateEntry() {
         queryKeys.entries.detail(updatedEntry.id),
         updatedEntry,
       );
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.entries.lists(),
-      });
+      invalidate();
     },
   });
 }
 
 export function useTogglePin() {
   const queryClient = useQueryClient();
+  const invalidate = useInvalidateEntryQueries();
 
   return useMutation<
     JournalEntry,
@@ -94,9 +106,7 @@ export function useTogglePin() {
         queryKeys.entries.detail(updatedEntry.id),
         updatedEntry,
       );
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.entries.lists(),
-      });
+      invalidate();
     },
   });
 }
@@ -122,6 +132,7 @@ export function useSearchEntries(query: string, journalId?: string) {
 
 export function useDeleteEntry() {
   const queryClient = useQueryClient();
+  const invalidate = useInvalidateEntryQueries();
 
   return useMutation<void, Error, string>({
     mutationFn: deleteEntry,
@@ -129,9 +140,7 @@ export function useDeleteEntry() {
       queryClient.removeQueries({
         queryKey: queryKeys.entries.detail(deletedId),
       });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.entries.lists(),
-      });
+      invalidate();
     },
   });
 }
