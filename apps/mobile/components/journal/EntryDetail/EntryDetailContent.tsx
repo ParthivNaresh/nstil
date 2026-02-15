@@ -15,11 +15,16 @@ export function EntryDetailContent({ entry }: EntryDetailContentProps) {
   const { colors } = useTheme();
   const formattedDate = formatFullDate(entry.created_at);
   const entryTypeLabel = t(`journal.entryTypes.${entry.entry_type}`);
-  const hasMood = entry.mood_score !== null;
+  const hasMood = entry.mood_category !== null;
 
   return (
     <View style={styles.container}>
-      {hasMood ? <MoodBanner moodScore={entry.mood_score!} /> : null}
+      {hasMood ? (
+        <MoodBanner
+          moodCategory={entry.mood_category!}
+          moodSpecific={entry.mood_specific}
+        />
+      ) : null}
 
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>

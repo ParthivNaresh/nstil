@@ -94,7 +94,8 @@ function EditEntryForm({ entryId }: { readonly entryId: string }) {
               journalId={form.journalId}
               body={form.body}
               title={form.title}
-              moodScore={form.moodScore}
+              moodCategory={form.moodCategory}
+              moodSpecific={form.moodSpecific}
               tags={form.tags}
               entryType={form.entryType}
               entryDate={form.entryDate}
@@ -103,7 +104,8 @@ function EditEntryForm({ entryId }: { readonly entryId: string }) {
               onJournalChange={form.setJournalId}
               onBodyChange={form.setBody}
               onTitleChange={form.setTitle}
-              onMoodChange={form.setMoodScore}
+              onMoodCategoryChange={form.setMoodCategory}
+              onMoodSpecificChange={form.setMoodSpecific}
               onEntryTypeChange={form.setEntryType}
               onDateChange={form.setEntryDate}
               onAddTag={form.addTag}

@@ -1,23 +1,25 @@
+import type { MoodCategory } from "@/types";
+
 export interface MoodGradient {
   readonly from: string;
   readonly to: string;
 }
 
-const MOOD_GRADIENTS: Record<number, MoodGradient> = {
-  1: { from: "#6366F1", to: "#818CF8" },
-  2: { from: "#8B5CF6", to: "#A78BFA" },
-  3: { from: "#F59E0B", to: "#FBBF24" },
-  4: { from: "#10B981", to: "#34D399" },
-  5: { from: "#F472B6", to: "#FB923C" },
+const MOOD_GRADIENTS: Record<MoodCategory, MoodGradient> = {
+  happy: { from: "#F6B93B", to: "#F8C96B" },
+  calm: { from: "#38ADA9", to: "#5EC4C0" },
+  sad: { from: "#6A89CC", to: "#8DA4DB" },
+  anxious: { from: "#9B59B6", to: "#B07CC6" },
+  angry: { from: "#E55039", to: "#EB7A68" },
 };
 
-const DEFAULT_GRADIENT: MoodGradient = { from: "#6366F1", to: "#818CF8" };
+const DEFAULT_GRADIENT: MoodGradient = { from: "#6A89CC", to: "#8DA4DB" };
 
-export function getMoodGradient(score: number | null): MoodGradient {
-  if (score === null) return DEFAULT_GRADIENT;
-  return MOOD_GRADIENTS[score] ?? DEFAULT_GRADIENT;
+export function getMoodGradient(category: MoodCategory | null): MoodGradient {
+  if (category === null) return DEFAULT_GRADIENT;
+  return MOOD_GRADIENTS[category] ?? DEFAULT_GRADIENT;
 }
 
-export function getMoodAccentColor(score: number | null): string {
-  return getMoodGradient(score).from;
+export function getMoodAccentColor(category: MoodCategory | null): string {
+  return getMoodGradient(category).from;
 }

@@ -145,16 +145,23 @@ Separate spaces for different areas of life: "Work Stress," "Personal Growth," "
 - [ ] **4G-10 — Journal Management Screen** — settings → manage journals. List with color dots, edit/delete. Add journal button. Swipe-to-delete with confirmation
 - [ ] **4G-11 — Entry Card & Detail Journal Indicator** — journal name label on entry cards (when viewing "All"), journal badge on detail screen metadata row
 
-### Subphase 4H — Enhanced Mood System
+### Subphase 4H — Enhanced Mood System ✅
 
-Replace the 5-point emoji scale with a two-level emotion wheel for professional-grade emotional granularity.
+Replace the 5-point emoji scale with a two-level category + sub-emotion system. 5 natural-language categories (Happy, Calm, Sad, Anxious, Angry) with 4 sub-emotions each (20 total). No emojis — clean glassmorphism pills with Skia gradient fills.
 
-**Objectives:**
-
-- [ ] Data model — replace `mood_score smallint` with `mood_category text` + `mood_specific text`. Categories based on Plutchik's wheel: Joy, Sadness, Anger, Fear, Surprise, Disgust, Trust, Anticipation. Each has 3-5 specific emotions. Migration maps existing 1-5 scores to new model
-- [ ] Backend models — `MoodCategory` and `MoodSpecific` enums. Validation: `mood_specific` must belong to given `mood_category`
-- [ ] Mobile — two-step mood picker: select category (8 options with emoji + color), then specific emotion (3-5 options). Animated transition with Skia gradient backgrounds per mood category. Each category has a distinct color for calendar/charts. Replaces existing `MoodSelector`
-- [ ] Tests — backend: valid mood pairs, invalid pair rejected, migration correctness. Mobile: tsc + eslint
+- [x] **Database migration** — `005_ENHANCED_MOOD_SYSTEM.sql`. Added `mood_category text` and `mood_specific text` columns with CHECK constraints for valid values and pair relationship (`mood_specific` requires `mood_category`). Migrated existing `mood_score` 1-5 → categories (1→angry, 2→sad, 3→calm, 4→calm, 5→happy). Dropped `mood_score` column. Added `idx_journal_entries_mood` index on `(user_id, mood_category)`
+- [x] **Backend mood model** — `models/mood.py` with `MoodCategory` (5 values) and `MoodSpecific` (20 values) StrEnums. `MOOD_CATEGORY_SPECIFICS` mapping with `frozenset` values. `validate_mood_pair()` reusable validator
+- [x] **Backend journal models** — Replaced `mood_score: int | None` with `mood_category: MoodCategory | None` + `mood_specific: MoodSpecific | None` across `Create`, `Update`, `Row`, `Response`. `model_validator` on Create and Update validates mood pairs
+- [x] **Service layer** — `JournalService.create()` sends `mood_category`/`mood_specific` in payload
+- [x] **Backend tests** — 231 total passing. New `test_mood.py` (7 tests): enum completeness, 4 specifics per category, no overlaps, all valid pairs, pair validation errors. Journal model tests updated for mood fields. API tests: 3 new validation tests (invalid category, specific without category, wrong pair)
+- [x] **Mobile types** — `MoodCategory` and `MoodSpecific` union types in `types/journal.ts`. Exported from `types/index.ts`
+- [x] **Mobile mood utilities** — `moodUtils.ts` rewritten: `getMoodLabel`, `getMoodSpecificLabel`, `getMoodDisplayLabel`. `MOOD_CATEGORIES` array and `MOOD_CATEGORY_SPECIFICS` mapping. No emojis. `moodColors.ts` rewritten: gradients keyed by `MoodCategory` — gold (happy), teal (calm), blue (sad), lavender (anxious), coral (angry)
+- [x] **MoodSelector redesign** — Two-step inline picker. Categories: horizontal `ScrollView` of Skia gradient-filled pills (always single line). Sub-emotions: wrapping row of gradient-filled pills with staggered `FadeInDown` animation (30ms delay per pill). `key={category}` triggers re-animation on category switch. `MoodItem` and `MoodSpecificItem` both use full Skia `LinearGradient` `RoundedRect` fill (8%/6% idle, 20%/18% selected). Border + text shift to category color on selection
+- [x] **EntryCard** — Emoji replaced with gradient dot + label mood badge pill (Skia `RoundedRect` gradient dot, tinted background). Shows `getMoodDisplayLabel` (specific if available, else category)
+- [x] **MoodBanner (detail screen)** — Emoji replaced with 32px Skia gradient orb. Shows specific label as primary, category as secondary caption. Full-width gradient background preserved
+- [x] **MoodAccent (card accent strip)** — Updated to use `moodCategory` prop
+- [x] **useEntryForm** — Manages `moodCategory` and `moodSpecific` state. Clears specific when category changes. Sends both in create/update payloads
+- [x] **Tests** — tsc ✅, eslint ✅. Backend: ruff ✅, mypy ✅ (45 files), 231 tests ✅
 
 ### Subphase 4I — Calendar, Date Picker & Mood History View
 

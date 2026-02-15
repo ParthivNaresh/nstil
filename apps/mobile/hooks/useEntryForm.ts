@@ -3,15 +3,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 
 import { useCreateEntry, useUpdateEntry } from "@/hooks/useEntries";
-import type { MoodValue } from "@/components/ui/MoodSelector/types";
-import type { EntryType, JournalEntry, JournalSpace } from "@/types";
+import type {
+  EntryType,
+  JournalEntry,
+  JournalSpace,
+  MoodCategory,
+  MoodSpecific,
+} from "@/types";
 
 const MAX_TAGS = 10;
 
 interface EntryFormState {
   readonly title: string;
   readonly body: string;
-  readonly moodScore: MoodValue | null;
+  readonly moodCategory: MoodCategory | null;
+  readonly moodSpecific: MoodSpecific | null;
   readonly tags: string[];
   readonly entryType: EntryType;
   readonly entryDate: Date;
@@ -25,7 +31,8 @@ interface UseEntryFormOptions {
 interface UseEntryFormReturn {
   readonly title: string;
   readonly body: string;
-  readonly moodScore: MoodValue | null;
+  readonly moodCategory: MoodCategory | null;
+  readonly moodSpecific: MoodSpecific | null;
   readonly tags: string[];
   readonly entryType: EntryType;
   readonly entryDate: Date;
@@ -35,7 +42,8 @@ interface UseEntryFormReturn {
   readonly canSubmit: boolean;
   readonly setTitle: (text: string) => void;
   readonly setBody: (text: string) => void;
-  readonly setMoodScore: (mood: MoodValue) => void;
+  readonly setMoodCategory: (category: MoodCategory) => void;
+  readonly setMoodSpecific: (specific: MoodSpecific) => void;
   readonly setEntryType: (type: EntryType) => void;
   readonly setEntryDate: (date: Date) => void;
   readonly setJournalId: (id: string) => void;
@@ -50,7 +58,8 @@ function buildInitialState(entry?: JournalEntry): EntryFormState {
     return {
       title: "",
       body: "",
-      moodScore: null,
+      moodCategory: null,
+      moodSpecific: null,
       tags: [],
       entryType: "journal",
       entryDate: new Date(),
@@ -59,7 +68,8 @@ function buildInitialState(entry?: JournalEntry): EntryFormState {
   return {
     title: entry.title,
     body: entry.body,
-    moodScore: entry.mood_score as MoodValue | null,
+    moodCategory: entry.mood_category,
+    moodSpecific: entry.mood_specific,
     tags: [...entry.tags],
     entryType: entry.entry_type,
     entryDate: new Date(entry.created_at),
@@ -89,7 +99,12 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
 
   const [title, setTitle] = useState(initial.title);
   const [body, setBody] = useState(initial.body);
-  const [moodScore, setMoodScore] = useState<MoodValue | null>(initial.moodScore);
+  const [moodCategory, setMoodCategoryState] = useState<MoodCategory | null>(
+    initial.moodCategory,
+  );
+  const [moodSpecific, setMoodSpecificState] = useState<MoodSpecific | null>(
+    initial.moodSpecific,
+  );
   const [tags, setTags] = useState<string[]>(initial.tags);
   const [entryType, setEntryType] = useState<EntryType>(initial.entryType);
   const [entryDate, setEntryDate] = useState<Date>(initial.entryDate);
@@ -116,6 +131,19 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     },
     [bodyError],
   );
+
+  const setMoodCategory = useCallback((category: MoodCategory) => {
+    setMoodCategoryState((prev) => {
+      if (prev !== category) {
+        setMoodSpecificState(null);
+      }
+      return category;
+    });
+  }, []);
+
+  const setMoodSpecific = useCallback((specific: MoodSpecific) => {
+    setMoodSpecificState(specific);
+  }, []);
 
   const addTag = useCallback((tag: string) => {
     setTags((prev) => {
@@ -149,7 +177,8 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
             journal_id: journalId,
             body: trimmedBody,
             title: trimmedTitle || undefined,
-            mood_score: moodScore ?? undefined,
+            mood_category: moodCategory ?? undefined,
+            mood_specific: moodSpecific ?? undefined,
             tags,
             entry_type: entryType,
             created_at: dateIso,
@@ -163,7 +192,8 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
           journal_id: journalId,
           body: trimmedBody,
           title: trimmedTitle || undefined,
-          mood_score: moodScore ?? undefined,
+          mood_category: moodCategory ?? undefined,
+          mood_specific: moodSpecific ?? undefined,
           tags: tags.length > 0 ? tags : undefined,
           entry_type: entryType,
           created_at: dateIso,
@@ -171,12 +201,13 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
         { onSuccess: () => router.back(), onError },
       );
     }
-  }, [body, title, moodScore, tags, entryType, entryDate, journalId, entry, createMutation, updateMutation, router]);
+  }, [body, title, moodCategory, moodSpecific, tags, entryType, entryDate, journalId, entry, createMutation, updateMutation, router]);
 
   return {
     title,
     body,
-    moodScore,
+    moodCategory,
+    moodSpecific,
     tags,
     entryType,
     entryDate,
@@ -186,7 +217,8 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     canSubmit,
     setTitle,
     setBody: handleBodyChange,
-    setMoodScore,
+    setMoodCategory,
+    setMoodSpecific,
     setEntryType,
     setEntryDate,
     setJournalId,

@@ -1,25 +1,34 @@
-import { Canvas, LinearGradient, Rect, vec } from "@shopify/react-native-skia";
+import {
+  Canvas,
+  LinearGradient,
+  Rect,
+  RoundedRect,
+  vec,
+} from "@shopify/react-native-skia";
 import { useCallback, useState } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
 import { withAlpha } from "@/lib/colorUtils";
 import { getMoodGradient } from "@/lib/moodColors";
-import { getMoodEmoji, getMoodLabel } from "@/lib/moodUtils";
+import { getMoodDisplayLabel, getMoodLabel } from "@/lib/moodUtils";
 import { spacing } from "@/styles";
+import type { MoodCategory, MoodSpecific } from "@/types";
 
 interface MoodBannerProps {
-  readonly moodScore: number;
+  readonly moodCategory: MoodCategory;
+  readonly moodSpecific: MoodSpecific | null;
 }
 
 const GRADIENT_OPACITY = 0.2;
-const BANNER_HEIGHT = 80;
+const BANNER_HEIGHT = 72;
+const ORB_SIZE = 32;
 
-export function MoodBanner({ moodScore }: MoodBannerProps) {
+export function MoodBanner({ moodCategory, moodSpecific }: MoodBannerProps) {
   const [width, setWidth] = useState(0);
-  const gradient = getMoodGradient(moodScore);
-  const emoji = getMoodEmoji(moodScore);
-  const label = getMoodLabel(moodScore);
+  const gradient = getMoodGradient(moodCategory);
+  const categoryLabel = getMoodLabel(moodCategory);
+  const displayLabel = getMoodDisplayLabel(moodCategory, moodSpecific);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     setWidth(event.nativeEvent.layout.width);
@@ -35,19 +44,42 @@ export function MoodBanner({ moodScore }: MoodBannerProps) {
               end={vec(width, 0)}
               colors={[
                 withAlpha(gradient.from, GRADIENT_OPACITY),
-                withAlpha(gradient.to, GRADIENT_OPACITY * 0.4),
+                withAlpha(gradient.to, GRADIENT_OPACITY * 0.3),
               ]}
             />
           </Rect>
         </Canvas>
       ) : null}
       <View style={styles.content}>
-        {emoji ? <AppText variant="h1">{emoji}</AppText> : null}
-        {label ? (
-          <AppText variant="label" color={gradient.from}>
-            {label}
-          </AppText>
-        ) : null}
+        <View style={styles.orbContainer}>
+          <Canvas style={styles.orbCanvas}>
+            <RoundedRect
+              x={0}
+              y={0}
+              width={ORB_SIZE}
+              height={ORB_SIZE}
+              r={ORB_SIZE / 2}
+            >
+              <LinearGradient
+                start={vec(0, 0)}
+                end={vec(ORB_SIZE, ORB_SIZE)}
+                colors={[gradient.from, gradient.to]}
+              />
+            </RoundedRect>
+          </Canvas>
+        </View>
+        <View style={styles.labels}>
+          {displayLabel ? (
+            <AppText variant="label" color={gradient.from}>
+              {displayLabel}
+            </AppText>
+          ) : null}
+          {moodSpecific && categoryLabel ? (
+            <AppText variant="caption" color={withAlpha(gradient.from, 0.6)}>
+              {categoryLabel}
+            </AppText>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -65,5 +97,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
+  },
+  orbContainer: {
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+  },
+  orbCanvas: {
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+  },
+  labels: {
+    gap: 2,
   },
 });

@@ -17,7 +17,8 @@ export function EntryForm({
   journalId,
   body,
   title,
-  moodScore,
+  moodCategory,
+  moodSpecific,
   tags,
   entryType,
   entryDate,
@@ -26,7 +27,8 @@ export function EntryForm({
   onJournalChange,
   onBodyChange,
   onTitleChange,
-  onMoodChange,
+  onMoodCategoryChange,
+  onMoodSpecificChange,
   onEntryTypeChange,
   onDateChange,
   onAddTag,
@@ -73,8 +75,10 @@ export function EntryForm({
 
       <View style={styles.section}>
         <MoodSelector
-          value={moodScore}
-          onChange={onMoodChange}
+          category={moodCategory}
+          specific={moodSpecific}
+          onCategoryChange={onMoodCategoryChange}
+          onSpecificChange={onMoodSpecificChange}
           label={t("journal.mood")}
         />
       </View>

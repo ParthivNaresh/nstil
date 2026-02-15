@@ -1,2 +1,2 @@
 export { MoodSelector } from "./MoodSelector";
-export type { MoodSelectorProps, MoodValue } from "./types";
+export type { MoodSelectorProps } from "./types";

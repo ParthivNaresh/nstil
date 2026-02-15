@@ -12,30 +12,36 @@ import { AppText } from "@/components/ui/AppText";
 import { useTheme } from "@/hooks/useTheme";
 import { withAlpha } from "@/lib/colorUtils";
 import { getMoodGradient } from "@/lib/moodColors";
-import { getMoodLabel } from "@/lib/moodUtils";
+import { getMoodSpecificLabel } from "@/lib/moodUtils";
 import { radius, spacing } from "@/styles";
-import type { MoodCategory } from "@/types";
+import type { MoodCategory, MoodSpecific } from "@/types";
 
-interface MoodItemProps {
+interface MoodSpecificItemProps {
   readonly category: MoodCategory;
+  readonly specific: MoodSpecific;
   readonly isSelected: boolean;
-  readonly onSelect: (category: MoodCategory) => void;
+  readonly onSelect: (specific: MoodSpecific) => void;
 }
 
-const IDLE_OPACITY = 0.08;
-const SELECTED_OPACITY = 0.2;
+const IDLE_OPACITY = 0.06;
+const SELECTED_OPACITY = 0.18;
 const PILL_RADIUS = 999;
 
-export function MoodItem({ category, isSelected, onSelect }: MoodItemProps) {
+export function MoodSpecificItem({
+  category,
+  specific,
+  isSelected,
+  onSelect,
+}: MoodSpecificItemProps) {
   const { colors } = useTheme();
   const gradient = getMoodGradient(category);
-  const label = getMoodLabel(category);
+  const label = getMoodSpecificLabel(specific);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
   const handlePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onSelect(category);
-  }, [category, onSelect]);
+    onSelect(specific);
+  }, [specific, onSelect]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -53,7 +59,7 @@ export function MoodItem({ category, isSelected, onSelect }: MoodItemProps) {
       style={[styles.pill, { borderColor }]}
       accessibilityRole="radio"
       accessibilityState={{ selected: isSelected }}
-      accessibilityLabel={label ?? category}
+      accessibilityLabel={label ?? specific}
     >
       {size.width > 0 ? (
         <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -76,7 +82,7 @@ export function MoodItem({ category, isSelected, onSelect }: MoodItemProps) {
         </Canvas>
       ) : null}
       <AppText variant="caption" color={textColor}>
-        {label ?? category}
+        {label ?? specific}
       </AppText>
     </Pressable>
   );

@@ -1,12 +1,12 @@
-import type { MoodValue } from "@/components/ui/MoodSelector/types";
-import type { EntryType, JournalSpace } from "@/types";
+import type { EntryType, JournalSpace, MoodCategory, MoodSpecific } from "@/types";
 
 export interface EntryFormProps {
   readonly journals: JournalSpace[];
   readonly journalId: string;
   readonly body: string;
   readonly title: string;
-  readonly moodScore: MoodValue | null;
+  readonly moodCategory: MoodCategory | null;
+  readonly moodSpecific: MoodSpecific | null;
   readonly tags: string[];
   readonly entryType: EntryType;
   readonly entryDate: Date;
@@ -15,7 +15,8 @@ export interface EntryFormProps {
   readonly onJournalChange: (id: string) => void;
   readonly onBodyChange: (text: string) => void;
   readonly onTitleChange: (text: string) => void;
-  readonly onMoodChange: (mood: MoodValue) => void;
+  readonly onMoodCategoryChange: (category: MoodCategory) => void;
+  readonly onMoodSpecificChange: (specific: MoodSpecific) => void;
   readonly onEntryTypeChange: (type: EntryType) => void;
   readonly onDateChange: (date: Date) => void;
   readonly onAddTag: (tag: string) => void;

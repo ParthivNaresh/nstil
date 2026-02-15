@@ -8,16 +8,17 @@ import { useCallback, useState } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 
 import { getMoodGradient } from "@/lib/moodColors";
+import type { MoodCategory } from "@/types";
 
 interface MoodAccentProps {
-  readonly moodScore: number | null;
+  readonly moodCategory: MoodCategory | null;
 }
 
 const STRIP_WIDTH = 4;
 
-export function MoodAccent({ moodScore }: MoodAccentProps) {
+export function MoodAccent({ moodCategory }: MoodAccentProps) {
   const [height, setHeight] = useState(0);
-  const gradient = getMoodGradient(moodScore);
+  const gradient = getMoodGradient(moodCategory);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     setHeight(event.nativeEvent.layout.height);

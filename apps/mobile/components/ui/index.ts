@@ -32,7 +32,7 @@ export { Icon } from "./Icon";
 export type { IconProps, IconSize } from "./Icon";
 
 export { MoodSelector } from "./MoodSelector";
-export type { MoodSelectorProps, MoodValue } from "./MoodSelector";
+export type { MoodSelectorProps } from "./MoodSelector";
 
 export { ScreenContainer } from "./ScreenContainer";
 export type { ScreenContainerProps } from "./ScreenContainer";

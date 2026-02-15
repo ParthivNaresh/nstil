@@ -12,6 +12,8 @@ export type {
   JournalEntry,
   JournalEntryCreate,
   JournalEntryUpdate,
+  MoodCategory,
+  MoodSpecific,
 } from "./journal";
 export type {
   JournalSpace,
