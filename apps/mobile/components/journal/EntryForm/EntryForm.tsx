@@ -9,6 +9,7 @@ import { ImageAttachmentStrip } from "@/components/journal/ImageAttachmentStrip"
 import { JournalPicker } from "@/components/journal/JournalPicker";
 import { LocationPicker } from "@/components/journal/LocationPicker";
 import { TagInput } from "@/components/journal/TagInput";
+import { VoiceMemoInline, VoiceMemoSection } from "@/components/journal/VoiceMemo";
 import { useTheme } from "@/hooks/useTheme";
 import { spacing } from "@/styles";
 
@@ -32,6 +33,13 @@ export function EntryForm({
   removedMediaIds,
   maxImages,
   compressionProgress,
+  localAudio,
+  existingAudio,
+  isRecordingAudio,
+  onStartRecording,
+  onStopRecording,
+  onRecordAudio,
+  onRemoveAudio,
   onJournalChange,
   onBodyChange,
   onTitleChange,
@@ -50,6 +58,17 @@ export function EntryForm({
   const { colors } = useTheme();
 
   const maxDate = useMemo(() => new Date(), []);
+
+  const micIcon = (
+    <VoiceMemoInline
+      localAudio={localAudio}
+      existingAudio={existingAudio}
+      isRecording={isRecordingAudio}
+      onStartRecording={onStartRecording}
+      onRecord={onRecordAudio}
+      onRemove={onRemoveAudio}
+    />
+  );
 
   return (
     <View style={styles.container}>
@@ -80,6 +99,16 @@ export function EntryForm({
         showCount
         minHeight={160}
         maxHeight={400}
+        footerLeft={micIcon}
+      />
+
+      <VoiceMemoSection
+        localAudio={localAudio}
+        existingAudio={existingAudio}
+        isRecording={isRecordingAudio}
+        onStopRecording={onStopRecording}
+        onRecord={onRecordAudio}
+        onRemove={onRemoveAudio}
       />
 
       <TextInput

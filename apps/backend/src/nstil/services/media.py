@@ -5,12 +5,15 @@ from supabase import AsyncClient
 
 from nstil.models.media import (
     ALLOWED_CONTENT_TYPES,
-    MAX_FILE_SIZE_BYTES,
-    MAX_MEDIA_PER_ENTRY,
+    MAX_AUDIO_DURATION_MS,
+    MAX_AUDIO_PER_ENTRY,
+    MAX_IMAGES_PER_ENTRY,
     PREVIEW_LIMIT,
     EntryMediaRow,
     MediaPreview,
     MediaPreviewItem,
+    is_audio_content_type,
+    max_file_size_for_content_type,
 )
 
 TABLE = "entry_media"
@@ -34,6 +37,10 @@ class FileTooLargeError(MediaUploadError):
     pass
 
 
+class AudioDurationExceededError(MediaUploadError):
+    pass
+
+
 class MediaService:
     def __init__(self, client: AsyncClient) -> None:
         self._client = client
@@ -41,14 +48,21 @@ class MediaService:
     def _storage_path(self, user_id: UUID, entry_id: UUID, file_id: UUID, ext: str) -> str:
         return f"{user_id}/{entry_id}/{file_id}{ext}"
 
-    async def _count_media(self, entry_id: UUID) -> int:
+    async def _count_media_by_type(
+        self, entry_id: UUID, audio: bool
+    ) -> int:
         result = await (
             self._client.table(TABLE)
-            .select("id")
+            .select("id, content_type")
             .eq("entry_id", str(entry_id))
             .execute()
         )
-        return len(result.data)
+        count = 0
+        for item in result.data:
+            raw: dict[str, Any] = item  # type: ignore[assignment]
+            if is_audio_content_type(str(raw["content_type"])) == audio:
+                count += 1
+        return count
 
     async def _get_next_sort_order(self, entry_id: UUID) -> int:
         result = await (
@@ -73,19 +87,34 @@ class MediaService:
         content_type: str,
         width: int | None = None,
         height: int | None = None,
+        duration_ms: int | None = None,
+        waveform: list[float] | None = None,
     ) -> EntryMediaRow:
         if content_type not in ALLOWED_CONTENT_TYPES:
             msg = f"Content type '{content_type}' is not allowed"
             raise InvalidMediaTypeError(msg)
 
-        if len(file_bytes) > MAX_FILE_SIZE_BYTES:
-            msg = f"File exceeds maximum size of {MAX_FILE_SIZE_BYTES} bytes"
+        max_size = max_file_size_for_content_type(content_type)
+        if len(file_bytes) > max_size:
+            msg = f"File exceeds maximum size of {max_size} bytes"
             raise FileTooLargeError(msg)
 
-        current_count = await self._count_media(entry_id)
-        if current_count >= MAX_MEDIA_PER_ENTRY:
-            msg = f"Maximum of {MAX_MEDIA_PER_ENTRY} media items per entry"
-            raise MediaLimitExceededError(msg)
+        is_audio = is_audio_content_type(content_type)
+
+        if is_audio:
+            if duration_ms is not None and duration_ms > MAX_AUDIO_DURATION_MS:
+                msg = f"Audio exceeds maximum duration of {MAX_AUDIO_DURATION_MS}ms"
+                raise AudioDurationExceededError(msg)
+
+            audio_count = await self._count_media_by_type(entry_id, audio=True)
+            if audio_count >= MAX_AUDIO_PER_ENTRY:
+                msg = f"Maximum of {MAX_AUDIO_PER_ENTRY} audio file per entry"
+                raise MediaLimitExceededError(msg)
+        else:
+            image_count = await self._count_media_by_type(entry_id, audio=False)
+            if image_count >= MAX_IMAGES_PER_ENTRY:
+                msg = f"Maximum of {MAX_IMAGES_PER_ENTRY} images per entry"
+                raise MediaLimitExceededError(msg)
 
         ext = _extension_for_content_type(content_type)
         file_id = uuid4()
@@ -109,6 +138,8 @@ class MediaService:
                 "size_bytes": len(file_bytes),
                 "width": width,
                 "height": height,
+                "duration_ms": duration_ms,
+                "waveform": waveform,
                 "sort_order": sort_order,
             })
             .execute()
@@ -222,11 +253,19 @@ class MediaService:
         return previews
 
 
+_EXTENSION_MAP: dict[str, str] = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/heic": ".heic",
+    "image/webp": ".webp",
+    "audio/m4a": ".m4a",
+    "audio/mp4": ".m4a",
+    "audio/aac": ".aac",
+    "audio/wav": ".wav",
+    "audio/mpeg": ".mp3",
+    "audio/x-m4a": ".m4a",
+}
+
+
 def _extension_for_content_type(content_type: str) -> str:
-    mapping: dict[str, str] = {
-        "image/jpeg": ".jpg",
-        "image/png": ".png",
-        "image/heic": ".heic",
-        "image/webp": ".webp",
-    }
-    return mapping.get(content_type, ".bin")
+    return _EXTENSION_MAP.get(content_type, ".bin")

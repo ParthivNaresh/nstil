@@ -4,12 +4,12 @@
 
 Complete, production-grade auth flow across backend and mobile. Every subphase passed lint, typecheck, and tests.
 
-- **1A — Backend: Auth hardening & protected route patterns** ✅ — JWT verification with typed `UserPayload`, `SecretStr` secrets, custom exceptions (`TokenExpiredError`/`InvalidTokenError`), 16 tests covering all auth paths. JWKS-based ES256 verification added (fetches public keys from Supabase on startup, falls back to HS256). Structured logging on all JWT failure paths (algorithm, kid, jwks_loaded).
-- **1B — Mobile: Auth screens (Sign In & Sign Up)** ✅ — Glassmorphism auth screens with i18n, validation utilities, form hooks, reusable UI primitives (`Card`, `TextInput`, `Button`, `ScreenContainer`). Generic error messages (no user enumeration).
-- **1C — Mobile: Email verification flow** ✅ — Post-signup verification screen with resend cooldown, deep linking (`nstil://` scheme), `onAuthStateChange` auto-updates, Supabase `config.toml` with confirmations enabled.
-- **1D — Mobile: Password reset flow** ✅ — Forgot password + reset password screens, deep link routing for recovery tokens, extracted password validation helpers.
-- **1E — Backend & Mobile: Session management hardening** ✅ — SecureStore token storage, `CacheControlMiddleware` (no-store on authenticated responses), `apiFetch` with `NoSessionError`/`ApiError` typing, 401 auto-sign-out, React Query cache clearing on sign-out.
-- **1F — Integration testing & auth polish** ✅ — 18 backend tests, zero `any`/`ts-ignore` in mobile, manual smoke test passed, security audit checklist completed (no secrets in client code, generic errors, CORS restricted, Supabase rate limiting).
+- **1A — Backend: Auth hardening & protected route patterns** ✅
+- **1B — Mobile: Auth screens (Sign In & Sign Up)** ✅
+- **1C — Mobile: Email verification flow** ✅
+- **1D — Mobile: Password reset flow** ✅
+- **1E — Backend & Mobile: Session management hardening** ✅
+- **1F — Integration testing & auth polish** ✅
 
 ---
 
@@ -21,10 +21,8 @@ Reusable component library with Reanimated animations, glassmorphism effects, an
 - **2B — Core Layout & Navigation Components** ✅
 - **2C — Data Display Components** ✅
 - **2D — Feedback & Overlay Components** _(as needed)_
-  - [ ] Toast/Snackbar, Bottom sheet, Confirmation dialog, Pull-to-refresh indicator
 - **2E — Input & Form Components** ✅
 - **2F — Animated Transitions & Polish** _(as needed)_
-  - [ ] Screen transitions, List animations, Micro-interactions, Haptic feedback patterns
 
 ---
 
@@ -32,236 +30,178 @@ Reusable component library with Reanimated animations, glassmorphism effects, an
 
 Core product loop: create, read, update, delete journal entries. FastAPI backend with Supabase Postgres, cursor-based pagination, Redis caching, and full mobile screens.
 
-- **3A — Database Schema & Backend Models** ✅
-- **3B — Database Service Layer** ✅
-- **3C — API Endpoints & Tests** ✅
-- **3D — Redis Caching Layer** ✅
-- **3E — Mobile: TypeScript Types & API Layer** ✅
-- **3F — Mobile: Journal List Screen** ✅
-- **3G — Mobile: Create/Edit Entry Screen** ✅
-- **3H — Mobile: Entry Detail Screen** ✅
-- **3I — Integration Testing & Polish** ✅ — 124 backend tests. Manual smoke test passed.
+- **3A–3I** ✅ — 124 backend tests. Manual smoke test passed.
 
 ---
 
 ## Phase 4 — Core Journaling Features
 
-The brick and mortar of a production journaling app. Everything a user expects before AI enters the picture. Theme system and visual polish come first — every subsequent UI component is built theme-aware from day one. Critical path: 4A → 4B → 4C → 4D → 4E → 4F → 4G → 4H → 4I → 4J → 4K → 4L.
+The brick and mortar of a production journaling app. Everything a user expects before AI enters the picture.
 
 ### Subphase 4A — Theme System, Skia & Visual Foundation ✅
 
-The visual foundation for everything that follows. Skia installed, theme provider built, three color palettes created, all existing components migrated to be theme-aware.
-
-- [x] `@shopify/react-native-skia` v2.2.12 installed — pod install, rebuild verified. Skia `Canvas` renders GPU-accelerated gradients
-- [x] Theme provider — Zustand `themeStore` with `dark` (default), `light`, `oled`, `auto` (system) modes. `useTheme()` hook returns current `ColorPalette`, `isDark`, `keyboardAppearance`, `setMode`
-- [x] Color palettes — `darkPalette`, `lightPalette`, `oledPalette` in `styles/palettes.ts`. Same `ColorPalette` interface across all three. OLED: `#000000` backgrounds, higher contrast, subtle borders
-- [x] All components migrated — every component uses `useTheme()` instead of static `colors` import. Dead `colors.ts` and `theme.ts` barrel files removed
-- [x] Glassmorphism adaptation — `BlurView` tint adapts via `isDark`. Light theme: lighter blur tints. OLED: subtle glass values
-- [x] Persistence — theme preference stored in SecureStore (synchronous `getItem` prevents theme flash). Loaded on app startup before first render
-- [x] Settings screen — `ThemePicker` with `ThemeModeCard` per mode, color swatch previews, accent-highlighted selection
-- [x] Skia gradient utility — `GradientBackground` component using Skia `Canvas` + `LinearGradient`. `MoodAccent` for entry card accent strips
-- [x] Shared `withAlpha` utility — `lib/colorUtils.ts` for hex color alpha manipulation, used by Skia gradient components
-- [x] Tests — tsc ✅, eslint ✅
+Skia installed, theme provider built, three color palettes (dark/light/OLED), all components migrated to theme-aware. Zustand `themeStore` with SecureStore persistence (no theme flash). `GradientBackground`, `MoodAccent` Skia components. `withAlpha` color utility (handles hex + rgba parsing). `onAccent`/`onError` palette tokens added — zero hardcoded hex in components.
 
 ### Subphase 4B — Visual Polish Pass 🔄
 
-With the theme system in place, redesign existing screens to close the gap with apps like Reflectly. Not new features — making what we have look and feel premium.
+Redesigned existing screens toward premium glassmorphism aesthetic.
 
 **Completed:**
-
-- [x] Entry form redesign — section dividers between form groups, increased textarea `minHeight` (180px), better vertical breathing room (`spacing.lg` gaps)
-- [x] Entry form flat inputs — `TextInput` and `TextArea` support `variant="flat"` (borderless, no background, subtle bottom line). Journal entry form uses flat variant so text sits directly on the ambient background
-- [x] Custom date/time picker — `DateTimeTrigger` (minimal text line: "Feb 14, 2026 — 3:09 PM"). `DateTimePickerSheet` centered floating modal (340px max-width, `radius.2xl` card) with `PickerCalendar` (single-month grid with prev/next navigation, fixed 6-row layout) + custom `TimePicker` (scroll-snap wheel columns for hour/minute with AM/PM toggle). Smooth scale+fade+translateY animation via single `progress` shared value (`Easing.out(quad)` enter, `Easing.in(quad)` exit). Future time prevention: greyed-out disabled values in wheel, auto-scroll-back to nearest valid value on invalid selection, live `now` state refreshed every 10s while modal is open. `sheet` color token added to all palettes. `@react-native-community/datetimepicker` dependency removed
-- [x] TextArea floating label fix — label animates outside the scrollable text area (above the input container) so scrolling text never overlaps the label. `labelSpacer` reserves space, `fieldWrapper` positions label absolutely relative to the field, label animates from placeholder position to above the input
-- [x] Image compression progress indicator — `CompressionIndicator` component with animated progress bar (Reanimated `withTiming`). Shows below thumbnail strip during compression. Images appear incrementally as each finishes via `onImageReady` callback from `useImagePicker`
-- [x] Mood selector — Skia gradient-tinted backgrounds per mood (idle + selected states), 64px touch targets, colored border on selection, haptic feedback
-- [x] Entry type selector — pill shapes (`radius.full`), haptic feedback on selection, accent-colored selected state
-- [x] Journal list — mood-colored left accent border via Skia `MoodAccent`, staggered fade-in animation (`AnimatedEntryCard`), better typography hierarchy (date prominent, body secondary), increased card spacing
-- [x] Detail screen — full-width Skia gradient mood banner, metadata row with icons (Calendar, FileText, MapPin), tags as rounded pills, better section spacing
-- [x] Tab bar — animated active tab indicator (accent-colored pill, spring scale animation)
-- [x] Tag pills — consistent `radius.full` pill styling across EntryCard, EntryDetail, and TagInput
-- [x] Persistent ambient background — single `AmbientBackground` mounted at root layout. All `Stack`/`Tabs` layouts use transparent `contentStyle`/`sceneStyle`. Screen backgrounds removed. Skia shader runs once, continuously, behind all navigation
-- [x] Tests — tsc ✅, eslint ✅ (zero warnings)
+- Entry form redesign (flat inputs, section dividers, breathing room)
+- Custom date/time picker (floating modal, calendar grid, scroll-snap time wheels, future time prevention)
+- TextArea floating label fix (label above scrollable area)
+- Image compression progress indicator
+- Mood selector (Skia gradient pills, haptic feedback)
+- Entry type selector (pill shapes, accent selection)
+- Journal list (mood-colored Skia accent strips, staggered fade-in)
+- Detail screen (full-width Skia gradient mood banner, metadata icons, tag pills)
+- Tab bar (animated accent-colored pill indicator)
+- Persistent ambient background (single Skia shader at root, transparent navigation)
+- Style files moved out of `app/` directory (eliminated Expo Router warnings)
 
 **Remaining:**
-
-- [ ] Auth screens — visual verification of all 6 auth screens in light/dark/OLED
-- [ ] Header polish — visual verification of blur/transparent modes across all themes
-- [ ] Full visual verification — all screens in all three themes on device/simulator
+- [ ] Auth screens — visual verification in light/dark/OLED
+- [ ] Header polish — blur/transparent modes across themes
+- [ ] Full visual verification — all screens, all themes, on device
 
 ### Subphase 4C — Rich Text Editing
 
 Replace plain text body with Markdown-based editing and rendering.
 
-**Objectives:**
-
-- [ ] Markdown editor — integrate a production-grade Markdown editor for the entry body field. Support: **bold**, *italic*, ~~strikethrough~~, headings (H1-H3), bullet lists, numbered lists, links, blockquotes, horizontal rules, inline code
-- [ ] Formatting toolbar — minimal floating toolbar above keyboard with bold/italic/list/heading/link buttons. Toolbar auto-hides when keyboard is dismissed. Distraction-free: toolbar fades out after 3s of typing, reappears on tap or pause
-- [ ] Markdown rendering — render stored Markdown in the detail screen and in entry card previews (strip formatting for preview, render fully on detail). Theme-aware rendering (code blocks, blockquotes adapt to current palette)
-- [ ] Migration — existing plain text entries render as-is (plain text is valid Markdown). No data migration needed
-- [ ] Backend — body field remains `text`. No schema change. Markdown is a client-side concern
-- [ ] Tests — editor renders, toolbar toggles formatting, preview strips Markdown, detail renders Markdown
+- [ ] Markdown editor with formatting toolbar (bold, italic, lists, headings, links, blockquotes, code)
+- [ ] Distraction-free toolbar (auto-hides after 3s typing, reappears on pause)
+- [ ] Theme-aware Markdown rendering on detail screen and card previews
+- [ ] No migration needed — plain text is valid Markdown
 
 ### Subphase 4D — Pin & Star Entries ✅
 
-Quick access to meaningful entries.
-
-- [x] Backend — `is_pinned boolean NOT NULL DEFAULT false` added to `journal_entries`. Migration with composite index `(user_id, is_pinned DESC, created_at DESC)`. Pydantic models updated across `Create`, `Update`, `Row`, `Response`
-- [x] API — `PATCH /entries/{id}` with `{"is_pinned": true/false}` toggles pin. List endpoint returns pinned-first sort order (`ORDER BY is_pinned DESC, created_at DESC`)
-- [x] Mobile — pin icon (lucide `Pin`) on `EntryCard` top-left when pinned. Detail screen header has pin/unpin toggle (Pin/PinOff icons) with haptic feedback. `useTogglePin` mutation hook with optimistic cache update
-- [x] Cache invalidation — `CachedJournalService.update()` already calls `invalidate_all()` — no additional work needed
-- [x] Tests — 5 new backend tests (create pinned, default unpinned, pin via update, unpin via update, pinned sort in list). 129 total passing. Mobile: tsc ✅, eslint ✅
+`is_pinned` boolean with composite index. Pin icon on cards, toggle in detail header with haptic feedback. Pinned-first sort order. 5 new backend tests, 129 total.
 
 ### Subphase 4E — Full-Text Search ✅
 
-Lightning-fast keyword search across all entries using Postgres full-text search.
-
-- [x] Backend — `search_vector tsvector` column with weighted A/B ranking (title > body). Trigger auto-updates on INSERT/UPDATE of title/body. GIN index on `search_vector WHERE deleted_at IS NULL`. Postgres RPC function `search_journal_entries` handles filtering, ordering, and pagination in a single query
-- [x] API — `GET /api/v1/entries/search?q=<query>&limit=20&cursor=<cursor>`. Returns `JournalEntryListResponse`. Empty/whitespace query returns 422. `SearchParams` model with validation
-- [x] Service layer — `JournalService.search()` via Supabase RPC. `CachedJournalService.search()` with cache-first pattern. Ownership enforced via RPC `p_user_id` param. Soft-deleted excluded in SQL
-- [x] Cache — search results cached with 60s TTL keyed by `user + query + cursor + limit` (md5 hash). `invalidate_user_searches()` clears all search cache on create/update/delete
-- [x] Mobile — `searchEntries` API function, `useSearchEntries` infinite query hook with debounced input. New **History tab** with search bar + entry list (entry list moved from old Journal tab). Home tab simplified to welcome/landing screen. 4-tab layout: Home, History, Insights, Settings
-- [x] Refactor — `list()` → `list_entries()` across service/cached/API/tests to fix Python builtin name shadowing
-- [x] Tests — 7 new search API tests (results, empty, pagination, empty query, missing query, whitespace-only, auth). 136 total passing. Mobile: tsc ✅, eslint ✅
+Postgres `tsvector` with weighted A/B ranking (title > body). GIN index. RPC-based search with filtering, ordering, pagination. Redis cache (60s TTL, md5-keyed). Mobile: debounced search, infinite query. History tab with search + entry list. 7 new tests, 136 total.
 
 ### Subphase 4F — Backdate Entries ✅
 
-Let users set a custom date for entries.
-
-- [x] Backend — `JournalEntryCreate.created_at` and `JournalEntryUpdate.created_at` — optional `datetime | None`, validated against future (1-min tolerance via `FUTURE_TOLERANCE`). Shared `_validate_not_future()` helper. Naive datetimes get UTC. `to_update_dict()` uses `model_dump(mode="json")` for datetime serialization
-- [x] Service layer — `JournalService.create()` conditionally includes `created_at` in insert payload. When `None`, Postgres `DEFAULT now()` applies
-- [x] Mobile — `EntryDatePicker` component (journal-specific, not generic UI) using native iOS compact picker (`display="compact"`). Glass pill trigger with calendar icon. Border + icon shift to accent color when backdated. `useEntryForm` manages `entryDate` state, serializes to ISO on submit. Old generic `DatePicker` UI component deleted
-- [x] Tests — 12 new backend tests (model + API): create with custom date, default none, future rejected, naive gets UTC, update date, update future rejected, `to_update_dict` serialization. 148 total passing. Mobile: tsc ✅, eslint ✅
-- [x] **Visual debt resolved** — native iOS compact picker replaced with custom `DateTimePickerSheet` floating modal (built in 4B). `PickerCalendar` with month navigation + custom `TimePicker` wheel columns. `DateTimeTrigger` text line. Future time clamping with greyed-out disabled values. `sheet` palette token
+Optional `created_at` on create/update with future validation (1-min tolerance). Custom `DateTimePickerSheet` floating modal with `PickerCalendar` + `TimePicker` wheels. 12 new tests, 148 total.
 
 ### Subphase 4G — Journals & Spaces 🔄
 
-Separate spaces for different areas of life: "Work Stress," "Personal Growth," "Dream Logs."
+Separate spaces for different areas of life.
 
-- [x] **4G-1 — Database Schema & Migration** — `journals` table with RLS, `moddatetime` trigger, index on `(user_id, sort_order, created_at)`. `journal_id uuid NOT NULL FK` added to `journal_entries`. `handle_new_user()` trigger creates default "My Journal" on signup. `search_journal_entries` RPC updated with optional `p_journal_id` filter. Atomic `soft_delete_journal` RPC for cascade delete
-- [x] **4G-2 — Backend Models** — `JournalSpaceCreate`, `JournalSpaceUpdate` (shared validators extracted), `JournalSpaceRow`, `JournalSpaceResponse`, `JournalSpaceListResponse`. Entry models updated with `journal_id: UUID` (required on create, optional on update). Hex color validation, name/description stripping, icon normalization
-- [x] **4G-3 — Backend Service & Cache Layer** — `JournalSpaceService` (CRUD + atomic cascade soft_delete via RPC + `get_default`). `SpaceCacheService` + `space_keys.py`. `CachedSpaceService` with cache-first pattern. `JournalService.list_entries()` and `search()` accept optional `journal_id` filter. Cache keys incorporate `journal_id` for separate filtered/unfiltered caching
-- [x] **4G-4 — API Endpoints** — `POST/GET/GET/:id/PATCH/DELETE /api/v1/journals`. Entry list and search endpoints accept optional `journal_id` query param. `get_space_service` dependency with space cache + entry cache for cascade invalidation
-- [x] **4G-5 — Backend Tests** — 211 total passing. Model tests (18): create/update validation, hex color, stripping, response mapping. API tests (18): CRUD, auth, validation. Cached service tests (10): cache-first reads, invalidation, cascade delete. Entry tests updated with `journal_id` filter tests
-- [x] **4G-6 — Mobile Types & API Layer** — `JournalSpace`, `JournalSpaceCreate`, `JournalSpaceUpdate`, `JournalSpaceListResponse` types. `services/api/journals.ts` with full CRUD. `listEntries`/`searchEntries` accept optional `journalId`. Query keys updated with `journals` namespace and `journalId` in entry list/search keys
-- [x] **4G-7 — Mobile Hooks** — `useJournals`, `useJournal`, `useCreateJournal`, `useUpdateJournal`, `useDeleteJournal`. `useEntries(journalId?)` and `useSearchEntries(query, journalId?)` pass filter through
-- [x] **4G-8 — Journal Picker on Entry Form** — `JournalPicker` component (horizontal pill scroll with color dots, custom color tinting, haptic feedback). `EntryForm` updated with picker above date picker. `useEntryForm` refactored to accept `{ entry?, journals? }` options, manages `journalId` state, includes `journal_id` in payloads. Create/edit screens fetch journals
-- [x] **4G-9 — Journal Filter on History Screen** — `JournalFilterBar` component with "All" pill + journal pills. History screen filters entries and search by selected journal. Reuses `JournalPickerItem` for consistent pill styling
-- [ ] **4G-10 — Journal Management Screen** — settings → manage journals. List with color dots, edit/delete. Add journal button. Swipe-to-delete with confirmation
-- [ ] **4G-11 — Entry Card & Detail Journal Indicator** — journal name label on entry cards (when viewing "All"), journal badge on detail screen metadata row
+**Completed (4G-1 through 4G-9):**
+- `journals` table with RLS, default "My Journal" on signup, cascade soft-delete RPC
+- Full backend CRUD with service/cache layers, 211 tests
+- Mobile: `JournalPicker` on entry form, `JournalFilterBar` on history screen
+- Entry list and search filter by journal
+
+**Remaining:**
+- [ ] **4G-10** — Journal management screen (settings → manage journals, add/edit/delete)
+- [ ] **4G-11** — Journal indicator on entry cards and detail screen
 
 ### Subphase 4H — Enhanced Mood System ✅
 
-Replace the 5-point emoji scale with a two-level category + sub-emotion system. 5 natural-language categories (Happy, Calm, Sad, Anxious, Angry) with 4 sub-emotions each (20 total). No emojis — clean glassmorphism pills with Skia gradient fills.
+Two-level mood system: 5 categories (Happy, Calm, Sad, Anxious, Angry) × 4 sub-emotions each (20 total). No emojis — Skia gradient-filled pills. Two-step inline picker with staggered animation. Mood gradient orbs on cards and detail screen. 231 tests.
 
-- [x] **Database migration** — `005_ENHANCED_MOOD_SYSTEM.sql`. Added `mood_category text` and `mood_specific text` columns with CHECK constraints for valid values and pair relationship (`mood_specific` requires `mood_category`). Migrated existing `mood_score` 1-5 → categories (1→angry, 2→sad, 3→calm, 4→calm, 5→happy). Dropped `mood_score` column. Added `idx_journal_entries_mood` index on `(user_id, mood_category)`
-- [x] **Backend mood model** — `models/mood.py` with `MoodCategory` (5 values) and `MoodSpecific` (20 values) StrEnums. `MOOD_CATEGORY_SPECIFICS` mapping with `frozenset` values. `validate_mood_pair()` reusable validator
-- [x] **Backend journal models** — Replaced `mood_score: int | None` with `mood_category: MoodCategory | None` + `mood_specific: MoodSpecific | None` across `Create`, `Update`, `Row`, `Response`. `model_validator` on Create and Update validates mood pairs
-- [x] **Service layer** — `JournalService.create()` sends `mood_category`/`mood_specific` in payload
-- [x] **Backend tests** — 231 total passing. New `test_mood.py` (7 tests): enum completeness, 4 specifics per category, no overlaps, all valid pairs, pair validation errors. Journal model tests updated for mood fields. API tests: 3 new validation tests (invalid category, specific without category, wrong pair)
-- [x] **Mobile types** — `MoodCategory` and `MoodSpecific` union types in `types/journal.ts`. Exported from `types/index.ts`
-- [x] **Mobile mood utilities** — `moodUtils.ts` rewritten: `getMoodLabel`, `getMoodSpecificLabel`, `getMoodDisplayLabel`. `MOOD_CATEGORIES` array and `MOOD_CATEGORY_SPECIFICS` mapping. No emojis. `moodColors.ts` rewritten: gradients keyed by `MoodCategory` — gold (happy), teal (calm), blue (sad), lavender (anxious), coral (angry)
-- [x] **MoodSelector redesign** — Two-step inline picker. Categories: horizontal `ScrollView` of Skia gradient-filled pills (always single line). Sub-emotions: wrapping row of gradient-filled pills with staggered `FadeInDown` animation (30ms delay per pill). `key={category}` triggers re-animation on category switch. `MoodItem` and `MoodSpecificItem` both use full Skia `LinearGradient` `RoundedRect` fill (8%/6% idle, 20%/18% selected). Border + text shift to category color on selection
-- [x] **EntryCard** — Emoji replaced with gradient dot + label mood badge pill (Skia `RoundedRect` gradient dot, tinted background). Shows `getMoodDisplayLabel` (specific if available, else category)
-- [x] **MoodBanner (detail screen)** — Emoji replaced with 32px Skia gradient orb. Shows specific label as primary, category as secondary caption. Full-width gradient background preserved
-- [x] **MoodAccent (card accent strip)** — Updated to use `moodCategory` prop
-- [x] **useEntryForm** — Manages `moodCategory` and `moodSpecific` state. Clears specific when category changes. Sends both in create/update payloads
-- [x] **Tests** — tsc ✅, eslint ✅. Backend: ruff ✅, mypy ✅ (45 files), 231 tests ✅
+### Subphase 4I — Calendar & Mood History View ✅
 
-### Subphase 4I — Calendar & Mood History View 🔄
-
-Continuous-scroll mood calendar at the top of the History tab. Each day shows a Skia-rendered mood-colored circle. Timezone-aware aggregation. Custom date picker deferred to a later subphase.
-
-**Completed:**
-
-- [x] **Database migration** — `006_ADD_CALENDAR_RPC.sql`. `get_calendar_data` RPC function with `p_timezone` parameter. Groups entries by local date using `at time zone p_timezone`. Returns dominant mood (most recent entry per day via `row_number()`), entry count per day. Soft-deleted entries excluded
-- [x] **Backend models** — `models/calendar.py`: `CalendarParams` (year, month, timezone), `CalendarDay` (date, mood_category, mood_specific, entry_count), `CalendarResponse` (year, month, days sorted, total_entries, streak). `compute_streak()` function: consecutive days ending at today (or yesterday fallback)
-- [x] **Backend service** — `JournalService.get_calendar()` calls RPC with timezone. `CachedJournalService.get_calendar()` cache-first with 5-min TTL. Cache key includes timezone for per-timezone caching
-- [x] **Cache layer** — `calendar_key(user_id, year, month, timezone)`, `calendar_pattern(user_id)`. `invalidate_user_calendars()` on create/update/delete. `invalidate_all()` includes calendar invalidation. `create()` also invalidates calendars (bug fix — was missing)
-- [x] **API endpoint** — `GET /api/v1/entries/calendar?year=2026&month=2&timezone=America/Los_Angeles`. Returns `CalendarResponse`
-- [x] **Backend tests** — 253 total passing. Model tests (13): params validation, day model, response sorting, streak computation (empty, single, consecutive, gap, yesterday fallback). API tests (7): returns days, empty month, invalid month/year, missing params, auth required, user_id passthrough
-- [x] **Mobile types & API** — `types/calendar.ts` with `CalendarDay`, `CalendarResponse`. `services/api/calendar.ts` with `getCalendar(year, month, timezone)`. Query keys: `entries.calendars()`, `entries.calendar(year, month)`
-- [x] **Timezone handling** — Client reads IANA timezone via `Intl.DateTimeFormat().resolvedOptions().timeZone`, passes to API. RPC uses `at time zone p_timezone` for all date conversions. Entries display on the correct local date regardless of UTC offset
-- [x] **Calendar component** — Continuous vertical scroll calendar (not paginated). `buildMonthSection()` generates week rows per month. `generateMonthRange()` builds 6 past + 1 future months. Fixed-height scroll window (4 rows visible). Initial scroll position: current week at bottom. `useFocusEffect` resets scroll on tab re-focus
-- [x] **CalendarDayCell** — Skia `Circle` with `LinearGradient` fill for mood-colored days (25% opacity). Circular cells with breathing room between them. Today: accent fill + ring. Subtle glass border on mood cells. Entry dot (4px) below day number. Text hierarchy: `textPrimary` for entry days, `textSecondary` for regular days, dimmed for outside-month/future
-- [x] **CalendarHeader** — Month name + year, auto-updates based on scroll position via `onScroll` handler (detects which month occupies the viewport center)
-- [x] **useCalendarRange** — `useQueries` fetches 8 months in parallel. Merges all `CalendarDay` data into a single `Map<string, CalendarDay>`. Streak = max across all months
-- [x] **History tab integration** — Calendar in `ListHeaderComponent` of `FlatList`. Entire screen scrolls as one surface. Entry mutations (`useCreateEntry`, `useUpdateEntry`, `useDeleteEntry`, `useTogglePin`) all invalidate `queryKeys.entries.calendars()`
-- [x] **Visual polish** — Semi-transparent card background (`surface` at 35% opacity) lets ambient Skia blobs show through. Circular cells, mood gradient fills, entry dots, today accent ring
-- [x] **Tests** — tsc ✅, eslint ✅. Backend: ruff ✅, mypy ✅ (46 files), 253 tests ✅
+Continuous-scroll mood calendar on History tab. Skia gradient circles per day. Timezone-aware aggregation via Postgres RPC. `useCalendarRange` fetches 8 months in parallel. Streak computation. Semi-transparent card background. 253 tests.
 
 ### Subphase 4J — Media Attachments (Images) ✅
 
-Support for multiple images per entry.
+Multiple images per entry (max 10, 10MB each). `entry_media` table with RLS + storage bucket. Client-side compression (2048px max, JPEG 80%). Incremental thumbnail appearance during compression. `MediaPreviewCluster` on cards. Long-press to activate delete (haptic feedback), tap to confirm, tap elsewhere to dismiss. 277 tests.
 
-- [x] **Database migration** — `007_ADD_ENTRY_MEDIA.sql`. `entry_media` table with `id`, `entry_id`, `user_id`, `storage_path`, `content_type`, `size_bytes`, `width`, `height`, `sort_order`, `created_at`. RLS policies for owner-only access. `entry-media` storage bucket (private, 10MB limit, MIME whitelist). Cascade delete via FK
-- [x] **Backend models** — `models/media.py`: `MediaContentType` StrEnum, `MAX_FILE_SIZE_BYTES=10MB`, `MAX_MEDIA_PER_ENTRY=10`, `PREVIEW_LIMIT=3`. `EntryMediaRow`, `EntryMediaResponse`, `EntryMediaListResponse`, `MediaPreviewItem`, `MediaPreview` (items + total_count)
-- [x] **Backend service** — `MediaService`: upload (validates size/type/count), list, get_by_id, delete, signed URLs (1hr expiry), `get_previews_for_entries()` batch preview for entry list cards
-- [x] **API endpoints** — `POST/GET/DELETE /entries/{id}/media/{media_id}`. Entry list endpoint injects `MediaService` for batch previews in response
-- [x] **Mobile types & API** — `media.ts` types, `apiUpload<T>()` generic upload function, `services/api/media.ts` with upload/list/delete
-- [x] **Mobile hooks** — `useEntryMedia`, `useUploadMedia`, `useDeleteMedia` query/mutation hooks. `useImagePicker` with per-image `onImageReady` callback and `CompressionProgress` reporting
-- [x] **Entry form integration** — `ImageAttachmentStrip` with thumbnails, add button, trash overlay. `CompressionIndicator` progress bar below strip during compression. Images appear incrementally as each finishes compressing. `useEntryForm` manages `localImages`, `existingMedia`, `removedMediaIds`, `compressionProgress` state
-- [x] **Entry card integration** — `MediaPreviewCluster` shows up to 3 thumbnail previews with overflow badge on entry cards
-- [x] **Client-side compression** — `lib/imageUtils.ts`: max 2048px dimension, JPEG 80% quality via `expo-image-manipulator`
-- [x] **Tests** — Backend: ruff ✅, mypy ✅, 277 tests ✅. Mobile: tsc ✅, eslint ✅
+### Subphase 4K — Voice Memos ✅
 
-### Subphase 4K — Voice Memos
+Record and attach audio to journal entries.
 
-Record and attach audio to entries.
-
-**Objectives:**
-
-- [ ] Storage — same `entry_media` table and bucket. Formats: M4A, AAC, WAV. Max 5 minutes, max 25MB
-- [ ] Mobile — record button on entry form (mic icon). `expo-av` for recording. Skia-rendered waveform visualization during recording and playback. Playback controls (play/pause, scrubber, duration). Auto-stop at max duration
-- [ ] Backend — same upload/delete/list endpoints. `content_type` distinguishes audio from images. Duration in `metadata jsonb`
-- [ ] Permissions — microphone permission via `expo-av`. Graceful denial handling
-- [ ] Tests — backend: audio upload, content type validation. Mobile: tsc + eslint
+- [x] **Database migration** — `009_ADD_AUDIO_SUPPORT.sql`. Audio content types (`audio/m4a`, `audio/aac`, `audio/wav`, `audio/mpeg`, `audio/mp4`) added to `entry_media` CHECK constraint. `010_ADD_WAVEFORM.sql` — `waveform jsonb` column on `entry_media` for persisted amplitude data
+- [x] **Backend** — `EntryMediaRow.waveform` and `EntryMediaResponse.waveform` (`list[float] | None`). `upload_media` accepts `waveform` as JSON string Form field, parsed via `_parse_waveform()`
+- [x] **Mobile recording** — `VoiceRecorderInline` (mic icon trigger) + `VoiceRecorderActive` (full recording UI). `expo-av` recording with real-time metering. `WaveformStatic` component renders live amplitude bars during recording. Auto-stop at max duration (5 min). Haptic feedback on start/stop/discard. `Date.now()` fallback for `durationMillis: 0` on iOS Simulator
+- [x] **Mobile playback** — `VoicePlayer` with play/pause, duration display, animated `Waveform` component. Skia-rendered bars with `useDerivedValue` + `withTiming` smooth progress animation via `Group clip`. Real waveform data from recording (no placeholder bars)
+- [x] **Waveform persistence** — Amplitudes captured during recording (`allAmplitudesRef`), downsampled via `downsampleAmplitudes()` in `audioUtils.ts`, stored as `LocalAudio.waveform`. Uploaded as JSON, persisted in `entry_media.waveform`. Playback uses stored waveform data
+- [x] **Audio utilities** — `lib/audioUtils.ts`: `configureAudioSession`, `createRecording`, `resetAudioSession`, `requestMicrophonePermission`, `normalizeMetering`, `formatDuration`, `downsampleAmplitudes`
+- [x] **Entry form integration** — `VoiceMemoSection` for active recording + playback. `useEntryForm` manages `localAudio`, `existingAudio`, `isRecordingAudio` state. Upload via `uploadAudio()` with waveform data
+- [x] **Tests** — Backend: ruff ✅, mypy ✅, 313 tests ✅. Mobile: tsc ✅, eslint ✅
 
 ### Subphase 4L — Location Tagging ✅
 
-Upgrade the existing `location` text field to structured geolocation with interactive place search and map-based pin drop.
+Structured geolocation with interactive place search and map-based pin drop.
 
-- [x] **Database migration** — `008_ADD_LOCATION_COORDINATES.sql`. Added `latitude double precision`, `longitude double precision` to `journal_entries`. CHECK constraints: pair constraint (both or neither), lat -90 to 90, lng -180 to 180. Partial index on `(user_id)` where `latitude IS NOT NULL AND deleted_at IS NULL`. `location` column kept as-is (no rename — already clear)
-- [x] **Backend models** — `validate_coordinate_pair()` reusable validator (same pattern as `validate_mood_pair`). `latitude`/`longitude` added to `JournalEntryCreate`, `JournalEntryUpdate`, `JournalEntryRow`, `JournalEntryResponse`. Model validators enforce pair constraint. `from_row()` maps coordinates through. `to_update_dict()` includes coordinates when present
-- [x] **Backend service** — `JournalService.create()` payload includes `latitude`/`longitude`
-- [x] **Backend tests** — 20 new tests: `TestCoordinateValidation` (9), `TestCreateWithCoordinates` (6), `TestUpdateWithCoordinates` (3), `TestJournalEntryResponse` with/without coordinates (2). 297 total passing. ruff ✅, mypy ✅
-- [x] **Mobile types** — `latitude: number | null`, `longitude: number | null` on `JournalEntry`. Optional `latitude?`/`longitude?` on `Create`/`Update`
-- [x] **Location utilities** — `lib/locationUtils.ts`: `LocationData` interface, `getCurrentLocation()` (permission → GPS → reverse geocode), `getCurrentLocationSilent()` (checks existing permission without prompting), `openInMaps()` (Apple Maps on iOS, geo intent on Android, Google Maps web fallback). `lib/locationSearch.ts`: Nominatim (OpenStreetMap) place search with POI support, structured address formatting, `searchResultToLocationData()` converter
-- [x] **LocationPicker component** — `components/journal/LocationPicker/`. Tap "Add location" or existing location → opens `LocationSearchSheet`. X button clears. Auto-detect on new entry mount via `getCurrentLocationSilent()` (silent — no prompt if permission not yet granted)
-- [x] **LocationSearchSheet** — Centered floating modal (matches `DateTimePickerSheet` pattern: scale+fade+translateY animation, 340px max-width, `radius.2xl` card). Search input with 400ms debounce → Nominatim forward geocoding (POI names, addresses, landmarks). "Use Current Location" row with GPS fetch. Search results with display name + subtitle (city, state, country). Two-step selection on iOS: result → pending preview → confirm
-- [x] **LocationMap (iOS only)** — `react-native-maps` Apple Maps `MapView` with tap-to-drop-pin. Reverse geocodes pin location for display name. Animates to selected search result coordinates. Conditionally loaded via `Platform.OS === "ios"` — Android gets search-only flow
-- [x] **Entry form integration** — `useEntryForm` manages `location` state (initialized from existing entry's lat/lng/location). Auto-detects on new entries. Includes `location`/`latitude`/`longitude` in create/update payloads. Date picker and location picker grouped with `spacing.sm` gap. Calendar icon + full date format ("February 16, 2026 at 8:09 AM") on trigger
-- [x] **Detail screen** — Location in metadata row as `Pressable`. Accent-colored when coordinates exist (tappable → opens Maps). Falls back to tertiary color for legacy text-only locations
-- [x] **Dependencies** — `expo-location` installed with `locationWhenInUsePermission` in `app.json`. `react-native-maps` installed (iOS Apple Maps, no API key needed)
-- [x] **Tests** — Backend: ruff ✅, mypy ✅, 297 tests ✅. Mobile: tsc ✅, eslint ✅
+- [x] `latitude`/`longitude` columns with CHECK constraints and pair validation
+- [x] `LocationSearchSheet` floating modal with Nominatim search (400ms debounce), "Use Current Location" GPS fetch, two-step selection
+- [x] `LocationMap` (iOS only) — Apple Maps with tap-to-drop-pin, reverse geocoding
+- [x] Auto-detect location on new entries (silent — no prompt if permission not granted)
+- [x] Detail screen: tappable location opens Apple Maps / Google Maps
+- [x] 297 tests. `expo-location` + `react-native-maps` installed
 
 ---
 
-## Phase 5 — AI Integration (Embeddings & Insights)
+## Phase 5 — Guided Check-ins & On-Device AI
 
-Generate vector embeddings for journal entries via background workers. Semantic search, mood tracking over time, AI-powered reflection prompts. pgvector queries for similarity search. "Year in Pixels" sentiment-colored history view.
+The intelligence layer. Push notification-initiated guided flows reduce the barrier to journaling. On-device LLMs provide personalized prompts, reflections, and insights — all data stays on device.
+
+### Subphase 5A — Guided Check-in Flow
+
+Low-friction, structured micro-entries initiated by the app rather than the user.
+
+- [ ] **Check-in data model** — new `check_ins` table (or entry subtype) with `mood_score` (1-10 scale), `prompt_id`, `response_text`, `created_at`. Lightweight alternative to full journal entries
+- [ ] **Check-in flow UI** — push notification → app opens to check-in screen. Step 1: "How are you feeling?" with 1-10 mood scale (Skia gradient slider or tappable pills). Step 2: contextual follow-up prompt based on score (e.g., low score → "What's weighing on you?", high → "What's going well?"). Step 3: optional free-text expansion, voice memo, or "just save"
+- [ ] **Prompt engine** — curated prompt bank organized by mood range. Randomized selection within range to avoid repetition. Extensible for AI-generated prompts later
+- [ ] **Check-in → entry promotion** — option to expand a check-in into a full journal entry (pre-fills mood, body from responses)
+- [ ] **Check-in history** — visible in calendar view (different visual indicator from full entries). Contributes to streak
+
+### Subphase 5B — Push Notifications & Reminders
+
+Scheduled reflection reminders. Configurable cadence. Gentle, non-intrusive prompts.
+
+- [ ] **Push notification infrastructure** — `expo-notifications` for local scheduled notifications. Permission request flow with graceful denial
+- [ ] **Reminder settings** — configurable in Settings: frequency (daily, twice daily, custom), time of day, days of week. Stored locally (no backend needed for local notifications)
+- [ ] **Smart scheduling** — avoid sending during sleep hours. Respect Do Not Disturb
+- [ ] **Notification content** — rotating prompt text ("Time for a quick check-in", "How's your day going?", "Take a moment to reflect"). Tapping opens guided check-in flow
+- [ ] **Backend push (future)** — when moving to production, migrate to server-sent push via APNs/FCM for reliability and cross-device sync
+
+### Subphase 5C — On-Device AI: Apple Foundation Models (iOS)
+
+Leverage Apple's Foundation Models framework (3B parameter on-device LLM, iOS 26+) for personalized, private intelligence features. Free inference, works offline.
+
+- [ ] **Native module bridge** — Swift native module exposing Foundation Models framework to React Native. `FoundationModelSession` with guided generation (structured output). Availability check (`FoundationModelAvailability`) with graceful fallback
+- [ ] **Personalized journaling prompts** — feed recent entries (mood, tags, topics) as context. Generate contextual prompts: "You mentioned feeling anxious about work yesterday — how did today go?" Prompts adapt to user's emotional state over time
+- [ ] **Entry reflections** — after saving an entry, offer an AI-generated reflection or reframe. "It sounds like you handled that situation with patience — that's growth"
+- [ ] **Mood-aware notifications** — generate context-aware notification text based on recent mood patterns. Low mood streak → compassionate check-in. High mood → celebration prompt
+- [ ] **Entry summaries** — weekly/monthly summaries of journal themes, mood trends, recurring topics. Displayed on Insights tab
+- [ ] **Natural language search** — semantic understanding of search queries beyond keyword matching. "entries about my relationship" finds relevant entries even without that exact word
+
+### Subphase 5D — On-Device AI: Gemini Nano (Android)
+
+Equivalent intelligence features on Android using Gemini Nano via ML Kit GenAI APIs.
+
+- [ ] **Native module bridge** — Kotlin native module exposing ML Kit GenAI Prompt API to React Native. Availability check (AICore service, supported devices). Graceful fallback for unsupported devices
+- [ ] **Feature parity** — same prompt generation, reflections, summaries, and mood-aware notifications as iOS. Shared prompt templates and context preparation logic in TypeScript. Platform-specific inference only
+- [ ] **Fallback strategy** — devices without on-device AI support get curated prompt bank (5A) instead of generated prompts. No cloud fallback — privacy first
+
+### Subphase 5E — Insights Dashboard
+
+AI-powered analytics and visualizations on the Insights tab.
+
+- [ ] **Mood trends** — weekly/monthly mood charts (Skia-rendered). Average mood over time, mood distribution pie/bar chart
+- [ ] **Journaling streaks & stats** — entries per week, average entry length, most active time of day, most used tags
+- [ ] **AI-generated weekly digest** — on-device summary of the week's entries, themes, emotional arc. "This week you wrote about work stress 3 times but ended the week feeling hopeful"
+- [ ] **"Year in Pixels"** — full-year grid where each day is a mood-colored pixel. Skia-rendered, scrollable
 
 ---
 
-## Phase 6 — Notifications & Reminders
+## Phase 6 — Production Deployment & Observability
 
-Scheduled reflection reminders via push notifications. Configurable cadence. Gentle, non-intrusive prompts.
+CI/CD pipelines, production Supabase project, monitoring, error tracking, app store submission.
 
----
-
-## Phase 7 — Production Deployment & Observability
-
-CI/CD pipelines, production Supabase project, monitoring, error tracking (Sentry), log aggregation, performance budgets, app store submission.
-
-**Includes:**
-
-- [ ] Production SMTP configuration — real email delivery (SendGrid, Postmark, or SES), custom templates
+- [ ] Production SMTP — real email delivery (SendGrid, Postmark, or SES), custom templates
 - [ ] Token revocation — Redis-based token blacklist for immediate invalidation on sign-out
-- [ ] API gateway rate limiting — rate limiting on backend endpoints
-- [ ] CORS production configuration — replace localhost origins with production domains
+- [ ] API gateway rate limiting
+- [ ] CORS production configuration
 - [ ] CI/CD pipelines — automated lint, typecheck, test on every PR
 - [ ] Error tracking — Sentry integration for backend and mobile
-- [ ] Log aggregation — structured log shipping to centralized platform
+- [ ] Log aggregation — structured log shipping
 - [ ] Performance budgets — bundle size limits, API response time targets
 - [ ] App store submission — iOS App Store and Google Play Store
 - [ ] Network resilience — offline detection, retry logic, offline indicator in UI

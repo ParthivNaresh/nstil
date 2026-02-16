@@ -1,3 +1,4 @@
+import * as Haptics from "expo-haptics";
 import { useCallback } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
@@ -13,16 +14,18 @@ const ICON_SIZE = 20;
 
 interface ImageThumbnailProps {
   readonly source: ThumbnailSource;
-  readonly onRemove: () => void;
-  readonly onDismissTrash: () => void;
   readonly showTrash: boolean;
+  readonly onRemove: () => void;
+  readonly onActivateTrash: () => void;
+  readonly onDeactivateTrash: () => void;
 }
 
 export function ImageThumbnail({
   source,
-  onRemove,
-  onDismissTrash,
   showTrash,
+  onRemove,
+  onActivateTrash,
+  onDeactivateTrash,
 }: ImageThumbnailProps) {
   const { colors } = useTheme();
 
@@ -30,12 +33,22 @@ export function ImageThumbnail({
     if (showTrash) {
       onRemove();
     } else {
-      onDismissTrash();
+      onDeactivateTrash();
     }
-  }, [showTrash, onRemove, onDismissTrash]);
+  }, [showTrash, onRemove, onDeactivateTrash]);
+
+  const handleLongPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onActivateTrash();
+  }, [onActivateTrash]);
 
   return (
-    <Pressable onPress={handlePress} style={styles.container}>
+    <Pressable
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      delayLongPress={300}
+      style={styles.container}
+    >
       <Image
         source={{ uri: source.uri }}
         style={[
@@ -51,7 +64,7 @@ export function ImageThumbnail({
           style={styles.trashOverlay}
         >
           <View style={styles.trashBackground}>
-            <Trash2 size={ICON_SIZE} color="#FFFFFF" />
+            <Trash2 size={ICON_SIZE} color={colors.onError} />
           </View>
         </Animated.View>
       )}

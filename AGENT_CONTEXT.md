@@ -22,6 +22,9 @@ This project is in active development. Backwards compatibility is not a concern.
 | Server state | TanStack React Query | 5.x | All API-fetched data, 5 min staleTime |
 | i18n | i18next + react-i18next | latest | All user-facing strings externalized |
 | Animations | react-native-reanimated | 4.x | Spring animations, floating labels |
+| GPU rendering | @shopify/react-native-skia | 2.x | Gradients, mood orbs, ambient background |
+| Maps | react-native-maps | latest | Apple Maps on iOS (no API key), Android excluded |
+| Location | expo-location | latest | GPS + reverse geocoding |
 | Gestures | react-native-gesture-handler | 2.x | Tap gestures for buttons |
 | Haptics | expo-haptics | latest | Button press feedback |
 | Deep linking | expo-linking | latest | `nstil://` scheme for auth callbacks |
@@ -30,7 +33,6 @@ This project is in active development. Backwards compatibility is not a concern.
 | Logging | structlog | 25.x | Structured logging, sensitive data scrubbing |
 | Auth/DB | Supabase | 2.x | Local dev via CLI, JWT auth, email confirmations |
 | Cache/Queue | Redis + ARQ | Redis 7, ARQ 0.26+ | Async Redis, background workers |
-| Styling | Custom design tokens | — | Dark glassmorphism theme |
 | Package manager (Python) | uv | latest | NOT pip/poetry |
 | Task runner | just | — | All commands via `just <command>` |
 | Linter (Python) | ruff | 0.9+ | Lint + format |
@@ -45,13 +47,13 @@ This project is in active development. Backwards compatibility is not a concern.
 
 | Path | Purpose |
 |------|---------|
-| `ROADMAP.md` | Phased development plan with checkboxes |
+| `ROADMAP.md` | Phased development plan with checkboxes — **source of truth for progress** |
 | `AGENT_CONTEXT.md` | This file |
 | `SETUP.md` | Full setup instructions from fresh clone |
 | `justfile` | Task runner for all commands |
 | `docker-compose.yml` | Backend + worker + Redis |
 | `supabase/config.toml` | Local Supabase config (auth, email, DB) |
-| `supabase/migrations/` | SQL migrations (Postgres + pgvector + RLS) |
+| `supabase/migrations/` | SQL migrations (8 total: init, search, journals, mood, calendar, media, location) |
 | `packages/shared/` | Placeholder for shared types/constants |
 
 ### Backend (`apps/backend/`)
@@ -60,36 +62,31 @@ Source lives in `src/nstil/` (hatchling src layout).
 
 | Directory | Purpose |
 |-----------|---------|
-| `api/` | FastAPI routes — `deps.py` (DI), `middleware.py` (CacheControl), `router.py`, `v1/` (endpoints) |
+| `api/` | FastAPI routes — `deps.py` (DI), `middleware.py`, `router.py`, `v1/` (endpoints) |
 | `core/` | Domain logic — `security.py` (JWT), `exceptions.py` |
-| `models/` | Pydantic models — one file per domain, `__init__.py` re-exports |
-| `observability/` | Structured logging — config, middleware, processors, context, constants |
-| `services/` | External service wrappers — `redis.py` |
+| `models/` | Pydantic models — `journal.py`, `mood.py`, `calendar.py`, `media.py`, `space.py` |
+| `services/` | Service layer — `journal.py`, `media.py`, `redis.py`, cache services |
+| `observability/` | Structured logging — config, middleware, processors, context |
 | `workers/` | ARQ background tasks and settings |
-
-Root files: `main.py` (app factory), `config.py` (Pydantic Settings).
-
-Tests in `tests/` mirror the source structure. `factories.py` for JWT token generation, `conftest.py` at each level for fixtures. **39 tests** across 5 test modules.
 
 ### Mobile (`apps/mobile/`)
 
 | Directory | Purpose |
 |-----------|---------|
-| `app/` | expo-router file-based routes — `(auth)/` (6 screens), `(tabs)/` (authenticated) |
+| `app/` | expo-router routes — `(auth)/` (6 screens), `(tabs)/` (4 tabs), `entry/` (create + edit) |
 | `components/ui/` | Reusable UI primitives — each in own directory |
 | `components/auth/` | Auth-specific shared components |
-| `hooks/` | Custom hooks — form logic extracted from screens |
-| `lib/` | Utilities — Supabase client, React Query, i18n, validation, error mapping, deep linking |
-| `stores/` | Zustand stores — `authStore.ts` |
-| `services/api/` | API client with typed errors and auto-auth |
-| `styles/` | Design tokens — colors, spacing, typography |
-| `types/` | Shared TypeScript types — one file per domain |
+| `components/journal/` | Journal feature components (EntryForm, EntryCard, Calendar, LocationPicker, etc.) |
+| `hooks/` | Custom hooks — form logic, data fetching, theme |
+| `lib/` | Utilities — Supabase client, React Query, i18n, validation, location, date formatting |
+| `stores/` | Zustand stores — `authStore.ts`, `themeStore.ts` |
+| `services/api/` | API client + domain-specific API functions |
+| `styles/` | Design tokens — palettes, spacing, typography, radius, animation, opacity |
+| `types/` | Shared TypeScript types — `journal.ts`, `calendar.ts`, `auth.ts`, `api.ts` |
 
 ---
 
 ## 4. Commands
-
-All commands run from the repo root via `just`:
 
 ```sh
 just backend-dev          # uvicorn --reload on :8000
@@ -100,194 +97,7 @@ just db-start             # supabase start (runs migrations)
 just db-reset             # reset + re-migrate
 ```
 
-Direct commands from `apps/backend/`:
-```sh
-uv run ruff check src tests
-uv run mypy src
-uv run pytest -v
-```
-
-Direct commands from `apps/mobile/`:
-```sh
-npx tsc --noEmit
-npx eslint .
-```
-
----
-
-## 5. Backend Architecture
-
-### App factory (`main.py`)
-
-`create_app()` with async lifespan for Redis pool. Middleware stack (order matters — LIFO):
-1. `CORSMiddleware` — restricted origins
-2. `RequestLoggingMiddleware` — auto-logs HTTP requests with request ID, duration
-3. `CacheControlMiddleware` — `no-store, private` on authenticated responses, skips public paths
-
-### Configuration (`config.py`)
-
-Pydantic Settings reads from `.env`. `SecretStr` for `supabase_service_key` and `supabase_jwt_secret`. `@model_validator` rejects empty secrets at startup.
-
-### Dependency injection (`api/deps.py`)
-
-| Dependency | Returns | Notes |
-|-----------|---------|-------|
-| `get_settings()` | `Settings` | `@lru_cache(maxsize=1)` singleton |
-| `get_redis(request)` | `aioredis.Redis` | From `request.app.state.redis` |
-| `get_current_user(credentials, settings)` | `UserPayload` | JWT verification, 401 on failure |
-
-### Auth pipeline
-
-Bearer token → `HTTPBearer` → `verify_jwt` (HS256, audience="authenticated", require sub/exp/aud, 30s leeway) → `UserPayload`. Distinct errors: `TokenExpiredError` → 401 "Token has expired", `InvalidTokenError` → 401 "Invalid token".
-
-### Observability
-
-structlog-based. `scrub_sensitive_data` recursively scrubs dicts/lists/strings matching sensitive keys (`password`, `token`, `jwt_secret`, etc.) or patterns (JWT regex, Supabase key regex). `RequestLoggingMiddleware` generates `X-Request-ID`, logs method/path/status/duration, warning for 4xx, error for 5xx.
-
-### Patterns to follow
-
-- Imports: `from nstil.xxx import yyy`
-- DI: all external resources via `Depends()`, never global imports in endpoints
-- Async: all route handlers, Redis calls, services
-- Exceptions: domain exceptions in `core/exceptions.py`, HTTP translation in `api/deps.py`
-- Models: one file per domain in `models/`, re-export from `__init__.py`
-- Endpoints: one file per feature in `api/v1/`, registered in `api/router.py`
-- Type annotations: required on all function signatures (mypy strict)
-- Settings: always via `Depends(get_settings)`, `.get_secret_value()` for SecretStr
-- Logging: `from nstil.observability import get_logger`, no `print()`
-
----
-
-## 6. Mobile Architecture
-
-### Auth flow
-
-6 screens in `app/(auth)/`: welcome, sign-in, sign-up, verify-email, forgot-password, reset-password. Redirect logic in `app/index.tsx`: no session → auth, recovery session → reset-password, unverified → verify-email, verified → tabs.
-
-### Deep linking
-
-`lib/deepLink.ts` handles `nstil://` scheme. Parses access/refresh tokens from URL fragment, detects `type` param (signup vs recovery), sets `pendingDeepLinkType` in auth store. Listener wired in root layout with cleanup.
-
-### Auth store (`stores/authStore.ts`)
-
-Zustand store with event-aware `onAuthStateChange`. `SIGNED_OUT` event clears all caches. `isEmailVerified` derived from `email_confirmed_at`. `pendingDeepLinkType` drives recovery flow routing.
-
-### API client (`services/api/client.ts`)
-
-`apiFetch<T>()` auto-injects Bearer token. Throws `NoSessionError` if no session, `ApiError` with typed status on failure, auto-signs-out on 401.
-
-### Patterns to follow
-
-- i18n: all user-facing strings via `t()`, never hardcoded
-- Components: each in own directory with `index.ts`, `types.ts`, implementation files
-- Hooks: form logic extracted into custom hooks, screens are thin
-- Styles: `StyleSheet.create()` at bottom, use design tokens from `@/styles`
-- Types: shared in `types/`, component-specific in component's `types.ts`
-- Validation: pure functions in `lib/validation/`, composed into form validators
-- Error handling: Supabase errors mapped to i18n keys, generic messages only
-- Navigation: `router.replace()` for auth transitions (no back gesture)
-
-### Design system
-
-Dark glassmorphism theme with comprehensive design tokens in `styles/`:
-
-| Token file | Contents |
-|-----------|----------|
-| `colors.ts` | Background, surface, glass, text, accent, semantic colors with muted variants |
-| `spacing.ts` | 8pt grid: xs=4, sm=8, md=16, lg=24, xl=32, 2xl=48, 3xl=64 |
-| `typography.ts` | Typed `TypographyScale` with `TypographyVariant` — h1, h2, h3, body, bodySmall, caption, label |
-| `radius.ts` | Border radius scale: xs=4, sm=8, md=12, lg=16, xl=20, 2xl=24, full=9999 |
-| `animation.ts` | Duration tokens (instant/fast/normal/slow), spring easing presets |
-| `opacity.ts` | Opacity scale: disabled=0.5, muted=0.4, subtle=0.7, full=1 |
-| `theme.ts` | Aggregated `theme` object with `Theme` type |
-
-### UI Component Library (18 components in `components/ui/`)
-
-Each component lives in its own directory with `index.ts`, `types.ts`, and implementation files.
-
-| Component | Purpose |
-|-----------|---------|
-| `AppText` | Variant-driven text (`variant`, `color`, `align` props) — use instead of raw `Text` |
-| `Icon` | Typed Lucide wrapper with `IconSize` enum |
-| `Button` | Spring animation + haptics, primary/secondary/ghost variants |
-| `TextInput` | Floating label, secure toggle, error state |
-| `TextArea` | Multi-line, auto-growing, character/word count |
-| `Card` | Pressable glass/elevated variants, header/footer slots, chevron |
-| `SearchInput` | Search icon, clear button, debounced `onSearch` |
-| `DatePicker` | Styled trigger + native picker, date/time/datetime modes |
-| `MoodSelector` | 5-mood emoji picker with spring animation |
-| `Avatar` | Initials-based, 4 sizes |
-| `Badge` | Count or dot mode, positioned overlay |
-| `EmptyState` | Icon + title + subtitle + optional CTA |
-| `Skeleton` | Pulse animation, text/circle/rect shapes |
-| `ScreenContainer` | SafeArea + keyboard avoidance + dark background (auth screens) |
-| `ScrollContainer` | Pull-to-refresh, keyboard avoidance (content screens) |
-| `Header` | Blur background, back button, right action slot |
-| `TabBar` | Custom glassmorphism tab bar with icons and badges |
-| `Divider` | Configurable horizontal rule |
-
----
-
-## 7. Environment Variables
-
-### Backend (`apps/backend/.env`)
-
-| Variable | Description |
-|----------|-------------|
-| `SUPABASE_URL` | Supabase API URL |
-| `SUPABASE_SERVICE_KEY` | Service role key (SecretStr, validated non-empty) |
-| `SUPABASE_JWT_SECRET` | JWT signing secret (SecretStr, validated non-empty) |
-| `REDIS_URL` | Redis connection string |
-| `CORS_ORIGINS` | JSON list of allowed origins |
-| `DEBUG` | Enable debug mode |
-| `LOG_LEVEL` | Logging level (default: `INFO`) |
-| `LOG_FORMAT` | `console` (dev) or `json` (production) |
-
-### Mobile (`apps/mobile/.env`)
-
-| Variable | Description |
-|----------|-------------|
-| `EXPO_PUBLIC_SUPABASE_URL` | Supabase API URL |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/publishable key |
-| `EXPO_PUBLIC_API_URL` | Backend API base URL |
-
-Get keys via `supabase status` after `just db-start`.
-
----
-
-## 8. Supabase Configuration
-
-`supabase/config.toml` configures the local Supabase instance:
-- `site_url = "nstil://"` — deep link scheme for auth callbacks
-- `enable_confirmations = true` — email verification required
-- `minimum_password_length = 8`, `password_requirements = "lower_upper_letters_digits"`
-- `jwt_expiry = 3600` (1 hour), refresh token rotation enabled
-- Inbucket/Mailpit at `localhost:54324` for local email testing
-
----
-
-## 9. Testing
-
-### Philosophy
-
-- Tests prove the system works under real conditions
-- No mocking external services in integration tests
-- Mocks acceptable only for unit tests of pure logic
-- Test directory mirrors source structure
-
-### Current: 39 tests (all passing)
-
-| Module | Tests | Type |
-|--------|-------|------|
-| `core/test_security.py` | 10 | Unit — JWT verification paths |
-| `core/test_config.py` | 5 | Unit — Settings validation |
-| `api/v1/test_auth.py` | 5 | Integration — auth dependency via HTTP |
-| `api/v1/test_cache_control.py` | 2 | Integration — cache headers |
-| `api/v1/test_health.py` | 1 | Integration — health endpoint |
-| `observability/test_processors.py` | 16 | Unit — sensitive data scrubbing |
-
-### Verification (run before any work is considered complete)
-
+Direct commands:
 ```sh
 cd apps/backend && uv run ruff check src tests && uv run mypy src && uv run pytest -v
 cd apps/mobile && npx tsc --noEmit && npx eslint .
@@ -295,58 +105,140 @@ cd apps/mobile && npx tsc --noEmit && npx eslint .
 
 ---
 
-## 10. Known Gotchas
+## 5. Backend Architecture
 
-### Backend
-- `redis.asyncio.from_url` is untyped — needs `# type: ignore[no-untyped-call]`
-- `python-jose` has no type stubs — needs `# type: ignore[import-untyped]`
-- mypy is strict — every function needs return types, no implicit `Any`
-- `workers/settings.py` instantiates `Settings()` at import time — requires all env vars
+### Key patterns
 
-### Mobile
-- `npm install` requires `--legacy-peer-deps` due to expo-router peer conflict
-- `npx expo install` does NOT respect `.npmrc` — use `npm install --legacy-peer-deps`
-- Reanimated 4.x requires `react-native-worklets` as a peer dependency
-- ESLint pinned to v8 — `eslint-config-expo@10` incompatible with v9+
-- Root layout must use `Stack` (not `Slot`) for `Redirect` to work
-- `GestureHandlerRootView` requires `style={{ flex: 1 }}`
-- After native dependency changes, run `just mobile-rebuild-ios`
-- Email verification links must be opened in Simulator Safari (not desktop browser) — use `xcrun simctl openurl booted "<url>"`
+- **App factory** (`main.py`): `create_app()` with async lifespan for Redis pool
+- **DI**: all external resources via `Depends()` — `get_settings()`, `get_redis()`, `get_current_user()`
+- **Auth**: Bearer JWT → `verify_jwt` (HS256) → `UserPayload`. `TokenExpiredError` / `InvalidTokenError`
+- **Models**: Pydantic models per domain — `Create`, `Update`, `Row`, `Response` pattern. Shared validators (e.g., `validate_mood_pair`, `validate_coordinate_pair`)
+- **Services**: `JournalService` (Supabase queries), `CachedJournalService` (Redis cache-first), `MediaService` (storage + signed URLs)
+- **Cache**: Redis with pattern-based invalidation. Cache keys include user_id, filters, pagination. TTLs: 5min for lists, 60s for search, 5min for calendar
+- **Observability**: structlog with sensitive data scrubbing, request logging middleware
 
----
+### Database (8 migrations)
 
-## 11. Current Progress
+1. `001_init` — `journal_entries` table with RLS, search vector, triggers
+2. `002_search_rpc` — `search_journal_entries` RPC function
+3. `003_journals` — `journals` table, FK on entries, default journal trigger
+4. `004_pin` — `is_pinned` column + composite index
+5. `005_mood` — `mood_category`/`mood_specific` columns (replaced `mood_score`)
+6. `006_calendar_rpc` — `get_calendar_data` RPC with timezone support
+7. `007_media` — `entry_media` table + storage bucket
+8. `008_location` — `latitude`/`longitude` columns with pair constraints
 
-### Phase 1 — Authentication ✅ Complete
-- Backend: JWT verification, typed models, custom exceptions, secrets management, structured logging, cache-control middleware, 39 tests
-- Mobile: 6 auth screens (welcome, sign-in, sign-up, verify-email, forgot-password, reset-password), deep linking, event-aware auth store, SecureStore token persistence, API client with typed errors and 401 auto-sign-out
-- Security: generic error messages, no user enumeration, server-side password enforcement, sensitive data scrubbing, CORS restricted
+### Tests: 297 passing
 
-### Phase 2 — Design System & Core UI Components ✅ Complete
-- Design tokens: typed typography, radius, animation, opacity scales + aggregated theme object
-- 18 UI components: AppText, Icon, Button, TextInput, TextArea, Card, SearchInput, DatePicker, MoodSelector, Avatar, Badge, EmptyState, Skeleton, ScreenContainer, ScrollContainer, Header, TabBar, Divider
-- App shell: 3-tab layout (Journal, Insights, Settings) with custom glassmorphism tab bar
-- Auth screens migrated from GlassCard to Card + AppText (GlassCard removed)
-- Dependency added: `@react-native-community/datetimepicker`
-
-### Phase 3 — Journal Entry CRUD (next)
-### Phase 4 — AI Integration (Embeddings & Insights)
-### Phase 5 — Notifications & Reminders
-### Phase 6 — Production Deployment & Observability
-
-See `ROADMAP.md` for detailed objectives and checkboxes.
+Covers models, API endpoints, cache layer, validators. Run `uv run pytest -v` from `apps/backend/`.
 
 ---
 
-## 12. What NOT to Do
+## 6. Mobile Architecture
 
+### Theme system
+
+Three palettes: `darkPalette` (default), `lightPalette`, `oledPalette`. Zustand `themeStore` persisted to SecureStore. `useTheme()` hook returns `colors`, `isDark`, `keyboardAppearance`. Every component uses `useTheme()` — no static color imports.
+
+Skia `AmbientBackground` mounted at root layout — all screens are transparent overlays on top of a continuous GPU-rendered gradient.
+
+### Navigation structure
+
+- `app/(auth)/` — 6 auth screens (welcome, sign-in, sign-up, verify-email, forgot-password, reset-password)
+- `app/(tabs)/` — 4 tabs: Home, History, Insights, Settings
+- `app/entry/create.tsx` — new entry form
+- `app/entry/[id]/index.tsx` — unified edit screen (no separate detail/read-only view). Includes pin toggle, delete, and save in header
+- `app/entry/search.tsx` — full-text search
+
+**Important**: tapping an entry card navigates directly to the edit screen (`/entry/${id}`). There is no read-only detail screen — it was intentionally removed.
+
+### Entry form
+
+`useEntryForm` hook manages all form state (title, body, mood, tags, entry type, date, location, images). Used by both create and edit screens. The `EntryForm` component receives all state + callbacks as props.
+
+### Location system
+
+- Auto-detects on new entry via `getCurrentLocationSilent()` (checks existing permission, no prompt)
+- `LocationPicker` opens `LocationSearchSheet` — centered floating modal with:
+  - Text search via Nominatim (OpenStreetMap) — supports POI names, addresses, landmarks
+  - "Use Current Location" GPS fetch
+  - Apple Maps `MapView` with tap-to-drop-pin (iOS only, conditionally loaded)
+  - Two-step selection: pick → preview on map → confirm
+- `openInMaps()` utility for deep-linking to native maps apps (Apple Maps / Google Maps fallback)
+
+### Key patterns
+
+- **No files in `app/` except route components** — styles must be inlined or in `components/`. Expo Router treats every file in `app/` as a route
+- **Component structure**: each in own directory with `index.ts`, `types.ts`, implementation files
+- **Hooks**: form logic extracted into custom hooks, screens are thin wrappers
+- **Styles**: `StyleSheet.create()` at bottom of file, use design tokens from `@/styles`
+- **i18n**: all user-facing strings via `t()`, never hardcoded
+- **Modals**: centered floating card pattern (see `DateTimePickerSheet`, `LocationSearchSheet`) — animated backdrop + scale/fade/translateY card via Reanimated shared values
+
+---
+
+## 7. Environment Variables
+
+### Backend (`apps/backend/.env`)
+
+`SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (SecretStr), `SUPABASE_JWT_SECRET` (SecretStr), `REDIS_URL`, `CORS_ORIGINS`, `DEBUG`, `LOG_LEVEL`, `LOG_FORMAT`
+
+### Mobile (`apps/mobile/.env`)
+
+`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL`
+
+Get keys via `supabase status` after `just db-start`.
+
+---
+
+## 8. Current Progress
+
+See `ROADMAP.md` for full details. Summary:
+
+| Phase | Status | Key deliverables |
+|-------|--------|-----------------|
+| 1 — Authentication | ✅ | JWT auth, 6 auth screens, deep linking, SecureStore, 401 auto-sign-out |
+| 2 — Design System | ✅ | 18 UI components, design tokens, glassmorphism theme |
+| 3 — Journal CRUD | ✅ | Create/read/update/delete entries, cursor pagination, Redis caching |
+| 4A — Theme & Skia | ✅ | 3 palettes, Skia gradients, ambient background, theme persistence |
+| 4B — Visual Polish | 🔄 | Custom date/time picker, mood selector, entry cards, tab bar (auth screen verification remaining) |
+| 4C — Rich Text | ❌ | Not started |
+| 4D — Pin & Star | ✅ | Pin toggle with haptics, pinned-first sort |
+| 4E — Full-Text Search | ✅ | Postgres tsvector, search RPC, History tab with search |
+| 4F — Backdate Entries | ✅ | Custom date picker, future prevention |
+| 4G — Journals/Spaces | 🔄 | CRUD, picker, filter (management screen + card indicators remaining) |
+| 4H — Enhanced Mood | ✅ | 5 categories × 4 sub-emotions, Skia gradient pills |
+| 4I — Calendar | ✅ | Continuous scroll, mood-colored cells, timezone-aware |
+| 4J — Media (Images) | ✅ | Multi-image upload, compression, thumbnails |
+| 4K — Voice Memos | ❌ | Not started |
+| 4L — Location Tagging | ✅ | GPS auto-detect, Nominatim search, Apple Maps pin drop, 297 backend tests |
+
+---
+
+## 9. Testing & Verification
+
+**Always run before considering work complete:**
+
+```sh
+cd apps/backend && uv run ruff check src tests && uv run mypy src && uv run pytest -v
+cd apps/mobile && npx tsc --noEmit && npx eslint .
+```
+
+Backend: 297 tests across models, API, cache, validators.
+
+---
+
+## 10. What NOT to Do
+
+- Don't put non-route files in `app/` directory (Expo Router treats them as routes)
 - Don't import Settings directly in endpoints — use DI
-- Don't put exceptions in the same file as business logic
 - Don't mock external services in integration tests
-- Don't skip mypy or ruff checks
+- Don't skip mypy, ruff, tsc, or eslint checks
 - Don't use `pip` or `poetry` — use `uv`
 - Don't use ESLint v9+ on mobile
 - Don't hardcode user-facing strings — use i18n
 - Don't put form logic in screen components — extract to hooks
-- Don't use `console.log` or `print()` — remove before committing
+- Don't use `console.log` or `print()`
 - Don't add `any` casts or `@ts-ignore` — fix the types properly
+- Don't add comments to code (project convention)
+- Don't add imports inside functions (only at top of file, unless circular dependency)

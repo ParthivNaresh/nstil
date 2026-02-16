@@ -8,6 +8,9 @@ doctor:
 dev:
     ./scripts/dev.sh
 
+device:
+    ./scripts/dev.sh --device
+
 infra-up:
     #!/usr/bin/env bash
     set -euo pipefail

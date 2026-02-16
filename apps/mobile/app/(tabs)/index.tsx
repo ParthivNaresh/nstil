@@ -8,7 +8,7 @@ import { EmptyState, Header } from "@/components/ui";
 import { useHeaderHeight } from "@/hooks";
 import { spacing } from "@/styles";
 
-import { styles } from "./homeStyles";
+import { styles } from "@/styles/screens/homeStyles";
 
 export default function HomeScreen() {
   const { t } = useTranslation();

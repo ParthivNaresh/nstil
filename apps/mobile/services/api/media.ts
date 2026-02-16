@@ -13,6 +13,15 @@ export interface UploadMediaParams {
   readonly contentType: string;
 }
 
+export interface UploadAudioParams {
+  readonly entryId: string;
+  readonly uri: string;
+  readonly fileName: string;
+  readonly contentType: string;
+  readonly durationMs: number;
+  readonly waveform?: readonly number[];
+}
+
 export function uploadMedia({
   entryId,
   uri,
@@ -25,6 +34,28 @@ export function uploadMedia({
     name: fileName,
     type: contentType,
   } as unknown as Blob);
+
+  return apiUpload<EntryMedia>(mediaPath(entryId), formData);
+}
+
+export function uploadAudio({
+  entryId,
+  uri,
+  fileName,
+  contentType,
+  durationMs,
+  waveform,
+}: UploadAudioParams): Promise<EntryMedia> {
+  const formData = new FormData();
+  formData.append("file", {
+    uri,
+    name: fileName,
+    type: contentType,
+  } as unknown as Blob);
+  formData.append("duration_ms", String(durationMs));
+  if (waveform && waveform.length > 0) {
+    formData.append("waveform", JSON.stringify(waveform));
+  }
 
   return apiUpload<EntryMedia>(mediaPath(entryId), formData);
 }

@@ -1,18 +1,20 @@
+import json
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 
 from nstil.api.deps import get_current_user, get_journal_service, get_media_service
 from nstil.models import UserPayload
 from nstil.models.media import (
     ALLOWED_CONTENT_TYPES,
-    MAX_FILE_SIZE_BYTES,
     EntryMediaListResponse,
     EntryMediaResponse,
+    max_file_size_for_content_type,
 )
 from nstil.services.cached_journal import CachedJournalService
 from nstil.services.media import (
+    AudioDurationExceededError,
     FileTooLargeError,
     InvalidMediaTypeError,
     MediaLimitExceededError,
@@ -35,6 +37,18 @@ async def _verify_entry_ownership(
         )
 
 
+def _parse_waveform(raw: str | None) -> list[float] | None:
+    if raw is None:
+        return None
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(parsed, list):
+        return None
+    return [float(v) for v in parsed]
+
+
 @router.post(
     "",
     response_model=EntryMediaResponse,
@@ -46,6 +60,8 @@ async def upload_media(
     user: Annotated[UserPayload, Depends(get_current_user)],
     media_service: Annotated[MediaService, Depends(get_media_service)],
     journal_service: Annotated[CachedJournalService, Depends(get_journal_service)],
+    duration_ms: Annotated[int | None, Form()] = None,
+    waveform: Annotated[str | None, Form()] = None,
 ) -> EntryMediaResponse:
     user_id = UUID(user.sub)
     await _verify_entry_ownership(entry_id, user_id, journal_service)
@@ -59,13 +75,16 @@ async def upload_media(
         )
 
     file_bytes = await file.read()
-    if len(file_bytes) > MAX_FILE_SIZE_BYTES:
+    max_size = max_file_size_for_content_type(content_type)
+    if len(file_bytes) > max_size:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File exceeds maximum size of {MAX_FILE_SIZE_BYTES // (1024 * 1024)}MB",
+            detail=f"File exceeds maximum size of {max_size // (1024 * 1024)}MB",
         )
 
     file_name = file.filename or "untitled"
+
+    parsed_waveform = _parse_waveform(waveform)
 
     try:
         row = await media_service.upload(
@@ -74,13 +93,15 @@ async def upload_media(
             file_bytes=file_bytes,
             file_name=file_name,
             content_type=content_type,
+            duration_ms=duration_ms,
+            waveform=parsed_waveform,
         )
     except MediaLimitExceededError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
         ) from exc
-    except InvalidMediaTypeError as exc:
+    except (InvalidMediaTypeError, AudioDurationExceededError) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),

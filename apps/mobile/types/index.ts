@@ -17,8 +17,11 @@ export type {
   MoodSpecific,
 } from "./journal";
 export type {
+  AudioContentType,
   EntryMedia,
   EntryMediaListResponse,
+  ImageContentType,
+  LocalAudio,
   LocalImage,
   MediaContentType,
   MediaPreview,

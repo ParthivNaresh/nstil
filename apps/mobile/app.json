@@ -43,6 +43,12 @@
         {
           "locationWhenInUsePermission": "Allow NStil to access your location to tag journal entries with where you are."
         }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow NStil to access your microphone to record voice memos for journal entries."
+        }
       ]
     ]
   }

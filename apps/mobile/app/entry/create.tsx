@@ -112,6 +112,13 @@ export default function CreateEntryScreen() {
               onRemoveTag={form.removeTag}
               onPickImages={form.handlePickImages}
               onRemoveLocalImage={form.removeLocalImage}
+              localAudio={form.localAudio}
+              existingAudio={form.existingAudio}
+              isRecordingAudio={form.isRecordingAudio}
+              onStartRecording={form.startRecording}
+              onStopRecording={form.stopRecording}
+              onRecordAudio={form.recordAudio}
+              onRemoveAudio={form.removeAudio}
               onRemoveExistingMedia={form.removeExistingMedia}
             />
           </View>

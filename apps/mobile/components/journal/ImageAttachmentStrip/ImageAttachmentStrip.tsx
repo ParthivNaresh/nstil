@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { spacing } from "@/styles";
 
@@ -23,6 +23,10 @@ export function ImageAttachmentStrip({
   maxImages,
 }: ImageAttachmentStripProps) {
   const [trashTargetId, setTrashTargetId] = useState<string | null>(null);
+
+  const clearTrash = useCallback(() => {
+    setTrashTargetId(null);
+  }, []);
 
   const visibleExisting = useMemo(
     () => existingMedia.filter((m) => !removedMediaIds.has(m.id)),
@@ -66,7 +70,7 @@ export function ImageAttachmentStrip({
   }
 
   return (
-    <View style={styles.wrapper}>
+    <Pressable style={styles.wrapper} onPress={clearTrash}>
       {totalCount > 0 && (
         <View style={styles.container}>
           <ScrollView
@@ -74,6 +78,7 @@ export function ImageAttachmentStrip({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
             style={atLimit ? styles.scrollFull : styles.scrollWithButton}
+            onScrollBeginDrag={clearTrash}
           >
             {thumbnails.map((source) => {
               const id = getThumbnailId(source);
@@ -83,7 +88,8 @@ export function ImageAttachmentStrip({
                   source={source}
                   showTrash={trashTargetId === id}
                   onRemove={() => handleRemove(source)}
-                  onDismissTrash={() => setTrashTargetId(id)}
+                  onActivateTrash={() => setTrashTargetId(id)}
+                  onDeactivateTrash={clearTrash}
                 />
               );
             })}
@@ -96,7 +102,7 @@ export function ImageAttachmentStrip({
       {isCompressing && compressionProgress && (
         <CompressionIndicator progress={compressionProgress} />
       )}
-    </View>
+    </Pressable>
   );
 }
 

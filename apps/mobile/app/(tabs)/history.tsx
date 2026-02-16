@@ -27,7 +27,7 @@ import { formatDateString } from "@/lib/calendarUtils";
 import { spacing } from "@/styles";
 import type { JournalEntry } from "@/types";
 
-import { styles } from "./historyStyles";
+import { styles } from "@/styles/screens/historyStyles";
 
 const SKELETON_COUNT = 3;
 const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => String(i));

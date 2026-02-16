@@ -5,8 +5,20 @@ BOLD="\033[1m"
 RESET="\033[0m"
 GREEN="\033[32m"
 RED="\033[31m"
+YELLOW="\033[33m"
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+MOBILE_DIR="$REPO_ROOT/apps/mobile"
+BACKEND_DIR="$REPO_ROOT/apps/backend"
+MOBILE_ENV="$MOBILE_DIR/.env"
+BACKEND_ENV="$BACKEND_DIR/.env"
+DEVICE_MODE=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --device) DEVICE_MODE=true ;;
+  esac
+done
 
 step() {
   echo -e "\n${BOLD}→ $1${RESET}"
@@ -36,7 +48,67 @@ open_iterm_tab() {
             -e 'end tell' > /dev/null 2>&1
 }
 
-echo -e "${BOLD}NStil Dev — Starting everything${RESET}"
+get_lan_ip() {
+  local ip
+  ip=$(ipconfig getifaddr en0 2>/dev/null || true)
+  if [[ -z "$ip" ]]; then
+    ip=$(ipconfig getifaddr en1 2>/dev/null || true)
+  fi
+  echo "$ip"
+}
+
+read_env_value() {
+  local file="$1"
+  local key="$2"
+  grep "^${key}=" "$file" | cut -d= -f2-
+}
+
+write_mobile_env() {
+  local supabase_url="$1"
+  local api_url="$2"
+  local anon_key
+  anon_key=$(read_env_value "$MOBILE_ENV" "EXPO_PUBLIC_SUPABASE_ANON_KEY")
+
+  cat > "$MOBILE_ENV" <<EOF
+EXPO_PUBLIC_SUPABASE_URL=${supabase_url}
+EXPO_PUBLIC_SUPABASE_ANON_KEY=${anon_key}
+EXPO_PUBLIC_API_URL=${api_url}
+EOF
+}
+
+write_backend_env() {
+  local supabase_url="$1"
+  local service_key
+  local jwt_secret
+  local redis_url
+  local cors_origins
+  service_key=$(read_env_value "$BACKEND_ENV" "SUPABASE_SERVICE_KEY")
+  jwt_secret=$(read_env_value "$BACKEND_ENV" "SUPABASE_JWT_SECRET")
+  redis_url=$(read_env_value "$BACKEND_ENV" "REDIS_URL")
+  cors_origins=$(read_env_value "$BACKEND_ENV" "CORS_ORIGINS")
+
+  cat > "$BACKEND_ENV" <<EOF
+SUPABASE_URL=${supabase_url}
+SUPABASE_SERVICE_KEY=${service_key}
+SUPABASE_JWT_SECRET=${jwt_secret}
+REDIS_URL=${redis_url}
+CORS_ORIGINS=${cors_origins}
+DEBUG=true
+EOF
+}
+
+if $DEVICE_MODE; then
+  LAN_IP=$(get_lan_ip)
+  if [[ -z "$LAN_IP" ]]; then
+    echo -e "${RED}Could not detect LAN IP. Are you connected to Wi-Fi?${RESET}"
+    exit 1
+  fi
+  echo -e "${BOLD}NStil Dev — Physical Device Mode${RESET}"
+  echo -e "  LAN IP: ${GREEN}${LAN_IP}${RESET}"
+else
+  LAN_IP=""
+  echo -e "${BOLD}NStil Dev — Starting everything${RESET}"
+fi
 
 step "Stopping stale Docker containers"
 docker compose -f "$REPO_ROOT/docker-compose.yml" down --remove-orphans 2>&1 | grep -v "^$" || true
@@ -69,6 +141,20 @@ for i in $(seq 1 15); do
   sleep 1
 done
 
+if $DEVICE_MODE; then
+  step "Configuring .env files for device (LAN IP: ${LAN_IP})"
+  write_mobile_env "http://${LAN_IP}:54321" "http://${LAN_IP}:8000"
+  write_backend_env "http://${LAN_IP}:54321"
+  echo "  Mobile .env → LAN IP"
+  echo "  Backend .env → LAN IP"
+else
+  step "Configuring .env files for simulator (localhost)"
+  write_mobile_env "http://127.0.0.1:54321" "http://localhost:8000"
+  write_backend_env "http://127.0.0.1:54321"
+  echo "  Mobile .env → localhost"
+  echo "  Backend .env → localhost"
+fi
+
 step "Opening backend in new iTerm tab"
 open_iterm_tab "cd $REPO_ROOT/apps/backend && uv run uvicorn nstil.main:app --reload --host 0.0.0.0 --port 8000"
 
@@ -85,13 +171,28 @@ for i in $(seq 1 15); do
   sleep 1
 done
 
-step "Opening Metro + iOS Simulator in new iTerm tab"
-open_iterm_tab "cd $REPO_ROOT/apps/mobile && EXPO_PACKAGER_PROXY_URL=http://localhost:8081 npx expo run:ios"
+if $DEVICE_MODE; then
+  step "Opening Metro + iOS Device in new iTerm tab"
+  open_iterm_tab "cd $REPO_ROOT/apps/mobile && npx expo run:ios --device"
 
-echo -e "\n${GREEN}${BOLD}All services started!${RESET}"
-echo "  Backend:  http://localhost:8000"
-echo "  Metro:    http://localhost:8081"
-echo "  Supabase: http://127.0.0.1:54321"
-echo "  Redis:    localhost:6379"
+  echo -e "\n${GREEN}${BOLD}All services started (device mode)!${RESET}"
+  echo -e "  Backend:  http://${LAN_IP}:8000"
+  echo -e "  Metro:    http://${LAN_IP}:8081 (LAN)"
+  echo -e "  Supabase: http://${LAN_IP}:54321"
+  echo "  Redis:    localhost:6379"
+  echo ""
+  echo -e "  ${YELLOW}Your phone must be on the same Wi-Fi network.${RESET}"
+  echo -e "  ${YELLOW}Run 'just dev' to switch back to simulator mode.${RESET}"
+else
+  step "Opening Metro + iOS Simulator in new iTerm tab"
+  open_iterm_tab "cd $REPO_ROOT/apps/mobile && EXPO_PACKAGER_PROXY_URL=http://localhost:8081 npx expo run:ios"
+
+  echo -e "\n${GREEN}${BOLD}All services started!${RESET}"
+  echo "  Backend:  http://localhost:8000"
+  echo "  Metro:    http://localhost:8081"
+  echo "  Supabase: http://127.0.0.1:54321"
+  echo "  Redis:    localhost:6379"
+fi
+
 echo ""
 echo -e "Run ${BOLD}just doctor${RESET} to verify everything is connected."

@@ -90,6 +90,8 @@ def make_media_row(
     size_bytes: int = 1024,
     width: int | None = 800,
     height: int | None = 600,
+    duration_ms: int | None = None,
+    waveform: list[float] | None = None,
     sort_order: int = 0,
     created_at: datetime | None = None,
 ) -> EntryMediaRow:
@@ -107,6 +109,8 @@ def make_media_row(
         size_bytes=size_bytes,
         width=width,
         height=height,
+        duration_ms=duration_ms,
+        waveform=waveform,
         sort_order=sort_order,
         created_at=created_at or now,
     )

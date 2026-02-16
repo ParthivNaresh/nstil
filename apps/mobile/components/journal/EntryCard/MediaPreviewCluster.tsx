@@ -34,7 +34,7 @@ export function MediaPreviewCluster({ preview }: MediaPreviewClusterProps) {
           />
           {index === lastIndex && overflow > 0 && (
             <View style={styles.overflowBadge}>
-              <AppText variant="caption" color="#FFFFFF" style={styles.overflowText}>
+              <AppText variant="caption" color={colors.onAccent} style={styles.overflowText}>
                 +{overflow}
               </AppText>
             </View>

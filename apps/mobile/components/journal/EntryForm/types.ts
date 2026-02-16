@@ -4,6 +4,7 @@ import type {
   EntryMedia,
   EntryType,
   JournalSpace,
+  LocalAudio,
   LocalImage,
   MoodCategory,
   MoodSpecific,
@@ -39,5 +40,12 @@ export interface EntryFormProps {
   readonly onRemoveTag: (tag: string) => void;
   readonly onPickImages: () => void;
   readonly onRemoveLocalImage: (localId: string) => void;
+  readonly localAudio: LocalAudio | null;
+  readonly existingAudio: EntryMedia | null;
+  readonly isRecordingAudio: boolean;
+  readonly onStartRecording: () => void;
+  readonly onStopRecording: () => void;
+  readonly onRecordAudio: (audio: LocalAudio) => void;
+  readonly onRemoveAudio: () => void;
   readonly onRemoveExistingMedia: (mediaId: string) => void;
 }

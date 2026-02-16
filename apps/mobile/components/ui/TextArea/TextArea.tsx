@@ -40,6 +40,7 @@ export function TextArea({
   placeholder,
   accessibilityLabel,
   testID,
+  footerLeft,
 }: TextAreaProps) {
   const { colors, keyboardAppearance } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
@@ -162,8 +163,9 @@ export function TextArea({
       </View>
 
       <View style={styles.footer}>
-        <View style={styles.errorContainer}>
+        <View style={styles.footerLeft}>
           {hasError && error ? <ErrorMessage message={error} /> : null}
+          {footerLeft}
         </View>
         {showCount ? (
           <AppText variant="caption" color={colors.textTertiary}>
@@ -218,7 +220,10 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginTop: spacing.xs,
   },
-  errorContainer: {
+  footerLeft: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
 });

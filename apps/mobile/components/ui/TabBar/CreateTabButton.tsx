@@ -22,6 +22,7 @@ const BUTTON_SIZE = 52;
 const ICON_SIZE = 24;
 const PRESS_SCALE = 0.9;
 const GLOW_SIZE = BUTTON_SIZE + 12;
+const BORDER_WIDTH = 1.5;
 
 interface CreateTabButtonProps {
   readonly onPress: () => void;
@@ -48,19 +49,19 @@ export function CreateTabButton({ onPress }: CreateTabButtonProps) {
     transform: [{ scale: scale.value }],
   }));
 
-  const glowRadius = GLOW_SIZE / 2;
-  const buttonRadius = BUTTON_SIZE / 2;
+  const glowCenter = GLOW_SIZE / 2;
+  const buttonCenter = BUTTON_SIZE / 2;
 
   return (
     <View style={styles.wrapper}>
       <Canvas style={styles.glow} pointerEvents="none">
-        <Circle cx={glowRadius} cy={glowRadius} r={glowRadius}>
+        <Circle cx={glowCenter} cy={glowCenter} r={glowCenter}>
           <LinearGradient
             start={vec(0, 0)}
             end={vec(GLOW_SIZE, GLOW_SIZE)}
             colors={[
-              withAlpha(colors.accent, 0.2),
-              withAlpha(colors.accentLight, 0.1),
+              withAlpha(colors.accent, 0.15),
+              withAlpha(colors.accentLight, 0.06),
             ]}
           />
         </Circle>
@@ -75,15 +76,26 @@ export function CreateTabButton({ onPress }: CreateTabButtonProps) {
           style={styles.button}
         >
           <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-            <Circle cx={buttonRadius} cy={buttonRadius} r={buttonRadius}>
+            <Circle cx={buttonCenter} cy={buttonCenter} r={buttonCenter}>
               <LinearGradient
                 start={vec(0, 0)}
                 end={vec(BUTTON_SIZE, BUTTON_SIZE)}
-                colors={[colors.accent, colors.accentLight]}
+                colors={[
+                  withAlpha(colors.surface, 0.85),
+                  withAlpha(colors.accent, 0.12),
+                ]}
               />
             </Circle>
+            <Circle
+              cx={buttonCenter}
+              cy={buttonCenter}
+              r={buttonCenter - BORDER_WIDTH / 2}
+              style="stroke"
+              strokeWidth={BORDER_WIDTH}
+              color={withAlpha(colors.accent, 0.35)}
+            />
           </Canvas>
-          <Plus size={ICON_SIZE} color="#FFFFFF" strokeWidth={2.5} />
+          <Plus size={ICON_SIZE} color={colors.accent} strokeWidth={2.5} />
         </Pressable>
       </Animated.View>
     </View>

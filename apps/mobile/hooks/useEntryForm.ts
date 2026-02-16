@@ -9,16 +9,18 @@ import type { CompressionProgress } from "@/hooks/useImagePicker";
 import type { LocationData } from "@/lib/locationUtils";
 import { getCurrentLocationSilent } from "@/lib/locationUtils";
 import { queryKeys } from "@/lib/queryKeys";
-import { deleteMedia, uploadMedia } from "@/services/api/media";
+import { deleteMedia, uploadAudio, uploadMedia } from "@/services/api/media";
 import type {
   EntryMedia,
   EntryType,
   JournalEntry,
   JournalSpace,
+  LocalAudio,
   LocalImage,
   MoodCategory,
   MoodSpecific,
 } from "@/types";
+import { findExistingAudio } from "@/lib/audioMediaUtils";
 
 const MAX_TAGS = 10;
 const MAX_IMAGES = 10;
@@ -48,6 +50,8 @@ interface UseEntryFormReturn {
   readonly removedMediaIds: ReadonlySet<string>;
   readonly maxImages: number;
   readonly compressionProgress: CompressionProgress | null;
+  readonly localAudio: LocalAudio | null;
+  readonly existingAudio: EntryMedia | null;
   readonly setTitle: (text: string) => void;
   readonly setBody: (text: string) => void;
   readonly setMoodCategory: (category: MoodCategory) => void;
@@ -61,6 +65,11 @@ interface UseEntryFormReturn {
   readonly handlePickImages: () => void;
   readonly removeLocalImage: (localId: string) => void;
   readonly removeExistingMedia: (mediaId: string) => void;
+  readonly isRecordingAudio: boolean;
+  readonly startRecording: () => void;
+  readonly stopRecording: () => void;
+  readonly recordAudio: (audio: LocalAudio) => void;
+  readonly removeAudio: () => void;
   readonly handleSubmit: () => void;
   readonly maxTags: number;
 }
@@ -153,6 +162,13 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
   const [removedMediaIds, setRemovedMediaIds] = useState<Set<string>>(new Set());
   const [compressionProgress, setCompressionProgress] = useState<CompressionProgress | null>(null);
 
+  const [localAudio, setLocalAudio] = useState<LocalAudio | null>(null);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const existingAudio = useMemo(
+    () => findExistingAudio(existingMedia, removedMediaIds),
+    [existingMedia, removedMediaIds],
+  );
+
   const visibleExistingCount = existingMedia.length - removedMediaIds.size;
   const totalImageCount = visibleExistingCount + localImages.length;
 
@@ -241,6 +257,28 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     setRemovedMediaIds((prev) => new Set(prev).add(mediaId));
   }, []);
 
+  const startRecording = useCallback(() => {
+    setIsRecordingAudio(true);
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    setIsRecordingAudio(false);
+  }, []);
+
+  const recordAudio = useCallback((audio: LocalAudio) => {
+    setLocalAudio(audio);
+  }, []);
+
+  const removeAudio = useCallback(() => {
+    if (localAudio) {
+      setLocalAudio(null);
+      return;
+    }
+    if (existingAudio) {
+      setRemovedMediaIds((prev) => new Set(prev).add(existingAudio.id));
+    }
+  }, [localAudio, existingAudio]);
+
   const processMediaChanges = useCallback(
     async (entryId: string) => {
       const deletePromises = Array.from(removedMediaIds).map((mediaId) =>
@@ -256,8 +294,19 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
           contentType: image.contentType,
         });
       }
+
+      if (localAudio) {
+        await uploadAudio({
+          entryId,
+          uri: localAudio.uri,
+          fileName: localAudio.fileName,
+          contentType: localAudio.contentType,
+          durationMs: localAudio.durationMs,
+          waveform: localAudio.waveform,
+        });
+      }
     },
-    [localImages, removedMediaIds],
+    [localImages, localAudio, removedMediaIds],
   );
 
   const invalidateAfterSave = useCallback(() => {
@@ -274,7 +323,7 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
 
     const trimmedTitle = title.trim();
     const dateIso = entryDate.toISOString();
-    const hasMediaChanges = localImages.length > 0 || removedMediaIds.size > 0;
+    const hasMediaChanges = localImages.length > 0 || localAudio !== null || removedMediaIds.size > 0;
 
     const onError = () => {
       Alert.alert("Unable to save", "Please check your connection and try again.");
@@ -347,7 +396,7 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
         },
       );
     }
-  }, [body, title, moodCategory, moodSpecific, tags, entryType, entryDate, journalId, location, entry, localImages, removedMediaIds, createMutation, updateMutation, router, processMediaChanges, invalidateAfterSave]);
+  }, [body, title, moodCategory, moodSpecific, tags, entryType, entryDate, journalId, location, entry, localImages, localAudio, removedMediaIds, createMutation, updateMutation, router, processMediaChanges, invalidateAfterSave]);
 
   return {
     title,
@@ -379,6 +428,13 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     removeTag,
     handlePickImages,
     removeLocalImage,
+    isRecordingAudio,
+    startRecording,
+    stopRecording,
+    recordAudio,
+    removeAudio,
+    localAudio,
+    existingAudio,
     removeExistingMedia,
     handleSubmit,
     maxTags: MAX_TAGS,

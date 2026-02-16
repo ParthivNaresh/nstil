@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type TextAreaVariant = "outlined" | "flat";
 
 export interface TextAreaProps {
@@ -13,4 +15,5 @@ export interface TextAreaProps {
   placeholder?: string;
   accessibilityLabel?: string;
   testID?: string;
+  footerLeft?: ReactNode;
 }

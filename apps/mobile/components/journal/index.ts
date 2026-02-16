@@ -29,3 +29,6 @@ export type { EntryTypeSelectorProps } from "./EntryTypeSelector";
 
 export { TagInput } from "./TagInput";
 export type { TagInputProps } from "./TagInput";
+
+export { VoiceMemoInline, VoiceMemoSection } from "./VoiceMemo";
+export type { VoiceMemoProps } from "./VoiceMemo";

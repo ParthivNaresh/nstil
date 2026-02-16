@@ -1,8 +1,18 @@
-export type MediaContentType =
+export type ImageContentType =
   | "image/jpeg"
   | "image/png"
   | "image/heic"
   | "image/webp";
+
+export type AudioContentType =
+  | "audio/m4a"
+  | "audio/mp4"
+  | "audio/aac"
+  | "audio/wav"
+  | "audio/mpeg"
+  | "audio/x-m4a";
+
+export type MediaContentType = ImageContentType | AudioContentType;
 
 export interface EntryMedia {
   readonly id: string;
@@ -12,6 +22,8 @@ export interface EntryMedia {
   readonly size_bytes: number;
   readonly width: number | null;
   readonly height: number | null;
+  readonly duration_ms: number | null;
+  readonly waveform: readonly number[] | null;
   readonly sort_order: number;
   readonly url: string;
   readonly created_at: string;
@@ -39,4 +51,12 @@ export interface LocalImage {
   readonly contentType: string;
   readonly width: number;
   readonly height: number;
+}
+
+export interface LocalAudio {
+  readonly uri: string;
+  readonly fileName: string;
+  readonly contentType: AudioContentType;
+  readonly durationMs: number;
+  readonly waveform: readonly number[];
 }
