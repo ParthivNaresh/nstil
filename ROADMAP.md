@@ -217,17 +217,23 @@ Record and attach audio to entries.
 - [ ] Permissions — microphone permission via `expo-av`. Graceful denial handling
 - [ ] Tests — backend: audio upload, content type validation. Mobile: tsc + eslint
 
-### Subphase 4L — Location Tagging
+### Subphase 4L — Location Tagging ✅
 
-Upgrade the existing `location` text field to structured geolocation.
+Upgrade the existing `location` text field to structured geolocation with interactive place search and map-based pin drop.
 
-**Objectives:**
-
-- [ ] Backend — add `latitude double precision`, `longitude double precision` to `journal_entries`. Rename `location` → `location_name`. Validation: if lat/lng provided, both required. Lat -90 to 90, lng -180 to 180
-- [ ] Mobile — `expo-location` for current position. Auto-attach toggle on entry form (opt-in). Location displayed on detail with MapPin icon, tappable to open Maps
-- [ ] Reverse geocoding — `expo-location.reverseGeocodeAsync()` converts lat/lng to city/country. Stored in `location_name`
-- [ ] Privacy — location always opt-in. Never auto-attach without explicit action. Clear indicator when recording
-- [ ] Tests — backend: create with location, validation. Mobile: tsc + eslint
+- [x] **Database migration** — `008_ADD_LOCATION_COORDINATES.sql`. Added `latitude double precision`, `longitude double precision` to `journal_entries`. CHECK constraints: pair constraint (both or neither), lat -90 to 90, lng -180 to 180. Partial index on `(user_id)` where `latitude IS NOT NULL AND deleted_at IS NULL`. `location` column kept as-is (no rename — already clear)
+- [x] **Backend models** — `validate_coordinate_pair()` reusable validator (same pattern as `validate_mood_pair`). `latitude`/`longitude` added to `JournalEntryCreate`, `JournalEntryUpdate`, `JournalEntryRow`, `JournalEntryResponse`. Model validators enforce pair constraint. `from_row()` maps coordinates through. `to_update_dict()` includes coordinates when present
+- [x] **Backend service** — `JournalService.create()` payload includes `latitude`/`longitude`
+- [x] **Backend tests** — 20 new tests: `TestCoordinateValidation` (9), `TestCreateWithCoordinates` (6), `TestUpdateWithCoordinates` (3), `TestJournalEntryResponse` with/without coordinates (2). 297 total passing. ruff ✅, mypy ✅
+- [x] **Mobile types** — `latitude: number | null`, `longitude: number | null` on `JournalEntry`. Optional `latitude?`/`longitude?` on `Create`/`Update`
+- [x] **Location utilities** — `lib/locationUtils.ts`: `LocationData` interface, `getCurrentLocation()` (permission → GPS → reverse geocode), `getCurrentLocationSilent()` (checks existing permission without prompting), `openInMaps()` (Apple Maps on iOS, geo intent on Android, Google Maps web fallback). `lib/locationSearch.ts`: Nominatim (OpenStreetMap) place search with POI support, structured address formatting, `searchResultToLocationData()` converter
+- [x] **LocationPicker component** — `components/journal/LocationPicker/`. Tap "Add location" or existing location → opens `LocationSearchSheet`. X button clears. Auto-detect on new entry mount via `getCurrentLocationSilent()` (silent — no prompt if permission not yet granted)
+- [x] **LocationSearchSheet** — Centered floating modal (matches `DateTimePickerSheet` pattern: scale+fade+translateY animation, 340px max-width, `radius.2xl` card). Search input with 400ms debounce → Nominatim forward geocoding (POI names, addresses, landmarks). "Use Current Location" row with GPS fetch. Search results with display name + subtitle (city, state, country). Two-step selection on iOS: result → pending preview → confirm
+- [x] **LocationMap (iOS only)** — `react-native-maps` Apple Maps `MapView` with tap-to-drop-pin. Reverse geocodes pin location for display name. Animates to selected search result coordinates. Conditionally loaded via `Platform.OS === "ios"` — Android gets search-only flow
+- [x] **Entry form integration** — `useEntryForm` manages `location` state (initialized from existing entry's lat/lng/location). Auto-detects on new entries. Includes `location`/`latitude`/`longitude` in create/update payloads. Date picker and location picker grouped with `spacing.sm` gap. Calendar icon + full date format ("February 16, 2026 at 8:09 AM") on trigger
+- [x] **Detail screen** — Location in metadata row as `Pressable`. Accent-colored when coordinates exist (tappable → opens Maps). Falls back to tertiary color for legacy text-only locations
+- [x] **Dependencies** — `expo-location` installed with `locationWhenInUsePermission` in `app.json`. `react-native-maps` installed (iOS Apple Maps, no API key needed)
+- [x] **Tests** — Backend: ruff ✅, mypy ✅, 297 tests ✅. Mobile: tsc ✅, eslint ✅
 
 ---
 

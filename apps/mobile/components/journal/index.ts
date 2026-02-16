@@ -9,9 +9,6 @@ export type { EntryCardProps, EntryCardSkeletonProps } from "./EntryCard";
 export { EntryDatePicker } from "./EntryDatePicker";
 export type { EntryDatePickerProps } from "./EntryDatePicker";
 
-export { EntryDetailContent } from "./EntryDetail";
-export type { EntryDetailContentProps } from "./EntryDetail";
-
 export { EntryForm } from "./EntryForm";
 export type { EntryFormProps } from "./EntryForm";
 

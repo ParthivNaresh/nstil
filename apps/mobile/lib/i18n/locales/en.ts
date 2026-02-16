@@ -50,7 +50,6 @@ const en = {
       freewrite: "Freewrite",
     },
     detail: {
-      edit: "Edit",
       delete: "Delete Entry",
       deleteTitle: "Delete Entry",
       deleteMessage: "Are you sure you want to delete this entry? This cannot be undone.",

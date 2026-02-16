@@ -1,2 +1,2 @@
 export { LocationPicker } from "./LocationPicker";
-export type { LocationPickerProps } from "./types";
+export type { LocationPickerProps, LocationSearchSheetProps } from "./types";

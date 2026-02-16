@@ -1,12 +1,13 @@
 import { MapPin, X } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Icon } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
-import { getCurrentLocation } from "@/lib/locationUtils";
+import type { LocationData } from "@/lib/locationUtils";
 import { spacing } from "@/styles";
 
+import { LocationSearchSheet } from "./LocationSearchSheet";
 import type { LocationPickerProps } from "./types";
 
 export function LocationPicker({
@@ -14,74 +15,77 @@ export function LocationPicker({
   onLocationChange,
 }: LocationPickerProps) {
   const { colors } = useTheme();
-  const [isFetching, setIsFetching] = useState(false);
+  const [sheetVisible, setSheetVisible] = useState(false);
 
-  const handleFetch = useCallback(async () => {
-    setIsFetching(true);
-    try {
-      const result = await getCurrentLocation();
-      if (result) {
-        onLocationChange(result);
-      }
-    } finally {
-      setIsFetching(false);
-    }
-  }, [onLocationChange]);
+  const handleOpen = useCallback(() => {
+    setSheetVisible(true);
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    setSheetVisible(false);
+  }, []);
+
+  const handleSelect = useCallback(
+    (selected: LocationData) => {
+      onLocationChange(selected);
+      setSheetVisible(false);
+    },
+    [onLocationChange],
+  );
 
   const handleClear = useCallback(() => {
     onLocationChange(null);
   }, [onLocationChange]);
 
-  if (isFetching) {
-    return (
-      <View style={styles.trigger}>
-        <ActivityIndicator size="small" color={colors.textTertiary} />
-      </View>
-    );
-  }
-
-  if (location) {
-    return (
-      <View style={styles.locationRow}>
-        <Pressable
-          onPress={handleFetch}
-          style={styles.locationContent}
-          accessibilityRole="button"
-          accessibilityLabel="Update location"
-        >
-          <Icon icon={MapPin} size="xs" color={colors.accent} />
-          <AppText
-            variant="caption"
-            color={colors.accent}
-            numberOfLines={1}
-            style={styles.locationText}
+  return (
+    <>
+      {location ? (
+        <View style={styles.locationRow}>
+          <Pressable
+            onPress={handleOpen}
+            style={styles.locationContent}
+            accessibilityRole="button"
+            accessibilityLabel="Change location"
           >
-            {location.displayName}
+            <Icon icon={MapPin} size="xs" color={colors.accent} />
+            <AppText
+              variant="caption"
+              color={colors.accent}
+              numberOfLines={1}
+              style={styles.locationText}
+            >
+              {location.displayName}
+            </AppText>
+          </Pressable>
+          <Pressable
+            onPress={handleClear}
+            hitSlop={8}
+            accessibilityLabel="Remove location"
+          >
+            <Icon icon={X} size="xs" color={colors.textTertiary} />
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable
+          onPress={handleOpen}
+          style={styles.trigger}
+          accessibilityRole="button"
+          accessibilityLabel="Add location"
+        >
+          <Icon icon={MapPin} size="xs" color={colors.textTertiary} />
+          <AppText variant="caption" color={colors.textTertiary}>
+            Add location
           </AppText>
         </Pressable>
-        <Pressable
-          onPress={handleClear}
-          hitSlop={8}
-          accessibilityLabel="Remove location"
-        >
-          <Icon icon={X} size="xs" color={colors.textTertiary} />
-        </Pressable>
-      </View>
-    );
-  }
+      )}
 
-  return (
-    <Pressable
-      onPress={handleFetch}
-      style={styles.trigger}
-      accessibilityRole="button"
-      accessibilityLabel="Add location"
-    >
-      <Icon icon={MapPin} size="xs" color={colors.textTertiary} />
-      <AppText variant="caption" color={colors.textTertiary}>
-        Add location
-      </AppText>
-    </Pressable>
+      <LocationSearchSheet
+        visible={sheetVisible}
+        currentLocation={location}
+        onSelect={handleSelect}
+        onDismiss={handleDismiss}
+      />
+    </>
   );
 }
 
