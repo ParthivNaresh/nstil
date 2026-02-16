@@ -1,3 +1,4 @@
+import type { CompressionProgress } from "@/hooks/useImagePicker";
 import type {
   EntryMedia,
   EntryType,
@@ -23,6 +24,7 @@ export interface EntryFormProps {
   readonly existingMedia: EntryMedia[];
   readonly removedMediaIds: ReadonlySet<string>;
   readonly maxImages: number;
+  readonly compressionProgress: CompressionProgress | null;
   readonly onJournalChange: (id: string) => void;
   readonly onBodyChange: (text: string) => void;
   readonly onTitleChange: (text: string) => void;

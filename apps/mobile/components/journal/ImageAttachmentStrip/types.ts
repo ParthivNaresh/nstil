@@ -1,9 +1,11 @@
+import type { CompressionProgress } from "@/hooks/useImagePicker";
 import type { EntryMedia, LocalImage } from "@/types";
 
 export interface ImageAttachmentStripProps {
   readonly localImages: LocalImage[];
   readonly existingMedia: EntryMedia[];
   readonly removedMediaIds: ReadonlySet<string>;
+  readonly compressionProgress: CompressionProgress | null;
   readonly onPickImages: () => void;
   readonly onRemoveLocal: (localId: string) => void;
   readonly onRemoveExisting: (mediaId: string) => void;

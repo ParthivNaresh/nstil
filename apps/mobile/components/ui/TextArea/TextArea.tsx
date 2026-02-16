@@ -4,13 +4,15 @@ import {
   TextInput as RNTextInput,
   View,
 } from "react-native";
-import {
+import Animated, {
+  useAnimatedStyle,
   useSharedValue,
   withTiming,
+  interpolate,
+  interpolateColor,
 } from "react-native-reanimated";
 
 import { AppText } from "@/components/ui/AppText";
-import { FloatingLabel } from "@/components/ui/TextInput/FloatingLabel";
 import { ErrorMessage } from "@/components/ui/TextInput/ErrorMessage";
 import { useTheme } from "@/hooks/useTheme";
 import { duration, radius, spacing, typography } from "@/styles";
@@ -20,6 +22,10 @@ import type { TextAreaProps } from "./types";
 const DEFAULT_MIN_HEIGHT = 120;
 const DEFAULT_MAX_HEIGHT = 300;
 const ANIMATION_DURATION = duration.fast;
+
+const LABEL_HEIGHT = 18;
+const LABEL_INACTIVE_SIZE = typography.body.fontSize ?? 16;
+const LABEL_ACTIVE_SIZE = typography.caption.fontSize ?? 12;
 
 export function TextArea({
   label,
@@ -91,28 +97,68 @@ export function TextArea({
     [isFlat, contentHeight, colors.textPrimary],
   );
 
+  const errorColor = colors.error;
+  const tertiaryColor = colors.textTertiary;
+  const secondaryColor = colors.textSecondary;
+
+  const inactiveTop = isFlat ? 10 : 14;
+  const activeTop = isFlat ? -LABEL_HEIGHT : -LABEL_HEIGHT;
+  const inactiveLeft = isFlat ? 0 : spacing.md;
+
+  const labelAnimatedStyle = useAnimatedStyle(() => {
+    const top = interpolate(
+      labelProgress.value,
+      [0, 1],
+      [inactiveTop, activeTop],
+    );
+    const fontSize = interpolate(
+      labelProgress.value,
+      [0, 1],
+      [LABEL_INACTIVE_SIZE, LABEL_ACTIVE_SIZE],
+    );
+    const color = hasError
+      ? errorColor
+      : interpolateColor(
+          labelProgress.value,
+          [0, 1],
+          [tertiaryColor, secondaryColor],
+        );
+
+    return {
+      top,
+      left: inactiveLeft,
+      fontSize,
+      color,
+    };
+  });
+
   return (
     <View style={styles.container}>
-      <View style={inputContainerStyle}>
-        <FloatingLabel label={label} progress={labelProgress} hasError={hasError} />
-        <RNTextInput
-          style={inputStyle}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onContentSizeChange={handleContentSizeChange}
-          multiline
-          textAlignVertical="top"
-          maxLength={maxLength}
-          placeholder={isActive ? placeholder : undefined}
-          placeholderTextColor={colors.textTertiary}
-          selectionColor={colors.accent}
-          keyboardAppearance={keyboardAppearance}
-          accessibilityLabel={accessibilityLabel ?? label}
-          accessibilityState={{ selected: isActive }}
-          testID={testID}
-        />
+      <View style={styles.labelSpacer} />
+      <View style={styles.fieldWrapper}>
+        <Animated.Text style={[styles.floatingLabel, labelAnimatedStyle]}>
+          {label}
+        </Animated.Text>
+        <View style={inputContainerStyle}>
+          <RNTextInput
+            style={inputStyle}
+            value={value}
+            onChangeText={onChangeText}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onContentSizeChange={handleContentSizeChange}
+            multiline
+            textAlignVertical="top"
+            maxLength={maxLength}
+            placeholder={isActive ? placeholder : undefined}
+            placeholderTextColor={colors.textTertiary}
+            selectionColor={colors.accent}
+            keyboardAppearance={keyboardAppearance}
+            accessibilityLabel={accessibilityLabel ?? label}
+            accessibilityState={{ selected: isActive }}
+            testID={testID}
+          />
+        </View>
       </View>
 
       <View style={styles.footer}>
@@ -135,23 +181,35 @@ const styles = StyleSheet.create({
   container: {
     width: "100%",
   },
+  labelSpacer: {
+    height: LABEL_HEIGHT,
+  },
+  fieldWrapper: {
+    position: "relative",
+  },
+  floatingLabel: {
+    position: "absolute",
+    zIndex: 1,
+  },
   inputContainer: {
     borderWidth: 1,
     borderRadius: radius.md,
+    overflow: "hidden",
   },
   flatContainer: {
     borderBottomWidth: 1,
+    overflow: "hidden",
   },
   input: {
     ...typography.body,
     paddingHorizontal: spacing.md,
-    paddingTop: 28,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
   flatInput: {
     ...typography.body,
     paddingHorizontal: 0,
-    paddingTop: 24,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
   footer: {

@@ -7,22 +7,31 @@ import type { LocalImage } from "@/types";
 
 const MAX_SELECTION = 10;
 
+export interface CompressionProgress {
+  readonly completed: number;
+  readonly total: number;
+}
+
 interface UseImagePickerOptions {
   readonly currentCount: number;
   readonly maxImages: number;
+  readonly onProgress?: (progress: CompressionProgress) => void;
+  readonly onImageReady?: (image: LocalImage) => void;
 }
 
 interface UseImagePickerReturn {
-  readonly pickImages: () => Promise<LocalImage[]>;
+  readonly pickImages: () => Promise<void>;
 }
 
 export function useImagePicker({
   currentCount,
   maxImages,
+  onProgress,
+  onImageReady,
 }: UseImagePickerOptions): UseImagePickerReturn {
-  const pickImages = useCallback(async (): Promise<LocalImage[]> => {
+  const pickImages = useCallback(async (): Promise<void> => {
     const remaining = maxImages - currentCount;
-    if (remaining <= 0) return [];
+    if (remaining <= 0) return;
 
     const selectionLimit = Math.min(remaining, MAX_SELECTION);
 
@@ -35,37 +44,45 @@ export function useImagePicker({
     });
 
     if (result.canceled || result.assets.length === 0) {
-      return [];
+      return;
     }
 
-    const compressed: LocalImage[] = [];
+    const validAssets = result.assets.filter((a) => a.width && a.height);
+    const total = validAssets.length;
 
-    for (const asset of result.assets) {
-      if (!asset.width || !asset.height) continue;
+    if (total === 0) return;
 
+    onProgress?.({ completed: 0, total });
+
+    let completed = 0;
+
+    for (const asset of validAssets) {
       try {
         const image = await compressImage(
           asset.uri,
-          asset.width,
-          asset.height,
+          asset.width!,
+          asset.height!,
           asset.fileName ?? undefined,
         );
 
-        compressed.push({
-          localId: `local_${Date.now()}_${compressed.length}`,
+        const localImage: LocalImage = {
+          localId: `local_${Date.now()}_${completed}`,
           uri: image.uri,
           fileName: image.fileName,
           contentType: image.contentType,
           width: image.width,
           height: image.height,
-        });
+        };
+
+        onImageReady?.(localImage);
       } catch {
         Alert.alert("Image Error", "One or more images could not be processed.");
       }
-    }
 
-    return compressed;
-  }, [currentCount, maxImages]);
+      completed += 1;
+      onProgress?.({ completed, total });
+    }
+  }, [currentCount, maxImages, onProgress, onImageReady]);
 
   return { pickImages };
 }

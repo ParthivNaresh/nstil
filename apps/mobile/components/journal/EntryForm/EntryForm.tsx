@@ -29,6 +29,7 @@ export function EntryForm({
   existingMedia,
   removedMediaIds,
   maxImages,
+  compressionProgress,
   onJournalChange,
   onBodyChange,
   onTitleChange,
@@ -83,6 +84,7 @@ export function EntryForm({
         localImages={localImages}
         existingMedia={existingMedia}
         removedMediaIds={removedMediaIds}
+        compressionProgress={compressionProgress}
         onPickImages={onPickImages}
         onRemoveLocal={onRemoveLocalImage}
         onRemoveExisting={onRemoveExistingMedia}

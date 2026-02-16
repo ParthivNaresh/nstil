@@ -98,6 +98,7 @@ export default function CreateEntryScreen() {
               existingMedia={form.existingMedia}
               removedMediaIds={form.removedMediaIds}
               maxImages={form.maxImages}
+              compressionProgress={form.compressionProgress}
               onJournalChange={form.setJournalId}
               onBodyChange={form.setBody}
               onTitleChange={form.setTitle}

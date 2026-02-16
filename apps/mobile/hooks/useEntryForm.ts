@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useCreateEntry, useUpdateEntry } from "@/hooks/useEntries";
 import { useImagePicker } from "@/hooks/useImagePicker";
+import type { CompressionProgress } from "@/hooks/useImagePicker";
 import { queryKeys } from "@/lib/queryKeys";
 import { deleteMedia, uploadMedia } from "@/services/api/media";
 import type {
@@ -43,6 +44,7 @@ interface UseEntryFormReturn {
   readonly existingMedia: EntryMedia[];
   readonly removedMediaIds: ReadonlySet<string>;
   readonly maxImages: number;
+  readonly compressionProgress: CompressionProgress | null;
   readonly setTitle: (text: string) => void;
   readonly setBody: (text: string) => void;
   readonly setMoodCategory: (category: MoodCategory) => void;
@@ -134,13 +136,24 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
   const [localImages, setLocalImages] = useState<LocalImage[]>([]);
   const [existingMedia] = useState<EntryMedia[]>(initialMedia);
   const [removedMediaIds, setRemovedMediaIds] = useState<Set<string>>(new Set());
+  const [compressionProgress, setCompressionProgress] = useState<CompressionProgress | null>(null);
 
   const visibleExistingCount = existingMedia.length - removedMediaIds.size;
   const totalImageCount = visibleExistingCount + localImages.length;
 
+  const handleCompressionProgress = useCallback((progress: CompressionProgress) => {
+    setCompressionProgress(progress);
+  }, []);
+
+  const handleImageReady = useCallback((image: LocalImage) => {
+    setLocalImages((prev) => [...prev, image]);
+  }, []);
+
   const { pickImages } = useImagePicker({
     currentCount: totalImageCount,
     maxImages: MAX_IMAGES,
+    onProgress: handleCompressionProgress,
+    onImageReady: handleImageReady,
   });
 
   useEffect(() => {
@@ -187,10 +200,8 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
   }, []);
 
   const handlePickImages = useCallback(async () => {
-    const picked = await pickImages();
-    if (picked.length > 0) {
-      setLocalImages((prev) => [...prev, ...picked]);
-    }
+    await pickImages();
+    setCompressionProgress(null);
   }, [pickImages]);
 
   const removeLocalImage = useCallback((localId: string) => {
@@ -314,6 +325,7 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     localImages,
     existingMedia,
     removedMediaIds,
+    compressionProgress,
     maxImages: MAX_IMAGES,
     setTitle,
     setBody: handleBodyChange,

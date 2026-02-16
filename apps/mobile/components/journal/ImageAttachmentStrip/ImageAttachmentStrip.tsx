@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { spacing } from "@/styles";
 
 import { AddImageButton } from "./AddImageButton";
+import { CompressionIndicator } from "./CompressionIndicator";
 import { ImageThumbnail } from "./ImageThumbnail";
 import type { ImageAttachmentStripProps, ThumbnailSource } from "./types";
 
@@ -15,6 +16,7 @@ export function ImageAttachmentStrip({
   localImages,
   existingMedia,
   removedMediaIds,
+  compressionProgress,
   onPickImages,
   onRemoveLocal,
   onRemoveExisting,
@@ -43,6 +45,9 @@ export function ImageAttachmentStrip({
 
   const totalCount = thumbnails.length;
   const atLimit = totalCount >= maxImages;
+  const isCompressing =
+    compressionProgress !== null &&
+    compressionProgress.completed < compressionProgress.total;
 
   const handleRemove = useCallback(
     (source: ThumbnailSource) => {
@@ -56,39 +61,49 @@ export function ImageAttachmentStrip({
     [onRemoveLocal, onRemoveExisting],
   );
 
-  if (totalCount === 0) {
+  if (totalCount === 0 && !isCompressing) {
     return <AddImageButton onPress={onPickImages} compact={false} />;
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        style={atLimit ? styles.scrollFull : styles.scrollWithButton}
-      >
-        {thumbnails.map((source) => {
-          const id = getThumbnailId(source);
-          return (
-            <ImageThumbnail
-              key={id}
-              source={source}
-              showTrash={trashTargetId === id}
-              onRemove={() => handleRemove(source)}
-              onDismissTrash={() => setTrashTargetId(id)}
-            />
-          );
-        })}
-      </ScrollView>
-      {!atLimit && (
-        <AddImageButton onPress={onPickImages} compact />
+    <View style={styles.wrapper}>
+      {totalCount > 0 && (
+        <View style={styles.container}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            style={atLimit ? styles.scrollFull : styles.scrollWithButton}
+          >
+            {thumbnails.map((source) => {
+              const id = getThumbnailId(source);
+              return (
+                <ImageThumbnail
+                  key={id}
+                  source={source}
+                  showTrash={trashTargetId === id}
+                  onRemove={() => handleRemove(source)}
+                  onDismissTrash={() => setTrashTargetId(id)}
+                />
+              );
+            })}
+          </ScrollView>
+          {!atLimit && !isCompressing && (
+            <AddImageButton onPress={onPickImages} compact />
+          )}
+        </View>
+      )}
+      {isCompressing && compressionProgress && (
+        <CompressionIndicator progress={compressionProgress} />
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    gap: spacing.sm,
+  },
   container: {
     flexDirection: "row",
     alignItems: "center",
