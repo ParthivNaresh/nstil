@@ -1,4 +1,5 @@
 import type { CompressionProgress } from "@/hooks/useImagePicker";
+import type { LocationData } from "@/lib/locationUtils";
 import type {
   EntryMedia,
   EntryType,
@@ -18,6 +19,7 @@ export interface EntryFormProps {
   readonly tags: string[];
   readonly entryType: EntryType;
   readonly entryDate: Date;
+  readonly location: LocationData | null;
   readonly bodyError: string | undefined;
   readonly maxTags: number;
   readonly localImages: LocalImage[];
@@ -32,6 +34,7 @@ export interface EntryFormProps {
   readonly onMoodSpecificChange: (specific: MoodSpecific) => void;
   readonly onEntryTypeChange: (type: EntryType) => void;
   readonly onDateChange: (date: Date) => void;
+  readonly onLocationChange: (location: LocationData | null) => void;
   readonly onAddTag: (tag: string) => void;
   readonly onRemoveTag: (tag: string) => void;
   readonly onPickImages: () => void;

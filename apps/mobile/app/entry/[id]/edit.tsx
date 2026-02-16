@@ -116,6 +116,7 @@ function EditEntryForm({ entryId, existingMediaItems }: EditEntryFormProps) {
               tags={form.tags}
               entryType={form.entryType}
               entryDate={form.entryDate}
+              location={form.location}
               bodyError={form.bodyError}
               maxTags={form.maxTags}
               localImages={form.localImages}
@@ -130,6 +131,7 @@ function EditEntryForm({ entryId, existingMediaItems }: EditEntryFormProps) {
               onMoodSpecificChange={form.setMoodSpecific}
               onEntryTypeChange={form.setEntryType}
               onDateChange={form.setEntryDate}
+              onLocationChange={form.setLocation}
               onAddTag={form.addTag}
               onRemoveTag={form.removeTag}
               onPickImages={form.handlePickImages}

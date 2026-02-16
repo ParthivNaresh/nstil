@@ -17,7 +17,7 @@ class JournalService:
         self._client = client
 
     async def create(self, user_id: UUID, data: JournalEntryCreate) -> JournalEntryRow:
-        payload: dict[str, str | int | bool | list[str] | None] = {
+        payload: dict[str, str | int | float | bool | list[str] | None] = {
             "user_id": str(user_id),
             "journal_id": str(data.journal_id),
             "title": data.title,
@@ -26,6 +26,8 @@ class JournalService:
             "mood_specific": data.mood_specific.value if data.mood_specific else None,
             "tags": data.tags,
             "location": data.location,
+            "latitude": data.latitude,
+            "longitude": data.longitude,
             "entry_type": data.entry_type.value,
             "is_pinned": data.is_pinned,
         }

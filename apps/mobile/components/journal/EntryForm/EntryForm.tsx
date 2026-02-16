@@ -7,6 +7,7 @@ import { EntryDatePicker } from "@/components/journal/EntryDatePicker";
 import { EntryTypeSelector } from "@/components/journal/EntryTypeSelector";
 import { ImageAttachmentStrip } from "@/components/journal/ImageAttachmentStrip";
 import { JournalPicker } from "@/components/journal/JournalPicker";
+import { LocationPicker } from "@/components/journal/LocationPicker";
 import { TagInput } from "@/components/journal/TagInput";
 import { useTheme } from "@/hooks/useTheme";
 import { spacing } from "@/styles";
@@ -23,6 +24,7 @@ export function EntryForm({
   tags,
   entryType,
   entryDate,
+  location,
   bodyError,
   maxTags,
   localImages,
@@ -37,6 +39,7 @@ export function EntryForm({
   onMoodSpecificChange,
   onEntryTypeChange,
   onDateChange,
+  onLocationChange,
   onAddTag,
   onRemoveTag,
   onPickImages,
@@ -56,11 +59,17 @@ export function EntryForm({
         onSelect={onJournalChange}
       />
 
-      <EntryDatePicker
-        value={entryDate}
-        onChange={onDateChange}
-        maximumDate={maxDate}
-      />
+      <View style={styles.metaGroup}>
+        <EntryDatePicker
+          value={entryDate}
+          onChange={onDateChange}
+          maximumDate={maxDate}
+        />
+        <LocationPicker
+          location={location}
+          onLocationChange={onLocationChange}
+        />
+      </View>
 
       <TextArea
         label={t("journal.body")}
@@ -131,6 +140,9 @@ export function EntryForm({
 const styles = StyleSheet.create({
   container: {
     gap: spacing.lg,
+  },
+  metaGroup: {
+    gap: spacing.sm,
   },
   section: {
     gap: spacing.sm,

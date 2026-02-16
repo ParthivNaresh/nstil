@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCreateEntry, useUpdateEntry } from "@/hooks/useEntries";
 import { useImagePicker } from "@/hooks/useImagePicker";
 import type { CompressionProgress } from "@/hooks/useImagePicker";
+import type { LocationData } from "@/lib/locationUtils";
+import { getCurrentLocationSilent } from "@/lib/locationUtils";
 import { queryKeys } from "@/lib/queryKeys";
 import { deleteMedia, uploadMedia } from "@/services/api/media";
 import type {
@@ -37,6 +39,7 @@ interface UseEntryFormReturn {
   readonly entryType: EntryType;
   readonly entryDate: Date;
   readonly journalId: string;
+  readonly location: LocationData | null;
   readonly bodyError: string | undefined;
   readonly isSubmitting: boolean;
   readonly canSubmit: boolean;
@@ -52,6 +55,7 @@ interface UseEntryFormReturn {
   readonly setEntryType: (type: EntryType) => void;
   readonly setEntryDate: (date: Date) => void;
   readonly setJournalId: (id: string) => void;
+  readonly setLocation: (location: LocationData | null) => void;
   readonly addTag: (tag: string) => void;
   readonly removeTag: (tag: string) => void;
   readonly handlePickImages: () => void;
@@ -130,6 +134,17 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
   const [journalId, setJournalId] = useState(() =>
     resolveInitialJournalId(entry, journals),
   );
+  const [location, setLocation] = useState<LocationData | null>(() => {
+    if (!entry) return null;
+    if (entry.latitude != null && entry.longitude != null) {
+      return {
+        latitude: entry.latitude,
+        longitude: entry.longitude,
+        displayName: entry.location ?? "",
+      };
+    }
+    return null;
+  });
   const [bodyError, setBodyError] = useState<string | undefined>(undefined);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -161,6 +176,20 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
       setJournalId(journals[0].id);
     }
   }, [journalId, journals]);
+
+  const isNewEntry = !entry;
+  useEffect(() => {
+    if (!isNewEntry) return;
+    let cancelled = false;
+    void getCurrentLocationSilent().then((result) => {
+      if (!cancelled && result) {
+        setLocation(result);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isNewEntry]);
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending || isUploading;
   const canSubmit = !isSubmitting && !!journalId;
@@ -266,6 +295,14 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
       router.back();
     };
 
+    const locationFields = location
+      ? {
+          location: location.displayName || undefined,
+          latitude: location.latitude,
+          longitude: location.longitude,
+        }
+      : {};
+
     if (entry) {
       updateMutation.mutate(
         {
@@ -279,6 +316,7 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
             tags,
             entry_type: entryType,
             created_at: dateIso,
+            ...locationFields,
           },
         },
         {
@@ -299,6 +337,7 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
           tags: tags.length > 0 ? tags : undefined,
           entry_type: entryType,
           created_at: dateIso,
+          ...locationFields,
         },
         {
           onSuccess: (createdEntry) => {
@@ -308,7 +347,7 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
         },
       );
     }
-  }, [body, title, moodCategory, moodSpecific, tags, entryType, entryDate, journalId, entry, localImages, removedMediaIds, createMutation, updateMutation, router, processMediaChanges, invalidateAfterSave]);
+  }, [body, title, moodCategory, moodSpecific, tags, entryType, entryDate, journalId, location, entry, localImages, removedMediaIds, createMutation, updateMutation, router, processMediaChanges, invalidateAfterSave]);
 
   return {
     title,
@@ -319,6 +358,7 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     entryType,
     entryDate,
     journalId,
+    location,
     bodyError,
     isSubmitting,
     canSubmit,
@@ -334,6 +374,7 @@ export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormRet
     setEntryType,
     setEntryDate,
     setJournalId,
+    setLocation,
     addTag,
     removeTag,
     handlePickImages,

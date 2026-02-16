@@ -145,33 +145,10 @@ export function DateTimePickerSheet({
   const maxHour = isToday ? now.getHours() : undefined;
   const maxMinute = isToday ? now.getMinutes() : undefined;
 
-  const handleDayPress = useCallback(
-    (dateString: string) => {
-      setSelectedDateStr(dateString);
-
-      const isTodaySelection = dateString === dateToString(new Date());
-      if (isTodaySelection) {
-        const now = new Date();
-        const nowHour = now.getHours();
-        const nowMinute = now.getMinutes();
-
-        setSelectedHour((prev) => {
-          if (prev > nowHour) return nowHour;
-          return prev;
-        });
-        setSelectedMinute((prev) => {
-          setSelectedHour((currentHour) => {
-            if (currentHour === nowHour && prev > nowMinute) {
-              setSelectedMinute(nowMinute);
-            }
-            return currentHour;
-          });
-          return prev;
-        });
-      }
-    },
-    [],
-  );
+  const handleDayPress = useCallback((dateString: string) => {
+    setSelectedDateStr(dateString);
+    setNow(new Date());
+  }, []);
 
   const handleHourChange = useCallback((hour: number) => {
     setSelectedHour(hour);

@@ -31,12 +31,17 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "@react-native-community/datetimepicker",
       [
         "expo-image-picker",
         {
           "photosPermission": "Allow NStil to access your photos to attach images to journal entries.",
           "cameraPermission": "Allow NStil to use your camera to take photos for journal entries."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow NStil to access your location to tag journal entries with where you are."
         }
       ]
     ]

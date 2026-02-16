@@ -92,6 +92,7 @@ export default function CreateEntryScreen() {
               tags={form.tags}
               entryType={form.entryType}
               entryDate={form.entryDate}
+              location={form.location}
               bodyError={form.bodyError}
               maxTags={form.maxTags}
               localImages={form.localImages}
@@ -106,6 +107,7 @@ export default function CreateEntryScreen() {
               onMoodSpecificChange={form.setMoodSpecific}
               onEntryTypeChange={form.setEntryType}
               onDateChange={form.setEntryDate}
+              onLocationChange={form.setLocation}
               onAddTag={form.addTag}
               onRemoveTag={form.removeTag}
               onPickImages={form.handlePickImages}

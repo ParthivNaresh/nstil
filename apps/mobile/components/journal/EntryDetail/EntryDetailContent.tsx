@@ -1,10 +1,12 @@
 import { Calendar, FileText, MapPin } from "lucide-react-native";
-import { StyleSheet, View } from "react-native";
+import { useCallback } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { AppText, Icon } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { formatFullDate } from "@/lib/formatFullDate";
+import { openInMaps } from "@/lib/locationUtils";
 import { radius, spacing } from "@/styles";
 
 import { MoodBanner } from "./MoodBanner";
@@ -16,6 +18,13 @@ export function EntryDetailContent({ entry }: EntryDetailContentProps) {
   const formattedDate = formatFullDate(entry.created_at);
   const entryTypeLabel = t(`journal.entryTypes.${entry.entry_type}`);
   const hasMood = entry.mood_category !== null;
+  const hasCoordinates = entry.latitude != null && entry.longitude != null;
+
+  const handleLocationPress = useCallback(() => {
+    if (hasCoordinates) {
+      void openInMaps(entry.latitude!, entry.longitude!, entry.location ?? undefined);
+    }
+  }, [hasCoordinates, entry.latitude, entry.longitude, entry.location]);
 
   return (
     <View style={styles.container}>
@@ -40,12 +49,24 @@ export function EntryDetailContent({ entry }: EntryDetailContentProps) {
           </AppText>
         </View>
         {entry.location ? (
-          <View style={styles.metaItem}>
-            <Icon icon={MapPin} size="xs" color={colors.textTertiary} />
-            <AppText variant="caption" color={colors.textTertiary}>
+          <Pressable
+            onPress={hasCoordinates ? handleLocationPress : undefined}
+            style={styles.metaItem}
+            accessibilityRole={hasCoordinates ? "link" : undefined}
+            accessibilityLabel={`Location: ${entry.location}`}
+          >
+            <Icon
+              icon={MapPin}
+              size="xs"
+              color={hasCoordinates ? colors.accent : colors.textTertiary}
+            />
+            <AppText
+              variant="caption"
+              color={hasCoordinates ? colors.accent : colors.textTertiary}
+            >
               {entry.location}
             </AppText>
-          </View>
+          </Pressable>
         ) : null}
       </View>
 

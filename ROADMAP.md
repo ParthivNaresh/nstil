@@ -71,7 +71,9 @@ With the theme system in place, redesign existing screens to close the gap with 
 
 - [x] Entry form redesign — section dividers between form groups, increased textarea `minHeight` (180px), better vertical breathing room (`spacing.lg` gaps)
 - [x] Entry form flat inputs — `TextInput` and `TextArea` support `variant="flat"` (borderless, no background, subtle bottom line). Journal entry form uses flat variant so text sits directly on the ambient background
-- [x] Custom date/time picker — replaced native iOS compact picker with custom bottom sheet. `DateTimeTrigger` (minimal text line: "Feb 14, 2026 — 3:09 PM"). `DateTimePickerSheet` modal with `PickerCalendar` (single-month grid with prev/next navigation, fixed 6-row layout) + native time spinner. Smooth fade-in/out animation via shared `opacity` value. Future time prevention (spinner `maximumDate` on today + clamp on confirm). `sheet` color token added to all palettes
+- [x] Custom date/time picker — `DateTimeTrigger` (minimal text line: "Feb 14, 2026 — 3:09 PM"). `DateTimePickerSheet` centered floating modal (340px max-width, `radius.2xl` card) with `PickerCalendar` (single-month grid with prev/next navigation, fixed 6-row layout) + custom `TimePicker` (scroll-snap wheel columns for hour/minute with AM/PM toggle). Smooth scale+fade+translateY animation via single `progress` shared value (`Easing.out(quad)` enter, `Easing.in(quad)` exit). Future time prevention: greyed-out disabled values in wheel, auto-scroll-back to nearest valid value on invalid selection, live `now` state refreshed every 10s while modal is open. `sheet` color token added to all palettes. `@react-native-community/datetimepicker` dependency removed
+- [x] TextArea floating label fix — label animates outside the scrollable text area (above the input container) so scrolling text never overlaps the label. `labelSpacer` reserves space, `fieldWrapper` positions label absolutely relative to the field, label animates from placeholder position to above the input
+- [x] Image compression progress indicator — `CompressionIndicator` component with animated progress bar (Reanimated `withTiming`). Shows below thumbnail strip during compression. Images appear incrementally as each finishes via `onImageReady` callback from `useImagePicker`
 - [x] Mood selector — Skia gradient-tinted backgrounds per mood (idle + selected states), 64px touch targets, colored border on selection, haptic feedback
 - [x] Entry type selector — pill shapes (`radius.full`), haptic feedback on selection, accent-colored selected state
 - [x] Journal list — mood-colored left accent border via Skia `MoodAccent`, staggered fade-in animation (`AnimatedEntryCard`), better typography hierarchy (date prominent, body secondary), increased card spacing
@@ -79,7 +81,7 @@ With the theme system in place, redesign existing screens to close the gap with 
 - [x] Tab bar — animated active tab indicator (accent-colored pill, spring scale animation)
 - [x] Tag pills — consistent `radius.full` pill styling across EntryCard, EntryDetail, and TagInput
 - [x] Persistent ambient background — single `AmbientBackground` mounted at root layout. All `Stack`/`Tabs` layouts use transparent `contentStyle`/`sceneStyle`. Screen backgrounds removed. Skia shader runs once, continuously, behind all navigation
-- [x] Tests — tsc ✅, eslint ✅
+- [x] Tests — tsc ✅, eslint ✅ (zero warnings)
 
 **Remaining:**
 
@@ -130,7 +132,7 @@ Let users set a custom date for entries.
 - [x] Service layer — `JournalService.create()` conditionally includes `created_at` in insert payload. When `None`, Postgres `DEFAULT now()` applies
 - [x] Mobile — `EntryDatePicker` component (journal-specific, not generic UI) using native iOS compact picker (`display="compact"`). Glass pill trigger with calendar icon. Border + icon shift to accent color when backdated. `useEntryForm` manages `entryDate` state, serializes to ISO on submit. Old generic `DatePicker` UI component deleted
 - [x] Tests — 12 new backend tests (model + API): create with custom date, default none, future rejected, naive gets UTC, update date, update future rejected, `to_update_dict` serialization. 148 total passing. Mobile: tsc ✅, eslint ✅
-- [x] **Visual debt resolved** — native iOS compact picker replaced with custom `DateTimePickerSheet` bottom sheet (built in 4B). `PickerCalendar` with month navigation + native time spinner. `DateTimeTrigger` text line. Future time clamping. `sheet` palette token
+- [x] **Visual debt resolved** — native iOS compact picker replaced with custom `DateTimePickerSheet` floating modal (built in 4B). `PickerCalendar` with month navigation + custom `TimePicker` wheel columns. `DateTimeTrigger` text line. Future time clamping with greyed-out disabled values. `sheet` palette token
 
 ### Subphase 4G — Journals & Spaces 🔄
 
@@ -188,18 +190,20 @@ Continuous-scroll mood calendar at the top of the History tab. Each day shows a 
 - [x] **Visual polish** — Semi-transparent card background (`surface` at 35% opacity) lets ambient Skia blobs show through. Circular cells, mood gradient fills, entry dots, today accent ring
 - [x] **Tests** — tsc ✅, eslint ✅. Backend: ruff ✅, mypy ✅ (46 files), 253 tests ✅
 
-### Subphase 4J — Media Attachments (Images)
+### Subphase 4J — Media Attachments (Images) ✅
 
 Support for multiple images per entry.
 
-**Objectives:**
-
-- [ ] Storage — Supabase Storage bucket `entry-media` with RLS. Path: `{user_id}/{entry_id}/{uuid}.{ext}`. Formats: JPEG, PNG, HEIC, WebP. Max 10MB per image, max 10 per entry
-- [ ] Backend — new `entry_media` table: `id`, `entry_id`, `user_id`, `storage_path`, `content_type`, `size_bytes`, `width`, `height`, `sort_order`, `created_at`. Cascade delete with entry
-- [ ] API — `POST /entries/{id}/media` (upload), `DELETE /entries/{id}/media/{media_id}`, `GET /entries/{id}/media`. Entry response includes `media[]` with signed URLs (1hr expiry)
-- [ ] Mobile — image picker (`expo-image-picker`). Thumbnail grid on form. Full-screen view with pinch-to-zoom. Upload progress. Horizontal gallery on detail screen
-- [ ] Optimization — client-side compression (max 2048px, JPEG 80%). Thumbnails via Supabase image transforms
-- [ ] Tests — backend: upload, list, delete, max count, file type validation. Mobile: tsc + eslint
+- [x] **Database migration** — `007_ADD_ENTRY_MEDIA.sql`. `entry_media` table with `id`, `entry_id`, `user_id`, `storage_path`, `content_type`, `size_bytes`, `width`, `height`, `sort_order`, `created_at`. RLS policies for owner-only access. `entry-media` storage bucket (private, 10MB limit, MIME whitelist). Cascade delete via FK
+- [x] **Backend models** — `models/media.py`: `MediaContentType` StrEnum, `MAX_FILE_SIZE_BYTES=10MB`, `MAX_MEDIA_PER_ENTRY=10`, `PREVIEW_LIMIT=3`. `EntryMediaRow`, `EntryMediaResponse`, `EntryMediaListResponse`, `MediaPreviewItem`, `MediaPreview` (items + total_count)
+- [x] **Backend service** — `MediaService`: upload (validates size/type/count), list, get_by_id, delete, signed URLs (1hr expiry), `get_previews_for_entries()` batch preview for entry list cards
+- [x] **API endpoints** — `POST/GET/DELETE /entries/{id}/media/{media_id}`. Entry list endpoint injects `MediaService` for batch previews in response
+- [x] **Mobile types & API** — `media.ts` types, `apiUpload<T>()` generic upload function, `services/api/media.ts` with upload/list/delete
+- [x] **Mobile hooks** — `useEntryMedia`, `useUploadMedia`, `useDeleteMedia` query/mutation hooks. `useImagePicker` with per-image `onImageReady` callback and `CompressionProgress` reporting
+- [x] **Entry form integration** — `ImageAttachmentStrip` with thumbnails, add button, trash overlay. `CompressionIndicator` progress bar below strip during compression. Images appear incrementally as each finishes compressing. `useEntryForm` manages `localImages`, `existingMedia`, `removedMediaIds`, `compressionProgress` state
+- [x] **Entry card integration** — `MediaPreviewCluster` shows up to 3 thumbnail previews with overflow badge on entry cards
+- [x] **Client-side compression** — `lib/imageUtils.ts`: max 2048px dimension, JPEG 80% quality via `expo-image-manipulator`
+- [x] **Tests** — Backend: ruff ✅, mypy ✅, 277 tests ✅. Mobile: tsc ✅, eslint ✅
 
 ### Subphase 4K — Voice Memos
 

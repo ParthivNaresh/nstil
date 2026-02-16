@@ -10,6 +10,7 @@ from nstil.models.journal import (
     JournalEntryCreate,
     JournalEntryResponse,
     JournalEntryUpdate,
+    validate_coordinate_pair,
 )
 from tests.factories import DEFAULT_JOURNAL_ID, make_entry_row
 
@@ -243,3 +244,126 @@ class TestJournalEntryResponse:
         row = make_entry_row()
         response = JournalEntryResponse.from_row(row)
         assert not hasattr(response, "metadata")
+
+    def test_from_row_with_coordinates(self) -> None:
+        row = make_entry_row(
+            location="Brooklyn, New York",
+            latitude=40.6782,
+            longitude=-73.9442,
+        )
+        response = JournalEntryResponse.from_row(row)
+        assert response.location == "Brooklyn, New York"
+        assert response.latitude == 40.6782
+        assert response.longitude == -73.9442
+
+    def test_from_row_without_coordinates(self) -> None:
+        row = make_entry_row()
+        response = JournalEntryResponse.from_row(row)
+        assert response.latitude is None
+        assert response.longitude is None
+
+
+class TestCoordinateValidation:
+    def test_both_none_accepted(self) -> None:
+        validate_coordinate_pair(None, None)
+
+    def test_both_provided_accepted(self) -> None:
+        validate_coordinate_pair(40.6782, -73.9442)
+
+    def test_latitude_only_rejected(self) -> None:
+        with pytest.raises(ValueError, match="both be provided"):
+            validate_coordinate_pair(40.6782, None)
+
+    def test_longitude_only_rejected(self) -> None:
+        with pytest.raises(ValueError, match="both be provided"):
+            validate_coordinate_pair(None, -73.9442)
+
+    def test_latitude_too_high_rejected(self) -> None:
+        with pytest.raises(ValueError, match="latitude must be between"):
+            validate_coordinate_pair(91.0, 0.0)
+
+    def test_latitude_too_low_rejected(self) -> None:
+        with pytest.raises(ValueError, match="latitude must be between"):
+            validate_coordinate_pair(-91.0, 0.0)
+
+    def test_longitude_too_high_rejected(self) -> None:
+        with pytest.raises(ValueError, match="longitude must be between"):
+            validate_coordinate_pair(0.0, 181.0)
+
+    def test_longitude_too_low_rejected(self) -> None:
+        with pytest.raises(ValueError, match="longitude must be between"):
+            validate_coordinate_pair(0.0, -181.0)
+
+    def test_boundary_values_accepted(self) -> None:
+        validate_coordinate_pair(90.0, 180.0)
+        validate_coordinate_pair(-90.0, -180.0)
+        validate_coordinate_pair(0.0, 0.0)
+
+
+class TestCreateWithCoordinates:
+    def test_create_with_location_and_coords(self) -> None:
+        entry = JournalEntryCreate(
+            journal_id=JID,
+            body="test",
+            location="Brooklyn, New York",
+            latitude=40.6782,
+            longitude=-73.9442,
+        )
+        assert entry.location == "Brooklyn, New York"
+        assert entry.latitude == 40.6782
+        assert entry.longitude == -73.9442
+
+    def test_create_with_coords_no_location_name(self) -> None:
+        entry = JournalEntryCreate(
+            journal_id=JID,
+            body="test",
+            latitude=40.6782,
+            longitude=-73.9442,
+        )
+        assert entry.location is None
+        assert entry.latitude == 40.6782
+
+    def test_create_latitude_only_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="both be provided"):
+            JournalEntryCreate(journal_id=JID, body="test", latitude=40.6782)
+
+    def test_create_longitude_only_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="both be provided"):
+            JournalEntryCreate(journal_id=JID, body="test", longitude=-73.9442)
+
+    def test_create_latitude_out_of_range_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="latitude must be between"):
+            JournalEntryCreate(
+                journal_id=JID, body="test", latitude=91.0, longitude=0.0
+            )
+
+    def test_create_defaults_no_coords(self) -> None:
+        entry = JournalEntryCreate(journal_id=JID, body="test")
+        assert entry.latitude is None
+        assert entry.longitude is None
+
+
+class TestUpdateWithCoordinates:
+    def test_update_with_coords(self) -> None:
+        update = JournalEntryUpdate(
+            location="San Francisco, CA",
+            latitude=37.7749,
+            longitude=-122.4194,
+        )
+        assert update.latitude == 37.7749
+        assert update.longitude == -122.4194
+
+    def test_update_latitude_only_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="both be provided"):
+            JournalEntryUpdate(latitude=37.7749)
+
+    def test_update_coords_in_update_dict(self) -> None:
+        update = JournalEntryUpdate(
+            location="Tokyo, Japan",
+            latitude=35.6762,
+            longitude=139.6503,
+        )
+        result = update.to_update_dict()
+        assert result["latitude"] == 35.6762
+        assert result["longitude"] == 139.6503
+        assert result["location"] == "Tokyo, Japan"

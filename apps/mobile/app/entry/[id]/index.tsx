@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { FileQuestion, Pencil, Pin, PinOff } from "lucide-react-native";
 import { useCallback } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -11,8 +11,6 @@ import { EntryDetailContent } from "@/components/journal";
 import { Button, EmptyState, Header, Icon, Skeleton } from "@/components/ui";
 import { useDeleteEntry, useEntry, useHeaderHeight, useTheme, useTogglePin } from "@/hooks";
 import { spacing } from "@/styles";
-
-import { styles } from "./styles";
 
 export default function EntryDetailScreen() {
   const { t } = useTranslation();
@@ -133,3 +131,28 @@ export default function EntryDetailScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  deleteSection: {
+    marginTop: spacing.xl,
+  },
+});

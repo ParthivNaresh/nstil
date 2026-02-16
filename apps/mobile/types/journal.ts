@@ -21,6 +21,8 @@ export interface JournalEntry {
   readonly mood_specific: MoodSpecific | null;
   readonly tags: string[];
   readonly location: string | null;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
   readonly entry_type: EntryType;
   readonly is_pinned: boolean;
   readonly media_preview: MediaPreview | null;
@@ -36,6 +38,8 @@ export interface JournalEntryCreate {
   readonly mood_specific?: MoodSpecific;
   readonly tags?: string[];
   readonly location?: string;
+  readonly latitude?: number;
+  readonly longitude?: number;
   readonly entry_type?: EntryType;
   readonly is_pinned?: boolean;
   readonly created_at?: string;
@@ -49,6 +53,8 @@ export interface JournalEntryUpdate {
   readonly mood_specific?: MoodSpecific;
   readonly tags?: string[];
   readonly location?: string;
+  readonly latitude?: number;
+  readonly longitude?: number;
   readonly entry_type?: EntryType;
   readonly is_pinned?: boolean;
   readonly created_at?: string;

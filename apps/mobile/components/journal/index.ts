@@ -18,6 +18,9 @@ export type { EntryFormProps } from "./EntryForm";
 export { ImageAttachmentStrip } from "./ImageAttachmentStrip";
 export type { ImageAttachmentStripProps } from "./ImageAttachmentStrip";
 
+export { LocationPicker } from "./LocationPicker";
+export type { LocationPickerProps } from "./LocationPicker";
+
 export { JournalFilterBar } from "./JournalFilterBar";
 export type { JournalFilterBarProps } from "./JournalFilterBar";
 

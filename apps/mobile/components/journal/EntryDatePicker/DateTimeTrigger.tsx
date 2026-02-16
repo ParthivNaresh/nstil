@@ -1,8 +1,11 @@
+import { Calendar } from "lucide-react-native";
 import { Pressable, StyleSheet } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
+import { Icon } from "@/components/ui/Icon";
 import { useTheme } from "@/hooks/useTheme";
-import { formatPickerDate, formatPickerTime } from "@/lib/dateFormatUtils";
+import { formatFullDateTime } from "@/lib/formatFullDate";
+import { spacing } from "@/styles";
 
 import type { DateTimeTriggerProps } from "./types";
 
@@ -13,18 +16,18 @@ export function DateTimeTrigger({
 }: DateTimeTriggerProps) {
   const { colors } = useTheme();
   const color = isBackdated ? colors.accent : colors.textTertiary;
-  const dateStr = formatPickerDate(value);
-  const timeStr = formatPickerTime(value);
+  const formatted = formatFullDateTime(value);
 
   return (
     <Pressable
       onPress={onPress}
       style={styles.trigger}
       accessibilityRole="button"
-      accessibilityLabel={`${dateStr} at ${timeStr}`}
+      accessibilityLabel={formatted}
     >
+      <Icon icon={Calendar} size="xs" color={color} />
       <AppText variant="caption" color={color}>
-        {dateStr} — {timeStr}
+        {formatted}
       </AppText>
     </Pressable>
   );
@@ -32,6 +35,9 @@ export function DateTimeTrigger({
 
 const styles = StyleSheet.create({
   trigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
     alignSelf: "flex-start",
     paddingVertical: 2,
   },

@@ -20,7 +20,26 @@ MAX_BODY_LENGTH = 50_000
 MAX_TAG_LENGTH = 50
 MAX_TAG_COUNT = 10
 MAX_LOCATION_LENGTH = 200
+MIN_LATITUDE = -90.0
+MAX_LATITUDE = 90.0
+MIN_LONGITUDE = -180.0
+MAX_LONGITUDE = 180.0
 FUTURE_TOLERANCE = timedelta(minutes=1)
+
+
+def validate_coordinate_pair(
+    latitude: float | None,
+    longitude: float | None,
+) -> None:
+    if (latitude is None) != (longitude is None):
+        msg = "latitude and longitude must both be provided or both be null"
+        raise ValueError(msg)
+    if latitude is not None and not (MIN_LATITUDE <= latitude <= MAX_LATITUDE):
+        msg = f"latitude must be between {MIN_LATITUDE} and {MAX_LATITUDE}"
+        raise ValueError(msg)
+    if longitude is not None and not (MIN_LONGITUDE <= longitude <= MAX_LONGITUDE):
+        msg = f"longitude must be between {MIN_LONGITUDE} and {MAX_LONGITUDE}"
+        raise ValueError(msg)
 
 
 def _validate_not_future(v: datetime | None) -> datetime | None:
@@ -42,13 +61,16 @@ class JournalEntryCreate(BaseModel):
     mood_specific: MoodSpecific | None = Field(default=None)
     tags: list[str] = Field(default_factory=list)
     location: str | None = Field(default=None, max_length=MAX_LOCATION_LENGTH)
+    latitude: float | None = Field(default=None)
+    longitude: float | None = Field(default=None)
     entry_type: EntryType = Field(default=EntryType.JOURNAL)
     is_pinned: bool = Field(default=False)
     created_at: datetime | None = Field(default=None)
 
     @model_validator(mode="after")
-    def validate_mood(self) -> "JournalEntryCreate":
+    def validate_mood_and_coords(self) -> "JournalEntryCreate":
         validate_mood_pair(self.mood_category, self.mood_specific)
+        validate_coordinate_pair(self.latitude, self.longitude)
         return self
 
     @field_validator("created_at")
@@ -92,6 +114,8 @@ class JournalEntryUpdate(BaseModel):
     mood_specific: MoodSpecific | None = Field(default=None)
     tags: list[str] | None = Field(default=None)
     location: str | None = Field(default=None, max_length=MAX_LOCATION_LENGTH)
+    latitude: float | None = Field(default=None)
+    longitude: float | None = Field(default=None)
     entry_type: EntryType | None = Field(default=None)
     is_pinned: bool | None = Field(default=None)
     created_at: datetime | None = Field(default=None)
@@ -110,6 +134,8 @@ class JournalEntryUpdate(BaseModel):
             raise ValueError(msg)
         if self.mood_specific is not None and self.mood_category is not None:
             validate_mood_pair(self.mood_category, self.mood_specific)
+        if self.latitude is not None or self.longitude is not None:
+            validate_coordinate_pair(self.latitude, self.longitude)
         return self
 
     @field_validator("created_at")
@@ -168,6 +194,8 @@ class JournalEntryRow(BaseModel):
     mood_specific: str | None
     tags: list[str]
     location: str | None
+    latitude: float | None
+    longitude: float | None
     entry_type: str
     is_pinned: bool
     metadata: dict[str, object]
@@ -188,6 +216,8 @@ class JournalEntryResponse(BaseModel):
     mood_specific: str | None
     tags: list[str]
     location: str | None
+    latitude: float | None
+    longitude: float | None
     entry_type: str
     is_pinned: bool
     media_preview: MediaPreview | None
@@ -210,6 +240,8 @@ class JournalEntryResponse(BaseModel):
             mood_specific=row.mood_specific,
             tags=row.tags,
             location=row.location,
+            latitude=row.latitude,
+            longitude=row.longitude,
             entry_type=row.entry_type,
             is_pinned=row.is_pinned,
             media_preview=media_preview,
