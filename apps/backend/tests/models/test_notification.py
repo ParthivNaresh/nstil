@@ -84,7 +84,7 @@ class TestNotificationPreferencesUpdate:
         with pytest.raises(ValidationError, match="0-6"):
             NotificationPreferencesUpdate(active_days=[-1])
 
-    def test_quiet_hours_both_required(self) -> None:
+    def test_quiet_hours_one_without_other_rejected(self) -> None:
         with pytest.raises(ValidationError, match="both be provided"):
             NotificationPreferencesUpdate(quiet_hours_start=time(22, 0))
 
@@ -96,7 +96,24 @@ class TestNotificationPreferencesUpdate:
         assert update.quiet_hours_start == time(22, 0)
         assert update.quiet_hours_end == time(7, 0)
 
-    def test_to_update_dict_excludes_none(self) -> None:
+    def test_quiet_hours_both_null_clears(self) -> None:
+        update = NotificationPreferencesUpdate(
+            quiet_hours_start=None,
+            quiet_hours_end=None,
+        )
+        assert update.quiet_hours_start is None
+        assert update.quiet_hours_end is None
+
+    def test_quiet_hours_null_in_update_dict(self) -> None:
+        update = NotificationPreferencesUpdate(
+            quiet_hours_start=None,
+            quiet_hours_end=None,
+        )
+        result = update.to_update_dict()
+        assert result["quiet_hours_start"] is None
+        assert result["quiet_hours_end"] is None
+
+    def test_to_update_dict_excludes_unset(self) -> None:
         update = NotificationPreferencesUpdate(reminders_enabled=True)
         result = update.to_update_dict()
         assert result == {"reminders_enabled": True}

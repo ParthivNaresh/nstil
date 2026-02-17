@@ -49,6 +49,13 @@
         {
           "microphonePermission": "Allow NStil to access your microphone to record voice memos for journal entries."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0A0A0F"
+        }
       ]
     ]
   }

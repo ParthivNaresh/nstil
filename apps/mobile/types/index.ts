@@ -28,6 +28,12 @@ export type {
   MediaPreviewItem,
 } from "./media";
 export type {
+  NotificationPreferences,
+  NotificationPreferencesUpdate,
+  ReminderFrequency,
+  ReminderTime,
+} from "./notification";
+export type {
   JournalSpace,
   JournalSpaceCreate,
   JournalSpaceListResponse,

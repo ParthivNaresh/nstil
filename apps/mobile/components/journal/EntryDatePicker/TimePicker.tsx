@@ -17,6 +17,9 @@ const ITEM_HEIGHT = 36;
 const VISIBLE_ITEMS = 3;
 const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
 
+const COLUMN_WIDTH_DEFAULT = 56;
+const COLUMN_WIDTH_COMPACT = 40;
+
 interface TimePickerProps {
   readonly hour: number;
   readonly minute: number;
@@ -24,6 +27,7 @@ interface TimePickerProps {
   readonly onMinuteChange: (minute: number) => void;
   readonly maxHour?: number;
   readonly maxMinute?: number;
+  readonly compact?: boolean;
 }
 
 interface WheelColumnProps {
@@ -32,6 +36,7 @@ interface WheelColumnProps {
   readonly onChange: (value: number) => void;
   readonly formatValue: (value: number) => string;
   readonly maxValue?: number;
+  readonly width: number;
 }
 
 function formatHour12(hour: number): string {
@@ -56,6 +61,7 @@ const WheelColumn = memo(function WheelColumn({
   onChange,
   formatValue,
   maxValue,
+  width,
 }: WheelColumnProps) {
   const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
@@ -122,7 +128,7 @@ const WheelColumn = memo(function WheelColumn({
   );
 
   return (
-    <View style={wheelStyles.column}>
+    <View style={[wheelStyles.column, { width }]}>
       <View
         style={[
           wheelStyles.highlight,
@@ -171,9 +177,11 @@ export const TimePicker = memo(function TimePicker({
   onMinuteChange,
   maxHour,
   maxMinute,
+  compact = false,
 }: TimePickerProps) {
   const { colors } = useTheme();
   const period = getPeriod(hour);
+  const columnWidth = compact ? COLUMN_WIDTH_COMPACT : COLUMN_WIDTH_DEFAULT;
 
   const effectiveMaxMinute = useMemo(() => {
     if (maxHour === undefined || maxMinute === undefined) return undefined;
@@ -209,13 +217,14 @@ export const TimePicker = memo(function TimePicker({
   }, [hour, maxHour]);
 
   return (
-    <View style={pickerStyles.container}>
+    <View style={compact ? pickerStyles.containerCompact : pickerStyles.container}>
       <WheelColumn
         items={HOURS}
         selected={hour}
         onChange={handleHourChange}
         formatValue={formatHour12}
         maxValue={maxHour}
+        width={columnWidth}
       />
       <AppText variant="label" color={colors.textSecondary}>
         :
@@ -226,12 +235,13 @@ export const TimePicker = memo(function TimePicker({
         onChange={handleMinuteChange}
         formatValue={formatMinute}
         maxValue={effectiveMaxMinute}
+        width={columnWidth}
       />
       <Pressable
         onPress={togglePeriod}
         disabled={!canTogglePeriod}
         style={[
-          pickerStyles.periodButton,
+          compact ? pickerStyles.periodButtonCompact : pickerStyles.periodButton,
           { backgroundColor: withAlpha(colors.accent, 0.1) },
         ]}
       >
@@ -249,7 +259,6 @@ export const TimePicker = memo(function TimePicker({
 const wheelStyles = StyleSheet.create({
   column: {
     height: PICKER_HEIGHT,
-    width: 56,
     position: "relative",
   },
   highlight: {
@@ -277,10 +286,21 @@ const pickerStyles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.sm,
   },
+  containerCompact: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+  },
   periodButton: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
     marginLeft: spacing.sm,
+  },
+  periodButtonCompact: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
   },
 });

@@ -36,6 +36,9 @@ class NotificationPreferencesRow(BaseModel):
     model_config = {"extra": "ignore"}
 
 
+NULLABLE_FIELDS: frozenset[str] = frozenset({"quiet_hours_start", "quiet_hours_end"})
+
+
 class NotificationPreferencesUpdate(BaseModel):
     reminders_enabled: bool | None = Field(default=None)
     frequency: ReminderFrequency | None = Field(default=None)
@@ -46,15 +49,13 @@ class NotificationPreferencesUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_fields(self) -> "NotificationPreferencesUpdate":
-        has_value = any(
-            getattr(self, field) is not None
-            for field in self.__class__.model_fields
-        )
-        if not has_value:
+        if not self.model_fields_set:
             msg = "At least one field must be provided"
             raise ValueError(msg)
-        if (self.quiet_hours_start is None) != (self.quiet_hours_end is None):
-            msg = "quiet_hours_start and quiet_hours_end must both be provided or both be null"
+        quiet_start_set = "quiet_hours_start" in self.model_fields_set
+        quiet_end_set = "quiet_hours_end" in self.model_fields_set
+        if quiet_start_set != quiet_end_set:
+            msg = "quiet_hours_start and quiet_hours_end must both be provided or both be omitted"
             raise ValueError(msg)
         return self
 
@@ -82,11 +83,12 @@ class NotificationPreferencesUpdate(BaseModel):
         return sorted(set(v))
 
     def to_update_dict(self) -> dict[str, object]:
-        return {
-            k: v
-            for k, v in self.model_dump(mode="json").items()
-            if v is not None
-        }
+        result: dict[str, object] = {}
+        for k, v in self.model_dump(mode="json").items():
+            if k not in self.model_fields_set:
+                continue
+            result[k] = v
+        return result
 
 
 class NotificationPreferencesResponse(BaseModel):

@@ -200,15 +200,17 @@ Database schema, models, services, and orchestration layer for the AI intelligen
 **Remaining backend work:**
 - [ ] ARQ worker setup + TaskOrchestrator (see deferred services above)
 
-### Subphase 5B — Push Notifications & Reminders
+### Subphase 5B — Push Notifications & Reminders ✅
 
-Scheduled reflection reminders. Configurable cadence. Gentle, non-intrusive prompts.
+Scheduled reflection reminders with configurable cadence, quiet hours, and full lifecycle management.
 
-- [ ] **Push notification infrastructure** — `expo-notifications` for local scheduled notifications. Permission request flow with graceful denial
-- [ ] **Reminder settings** — configurable in Settings: frequency (daily, twice daily, custom), time of day, days of week. Stored locally (no backend needed for local notifications)
-- [ ] **Smart scheduling** — avoid sending during sleep hours. Respect Do Not Disturb
-- [ ] **Notification content** — rotating prompt text from PromptBank nudge category. Tapping opens guided check-in flow
-- [ ] **Backend push (future)** — when moving to production, migrate to server-sent push via APNs/FCM for reliability and cross-device sync
+- [x] **5B-1 — Infrastructure & permission flow** — `expo-notifications` installed, `lib/notifications.ts` (permission request, handler config, `PermissionStatus` enum), `stores/notificationStore.ts` (Zustand: permission tracking, schedule sync, clear), root layout integration (module-scope handler config, notification tap → `/entry/create?source=notification`, cold-launch handling via `getLastResponseAsync`)
+- [x] **5B-2 — Notification scheduling engine** — `scheduleReminders()` (cancel all → iterate reminderTimes × activeDays → skip quiet hours → schedule WEEKLY triggers), `isWithinQuietHours()` (handles overnight wrap), `lib/nudgeContent.ts` (15 rotating notification body strings), `toExpoWeekday()` conversion
+- [x] **5B-3 — API service & types** — `types/notification.ts` (`ReminderTime`, `ReminderFrequency`, `NotificationPreferences`, `NotificationPreferencesUpdate`), `services/api/notifications.ts` (GET/PATCH), `hooks/useNotificationPreferences.ts` (useQuery + useMutation with optimistic update, reschedule on success, rollback on error), `queryKeys` additions
+- [x] **5B-4 — Notification preferences screen** — `app/settings/_layout.tsx` + `app/settings/notifications.tsx` (sub-screen with Header, permission gating, loading skeletons). 6 components in `components/settings/NotificationSettings/`: `NotificationPermissionCard` (undetermined/denied states), `FrequencyPicker` (Skia gradient pills), `DaySelector` (7 circular Skia gradient pills), `ReminderTimeRow` (reuses TimePicker scroll wheels, local state for atomic updates, reserved-height quiet hours warning in red), `QuietHoursSection` (toggle + compact side-by-side TimePickers, local state emitting both start+end atomically), `NotificationSettings` (orchestrator with debounced/immediate update split, local toggle state for flicker-free switches). Settings tab updated with Bell icon navigation card. i18n translations for all notification UI strings
+- [x] **5B-5 — Notification response handling** — Tap notification → navigate to `/entry/create?source=notification` (implemented in 5B-1). `data: { action: "check_in" }` set on all scheduled notifications
+- [x] **5B-6 — Sync & edge cases** — `hooks/useNotificationSync.ts`: AppState foreground listener (re-check permission status, fetch prefs if `updated_at` changed, reschedule or cancel), sign-in detection (fetch + schedule), sign-out detection (cancel all), `lastSyncedAt` ref to avoid redundant reschedules. Sign-out in settings clears scheduled notifications
+- [x] **Backend fix** — `NotificationPreferencesUpdate.to_update_dict()` and model validator refactored to use `model_fields_set` (Pydantic) to distinguish "field omitted" from "field explicitly set to null", enabling quiet hours clearing. `TimePicker` gained `compact` prop for side-by-side quiet hours layout. 574 backend tests ✅
 
 ### Subphase 5C — On-Device AI: Apple Foundation Models (iOS)
 
@@ -231,10 +233,12 @@ Equivalent intelligence features on Android using Gemini Nano via ML Kit GenAI A
 
 ### Subphase 5E — Mobile AI Screens & Check-in Flow UI
 
-- [ ] **Check-in flow UI** — notification/home card → check-in screen. Step 1: mood selector (existing Skia gradient pills). Step 2: contextual prompt from PromptEngine. Step 3: optional free-text response. Step 4: save as check-in or promote to full entry
-- [ ] **Insights dashboard** — mood trends (Skia charts), streaks & stats, AI-generated weekly digest, "Year in Pixels" grid
-- [ ] **AI profile settings** — prompt style selector, topics to avoid, goals management
-- [ ] **Notification preferences** — reminder frequency, time, quiet hours
+The user-facing AI experience. Consumes the 17 backend endpoints from 5A. Works with curated PromptBank prompts now; on-device LLM (5C/5D) layers personalization on top later.
+
+- [ ] **Check-in flow UI** — notification tap or home card → check-in screen. Step 1: mood selector (existing Skia gradient pills). Step 2: contextual prompt from PromptEngine (`POST /ai/prompts/generate`). Step 3: optional free-text response (`POST /check-in/{id}/respond`). Step 4: save as check-in (`POST /check-in/{id}/complete`) or promote to full entry (`POST /check-in/{id}/convert`). Resume interrupted sessions (`GET /check-in/active`). Abandon flow (`POST /check-in/{id}/abandon`)
+- [ ] **Home screen check-in card** — contextual prompt card on home tab. Shows PromptEngine-generated prompt. Tap to start check-in flow. Dismissible (tracks engagement via `PATCH /ai/prompts/{id}`)
+- [ ] **Insights dashboard** — mood trends (Skia charts), streaks & stats, weekly digest from InsightEngine (`POST /insights/generate`, `GET /insights`), "Year in Pixels" mood grid
+- [ ] **AI profile settings** — prompt style selector, topics to avoid, goals management (`GET /ai/profile`, `PATCH /ai/profile`)
 
 ---
 

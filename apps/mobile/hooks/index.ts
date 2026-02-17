@@ -26,6 +26,11 @@ export {
   useJournals,
   useUpdateJournal,
 } from "./useJournals";
+export {
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+} from "./useNotificationPreferences";
+export { useNotificationSync } from "./useNotificationSync";
 export { useResetPassword } from "./useResetPassword";
 export { useSignInForm } from "./useSignInForm";
 export { useSignUpForm } from "./useSignUpForm";

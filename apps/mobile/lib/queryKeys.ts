@@ -29,4 +29,8 @@ export const queryKeys = {
     detail: (id: string) =>
       [...queryKeys.journals.details(), id] as const,
   },
+  notifications: {
+    all: ["notifications"] as const,
+    preferences: () => [...queryKeys.notifications.all, "preferences"] as const,
+  },
 } as const;
