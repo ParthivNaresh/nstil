@@ -137,19 +137,68 @@ Structured geolocation with interactive place search and map-based pin drop.
 
 ---
 
-## Phase 5 — Guided Check-ins & On-Device AI
+## Phase 5 — AI Intelligence Layer & On-Device AI
 
-The intelligence layer. Push notification-initiated guided flows reduce the barrier to journaling. On-device LLMs provide personalized prompts, reflections, and insights — all data stays on device.
+The intelligence layer. Backend provides data aggregation, curated prompt selection, and computed insights. On-device LLMs (Apple Foundation Models / Gemini Nano) provide personalized text generation — all inference stays on device.
 
-### Subphase 5A — Guided Check-in Flow
+### Subphase 5A — Backend AI Architecture ✅
 
-Low-friction, structured micro-entries initiated by the app rather than the user.
+Database schema, models, services, and orchestration layer for the AI intelligence system.
 
-- [ ] **Check-in data model** — new `check_ins` table (or entry subtype) with `mood_score` (1-10 scale), `prompt_id`, `response_text`, `created_at`. Lightweight alternative to full journal entries
-- [ ] **Check-in flow UI** — push notification → app opens to check-in screen. Step 1: "How are you feeling?" with 1-10 mood scale (Skia gradient slider or tappable pills). Step 2: contextual follow-up prompt based on score (e.g., low score → "What's weighing on you?", high → "What's going well?"). Step 3: optional free-text expansion, voice memo, or "just save"
-- [ ] **Prompt engine** — curated prompt bank organized by mood range. Randomized selection within range to avoid repetition. Extensible for AI-generated prompts later
-- [ ] **Check-in → entry promotion** — option to expand a check-in into a full journal entry (pre-fills mood, body from responses)
-- [ ] **Check-in history** — visible in calendar view (different visual indicator from full entries). Contributes to streak
+**Database (migrations consolidated into domain-based files):**
+- [x] `006_USER_PREFERENCES.sql` — `user_ai_profiles` (prompt_style, topics_to_avoid, goals) + `user_notification_preferences` (reminder frequency/time, quiet hours). Auto-created by `handle_new_user()` trigger
+- [x] `007_AI_INTELLIGENCE_LAYER.sql` — `ai_sessions`, `ai_messages`, `ai_prompts`, `ai_insights`, `ai_feedback`, `ai_agent_tasks`, `entry_embeddings` tables. Full RLS, indexes, constraints. `semantic_search()` and `get_ai_context()` RPCs
+- [x] `008_TRIGGERS_AND_FUNCTIONS.sql` — `handle_new_user()` creates profile + default journal + AI profile + notification prefs
+
+**Models (10 new model files):**
+- [x] `ai_profile.py`, `notification.py`, `ai_session.py`, `ai_message.py`, `ai_prompt.py`, `ai_insight.py`, `ai_feedback.py`, `ai_task.py`, `embedding.py`, `ai_context.py`
+- [x] `CHECK_IN` added to `EntryType` enum, body made optional for check-in entries
+
+**Tier 1 Data Services (CRUD + Query, 9 services):**
+- [x] `services/ai/session.py` — AISessionService (sessions + messages, sort_order tracking)
+- [x] `services/ai/prompt.py` — AIPromptService (engagement funnel: mark_delivered/seen/engaged/dismissed/converted)
+- [x] `services/ai/insight.py` — AIInsightService (period queries, supersede chain)
+- [x] `services/ai/feedback.py` — AIFeedbackService (append-only, target-based lookup)
+- [x] `services/ai/task.py` — AITaskService (enqueue, optimistic-locking claim_next)
+- [x] `services/ai/profile.py` — AIProfileService
+- [x] `services/ai/context.py` — AIContextService (get_ai_context RPC wrapper)
+- [x] `services/ai/embedding.py` — EmbeddingService (upsert, semantic_search RPC)
+- [x] `services/notification.py` — NotificationService
+
+**Cache Layer:**
+- [x] `cache/ai_keys.py` — Key generation for AI context, profile, notification prefs
+- [x] `cache/ai_cache.py` — AICacheService (context 60s TTL, profile/prefs 600s TTL)
+- [x] `cached_ai_context.py`, `cached_ai_profile.py`, `cached_notification.py` — Cache-aside wrappers
+
+**Prompt Bank (76 curated prompts):**
+- [x] `services/ai/prompt_bank/types.py` — CuratedPrompt dataclass, PromptIntensity, PromptTag enums
+- [x] 7 data files: check_in (15), reflection (10), nudge (8), affirmation (10), reframe (10), guided (15), goal_check (8)
+- [x] `services/ai/prompt_bank/__init__.py` — PromptBank class with indexed lookup, mood/topic/intensity filtering, dedup-aware random selection
+
+**Tier 2 Orchestration Services:**
+- [x] `services/ai/prompt_engine.py` — PromptEngine: context-aware prompt type determination (check_in/reflection/nudge/affirmation/goal_check/guided), mood-appropriate selection, progressive filter relaxation, engagement context snapshot
+- [x] `services/ai/check_in.py` — CheckInOrchestrator: multi-step check-in flow (start → respond → convert/complete/abandon), flow_state management, resume-on-interrupt, orphaned session recovery, entry promotion to journal
+- [x] `services/ai/insight_engine.py` + `insight_computations.py` — InsightEngine v1: streak/milestone detection, weekly summaries (entry count, mood distribution, top tags, avg length), mood anomaly detection (difficult mood ratio comparison). Pure computation functions separated for testability
+
+**InsightEngine v2 (deferred):**
+- [ ] Mood trends — moving averages, upward/downward trend detection across multiple months
+- [ ] Complex patterns — day-of-week journaling frequency, mood-by-day correlations, gratitude→mood correlations
+- [ ] Monthly summaries — same structure as weekly, requires sufficient user data
+- [ ] LLM-generated narrative summaries on top of computed data
+
+**Deferred Tier 2 services:**
+- [ ] `services/ai/reflection.py` — ReflectionEngine: post-entry reflection/reframe generation. **Deferred because** v1 curated reflections are fully handled by `PromptEngine.generate(prompt_type=REFLECTION, entry_id=...)` — the existing engine already selects mood-appropriate reflection/reframe prompts from the PromptBank and links them to the triggering entry. A separate `ReflectionEngine` class becomes necessary only when on-device LLM integration (5C/5D) adds personalized text generation that reads the entry body and produces a contextual response. **Build trigger:** when implementing 5C (Apple Foundation Models) or 5D (Gemini Nano), create `ReflectionEngine` as the coordinator between the on-device LLM bridge and the `AIPromptService` persistence layer.
+- [ ] `services/ai/task_orchestrator.py` — TaskOrchestrator: ARQ worker dispatcher for background jobs (batch insight generation, embedding computation, scheduled tasks). **Deferred because** it requires infrastructure not yet in place: ARQ worker setup, `get_unembedded_entries` RPC in migrations, and an embedding model provider. The `AITaskService` (enqueue/claim_next with optimistic locking) is already built and ready to be consumed. **Build trigger:** when adding background processing — either for batch embedding generation (requires an embedding model decision), scheduled insight runs across all users, or any async work that shouldn't block API requests. **Dependencies:** ARQ integration in `pyproject.toml`, worker entrypoint, `get_unembedded_entries` RPC added to migrations.
+
+**API Routes (17 endpoints across 4 route files):**
+- [x] `api/v1/check_in.py` — 6 endpoints: `POST /start`, `POST /{id}/respond`, `POST /{id}/convert`, `POST /{id}/complete`, `POST /{id}/abandon`, `GET /active`. Typed request models (`StartCheckInRequest`, `RespondCheckInRequest`, `ConvertCheckInRequest`), unified `CheckInResponse` wrapper
+- [x] `api/v1/insights.py` — 3 endpoints: `GET /insights` (paginated, filterable), `POST /insights/generate`, `PATCH /insights/{id}`
+- [x] `api/v1/ai_profile.py` — 4 endpoints: `GET /ai/profile`, `PATCH /ai/profile`, `GET /ai/notifications`, `PATCH /ai/notifications`
+- [x] `api/v1/ai_context.py` — 4 endpoints: `GET /ai/context` (configurable entry_limit/days_back), `GET /ai/prompts` (paginated), `POST /ai/prompts/generate`, `PATCH /ai/prompts/{id}`
+- [x] `api/deps.py` — 10 dependency injection factories wiring the full AI service graph (cache → data services → cached wrappers → engines → orchestrators)
+
+**Remaining backend work:**
+- [ ] ARQ worker setup + TaskOrchestrator (see deferred services above)
 
 ### Subphase 5B — Push Notifications & Reminders
 
@@ -158,36 +207,34 @@ Scheduled reflection reminders. Configurable cadence. Gentle, non-intrusive prom
 - [ ] **Push notification infrastructure** — `expo-notifications` for local scheduled notifications. Permission request flow with graceful denial
 - [ ] **Reminder settings** — configurable in Settings: frequency (daily, twice daily, custom), time of day, days of week. Stored locally (no backend needed for local notifications)
 - [ ] **Smart scheduling** — avoid sending during sleep hours. Respect Do Not Disturb
-- [ ] **Notification content** — rotating prompt text ("Time for a quick check-in", "How's your day going?", "Take a moment to reflect"). Tapping opens guided check-in flow
+- [ ] **Notification content** — rotating prompt text from PromptBank nudge category. Tapping opens guided check-in flow
 - [ ] **Backend push (future)** — when moving to production, migrate to server-sent push via APNs/FCM for reliability and cross-device sync
 
 ### Subphase 5C — On-Device AI: Apple Foundation Models (iOS)
 
-Leverage Apple's Foundation Models framework (3B parameter on-device LLM, iOS 26+) for personalized, private intelligence features. Free inference, works offline.
+Leverage Apple's Foundation Models framework (3B parameter on-device LLM, iOS 26+) for personalized, private intelligence features. Free inference, works offline. Backend provides structured context via `GET /ai/context`, client feeds to on-device LLM, persists results via `POST /ai/messages`.
 
-- [ ] **Native module bridge** — Swift native module exposing Foundation Models framework to React Native. `FoundationModelSession` with guided generation (structured output). Availability check (`FoundationModelAvailability`) with graceful fallback
-- [ ] **Personalized journaling prompts** — feed recent entries (mood, tags, topics) as context. Generate contextual prompts: "You mentioned feeling anxious about work yesterday — how did today go?" Prompts adapt to user's emotional state over time
-- [ ] **Entry reflections** — after saving an entry, offer an AI-generated reflection or reframe. "It sounds like you handled that situation with patience — that's growth"
-- [ ] **Mood-aware notifications** — generate context-aware notification text based on recent mood patterns. Low mood streak → compassionate check-in. High mood → celebration prompt
-- [ ] **Entry summaries** — weekly/monthly summaries of journal themes, mood trends, recurring topics. Displayed on Insights tab
-- [ ] **Natural language search** — semantic understanding of search queries beyond keyword matching. "entries about my relationship" finds relevant entries even without that exact word
+- [ ] **Native module bridge** — Swift native module exposing Foundation Models framework to React Native. `FoundationModelSession` with guided generation (structured output). Availability check (`FoundationModelAvailability`) with graceful fallback to curated prompts
+- [ ] **Personalized journaling prompts** — feed AIContextResponse to on-device LLM. Generate contextual prompts that adapt to user's emotional state over time
+- [ ] **Entry reflections** — after saving an entry, on-device LLM generates personalized reflection/reframe. Persisted as `ai_prompt` with `source='on_device_llm'`
+- [ ] **Mood-aware notifications** — generate context-aware notification text based on recent mood patterns
+- [ ] **Entry summaries** — on-device LLM generates narrative weekly/monthly summaries on top of InsightEngine's computed data
+- [ ] **Natural language search** — semantic understanding of search queries beyond keyword matching
 
 ### Subphase 5D — On-Device AI: Gemini Nano (Android)
 
 Equivalent intelligence features on Android using Gemini Nano via ML Kit GenAI APIs.
 
-- [ ] **Native module bridge** — Kotlin native module exposing ML Kit GenAI Prompt API to React Native. Availability check (AICore service, supported devices). Graceful fallback for unsupported devices
+- [ ] **Native module bridge** — Kotlin native module exposing ML Kit GenAI Prompt API to React Native. Availability check (AICore service, supported devices). Graceful fallback to curated prompts
 - [ ] **Feature parity** — same prompt generation, reflections, summaries, and mood-aware notifications as iOS. Shared prompt templates and context preparation logic in TypeScript. Platform-specific inference only
-- [ ] **Fallback strategy** — devices without on-device AI support get curated prompt bank (5A) instead of generated prompts. No cloud fallback — privacy first
+- [ ] **Fallback strategy** — devices without on-device AI support get curated PromptBank selection. No cloud fallback — privacy first
 
-### Subphase 5E — Insights Dashboard
+### Subphase 5E — Mobile AI Screens & Check-in Flow UI
 
-AI-powered analytics and visualizations on the Insights tab.
-
-- [ ] **Mood trends** — weekly/monthly mood charts (Skia-rendered). Average mood over time, mood distribution pie/bar chart
-- [ ] **Journaling streaks & stats** — entries per week, average entry length, most active time of day, most used tags
-- [ ] **AI-generated weekly digest** — on-device summary of the week's entries, themes, emotional arc. "This week you wrote about work stress 3 times but ended the week feeling hopeful"
-- [ ] **"Year in Pixels"** — full-year grid where each day is a mood-colored pixel. Skia-rendered, scrollable
+- [ ] **Check-in flow UI** — notification/home card → check-in screen. Step 1: mood selector (existing Skia gradient pills). Step 2: contextual prompt from PromptEngine. Step 3: optional free-text response. Step 4: save as check-in or promote to full entry
+- [ ] **Insights dashboard** — mood trends (Skia charts), streaks & stats, AI-generated weekly digest, "Year in Pixels" grid
+- [ ] **AI profile settings** — prompt style selector, topics to avoid, goals management
+- [ ] **Notification preferences** — reminder frequency, time, quiet hours
 
 ---
 

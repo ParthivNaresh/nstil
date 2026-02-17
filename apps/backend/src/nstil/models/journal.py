@@ -13,6 +13,7 @@ class EntryType(StrEnum):
     REFLECTION = "reflection"
     GRATITUDE = "gratitude"
     FREEWRITE = "freewrite"
+    CHECK_IN = "check_in"
 
 
 MAX_TITLE_LENGTH = 200
@@ -56,7 +57,7 @@ def _validate_not_future(v: datetime | None) -> datetime | None:
 class JournalEntryCreate(BaseModel):
     journal_id: UUID = Field(...)
     title: str = Field(default="", max_length=MAX_TITLE_LENGTH)
-    body: str = Field(..., min_length=1, max_length=MAX_BODY_LENGTH)
+    body: str = Field(default="", max_length=MAX_BODY_LENGTH)
     mood_category: MoodCategory | None = Field(default=None)
     mood_specific: MoodSpecific | None = Field(default=None)
     tags: list[str] = Field(default_factory=list)
@@ -68,7 +69,10 @@ class JournalEntryCreate(BaseModel):
     created_at: datetime | None = Field(default=None)
 
     @model_validator(mode="after")
-    def validate_mood_and_coords(self) -> "JournalEntryCreate":
+    def validate_entry(self) -> "JournalEntryCreate":
+        if self.entry_type != EntryType.CHECK_IN and not self.body:
+            msg = "Body is required for non-check-in entries"
+            raise ValueError(msg)
         validate_mood_pair(self.mood_category, self.mood_specific)
         validate_coordinate_pair(self.latitude, self.longitude)
         return self
