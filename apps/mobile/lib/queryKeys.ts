@@ -33,4 +33,25 @@ export const queryKeys = {
     all: ["notifications"] as const,
     preferences: () => [...queryKeys.notifications.all, "preferences"] as const,
   },
+  checkIn: {
+    all: ["checkIn"] as const,
+    active: () => [...queryKeys.checkIn.all, "active"] as const,
+  },
+  prompts: {
+    all: ["prompts"] as const,
+    lists: () => [...queryKeys.prompts.all, "list"] as const,
+    list: (type?: string, status?: string) =>
+      [...queryKeys.prompts.lists(), { type, status }] as const,
+    generated: () => [...queryKeys.prompts.all, "generated"] as const,
+  },
+  insights: {
+    all: ["insights"] as const,
+    lists: () => [...queryKeys.insights.all, "list"] as const,
+    list: (type?: string, status?: string) =>
+      [...queryKeys.insights.lists(), { type, status }] as const,
+    generated: () => [...queryKeys.insights.all, "generated"] as const,
+  },
+  aiProfile: {
+    all: ["aiProfile"] as const,
+  },
 } as const;

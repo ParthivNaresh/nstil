@@ -1,3 +1,17 @@
+export { useAIProfile, useUpdateAIProfile } from "./useAIProfile";
+export { useCheckIn } from "./useCheckIn";
+export type { CheckInStep, UseCheckInReturn } from "./useCheckIn";
+export {
+  useDismissPrompt,
+  useEngagePrompt,
+  useHomePrompt,
+} from "./useHomePrompt";
+export {
+  useGenerateInsights,
+  useInsightsList,
+  useUpdateInsight,
+} from "./useInsights";
+export { useYearCalendar } from "./useYearCalendar";
 export { useCalendarRange } from "./useCalendar";
 export { useDayEntries } from "./useDayEntries";
 export {

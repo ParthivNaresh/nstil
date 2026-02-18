@@ -1,6 +1,7 @@
 const en = {
   common: {
     done: "Done",
+    tryAgain: "Try Again",
     accessibility: {
       showPassword: "Show password",
       hidePassword: "Hide password",
@@ -17,10 +18,32 @@ const en = {
     title: "NStil",
     authenticated: "Authenticated",
     signOut: "Sign Out",
+    checkIn: "Check In",
+    fallbackPrompt: "How are you feeling right now?",
+    quickCheckIn: "Quick Check-in",
   },
   settings: {
     appearance: "Appearance",
     theme: "Theme",
+    aiProfile: {
+      title: "AI Companion",
+      subtitle: "Personalize your AI experience",
+      aiEnabled: "AI Features",
+      aiEnabledSubtitle: "Enable AI-powered prompts, insights, and check-ins",
+      promptStyle: "Prompt Style",
+      styles: {
+        gentle: "Gentle",
+        direct: "Direct",
+        analytical: "Analytical",
+        motivational: "Motivational",
+      },
+      topicsToAvoid: "Topics to Avoid",
+      topicPlaceholder: "Add a topic...",
+      topicLimit: "Maximum {{max}} topics",
+      goals: "Goals",
+      goalPlaceholder: "Add a goal...",
+      goalLimit: "Maximum {{max}} goals",
+    },
     themeModes: {
       dark: "Dark",
       light: "Light",
@@ -62,6 +85,24 @@ const en = {
         openSettings: "Open Settings",
       },
     },
+  },
+  checkIn: {
+    moodTitle: "How are you feeling?",
+    moodSubtitle: "Take a moment to check in with yourself",
+    continue: "Continue",
+    defaultPrompt: "What's on your mind right now?",
+    responsePlaceholder: "Share your thoughts...",
+    done: "Done",
+    skip: "Skip",
+    outcomeTitle: "Check-in Complete",
+    outcomeSubtitle: "Taking a moment for yourself matters",
+    saveCheckIn: "Save Check-in",
+    expandToEntry: "Expand to Entry",
+    abandonTitle: "Discard Check-in?",
+    abandonMessage: "Your progress will be lost.",
+    abandonConfirm: "Discard",
+    abandonCancel: "Keep Going",
+    saved: "Check-in saved",
   },
   journal: {
     emptyTitle: "No entries yet",
@@ -116,6 +157,17 @@ const en = {
   insights: {
     emptyTitle: "No insights yet",
     emptySubtitle: "Insights will appear as you journal",
+    title: "Insights",
+    streakCount: "{{count}}-day streak",
+    streakMilestone: "🎉 {{milestone}}-day milestone!",
+    weeklySummary: "Weekly Summary",
+    entries: "Entries",
+    avgLength: "Avg. Length",
+    topThemes: "Top themes",
+    moodTrends: "Mood Trends",
+    yearInPixels: "Year in Pixels",
+    confidenceLabel: "{{value}}% shift from average",
+    period: "{{start}} – {{end}}",
   },
   auth: {
     welcome: {

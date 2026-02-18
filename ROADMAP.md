@@ -212,33 +212,81 @@ Scheduled reflection reminders with configurable cadence, quiet hours, and full 
 - [x] **5B-6 — Sync & edge cases** — `hooks/useNotificationSync.ts`: AppState foreground listener (re-check permission status, fetch prefs if `updated_at` changed, reschedule or cancel), sign-in detection (fetch + schedule), sign-out detection (cancel all), `lastSyncedAt` ref to avoid redundant reschedules. Sign-out in settings clears scheduled notifications
 - [x] **Backend fix** — `NotificationPreferencesUpdate.to_update_dict()` and model validator refactored to use `model_fields_set` (Pydantic) to distinguish "field omitted" from "field explicitly set to null", enabling quiet hours clearing. `TimePicker` gained `compact` prop for side-by-side quiet hours layout. 574 backend tests ✅
 
-### Subphase 5C — On-Device AI: Apple Foundation Models (iOS)
+### Subphase 5C — On-Device AI: Apple Foundation Models & Contextual Intelligence (iOS)
 
-Leverage Apple's Foundation Models framework (3B parameter on-device LLM, iOS 26+) for personalized, private intelligence features. Free inference, works offline. Backend provides structured context via `GET /ai/context`, client feeds to on-device LLM, persists results via `POST /ai/messages`.
+Leverage Apple Foundation Models (3B parameter on-device LLM, iOS 26+), Journaling Suggestions API, and HealthKit for personalized, private intelligence. All inference on-device. Backend provides structured context via `GET /ai/context`, client enriches with system signals, feeds to on-device LLM, persists results via existing API endpoints.
 
-- [ ] **Native module bridge** — Swift native module exposing Foundation Models framework to React Native. `FoundationModelSession` with guided generation (structured output). Availability check (`FoundationModelAvailability`) with graceful fallback to curated prompts
-- [ ] **Personalized journaling prompts** — feed AIContextResponse to on-device LLM. Generate contextual prompts that adapt to user's emotional state over time
-- [ ] **Entry reflections** — after saving an entry, on-device LLM generates personalized reflection/reframe. Persisted as `ai_prompt` with `source='on_device_llm'`
-- [ ] **Mood-aware notifications** — generate context-aware notification text based on recent mood patterns
-- [ ] **Entry summaries** — on-device LLM generates narrative weekly/monthly summaries on top of InsightEngine's computed data
-- [ ] **Natural language search** — semantic understanding of search queries beyond keyword matching
+**5C-1 — Native Module: Foundation Models Bridge**
+
+Swift native module exposing Apple Foundation Models to React Native via Expo Modules API.
+
+- [ ] `NStilAIModule.swift` — Expo native module with `isAvailable(): Bool`, `generate(systemPrompt: String, userPrompt: String): String`, `generateStructured<T: Decodable>(systemPrompt: String, userPrompt: String, schema: String): T`. Uses `FoundationModelSession` with `@Generable` protocol for typed output
+- [ ] `NStilAIAvailability.swift` — wraps `FoundationModelAvailability` checks (device capability, model download status, language support). Exposes `available`, `unavailable`, `downloading` states to JS
+- [ ] TypeScript bridge — `lib/ai/foundationModels.ts`: typed wrapper functions (`generateText`, `generateStructured<T>`), availability check, error mapping. Platform guard (`Platform.OS === 'ios'`)
+- [ ] Graceful fallback — when Foundation Models unavailable (older device, model not downloaded), all AI features silently fall back to curated PromptBank. No user-facing error. `useAICapabilities` hook exposes `{ hasOnDeviceAI, isDownloading }` for conditional UI
+
+**5C-2 — Contextual Signals: Journaling Suggestions API**
+
+Integrate Apple's Journaling Suggestions framework to receive system-aggregated context (workouts, music, photos, locations, contacts) without requesting individual permissions.
+
+- [ ] `NStilSuggestionsModule.swift` — Expo native module wrapping `JournalingSuggestion` framework. `requestAuthorization(): Bool`, `fetchSuggestions(since: Date): JournalingSuggestion[]`. Maps native suggestion types to typed TS interfaces
+- [ ] TypeScript types — `types/contextSignal.ts`: `ContextSignalType` enum (`workout`, `music`, `photo`, `location`, `contact`, `calendar`, `sleep`), `ContextSignal` interface (`type`, `timestamp`, `metadata: Record<string, unknown>`, `displayText`), `WorkoutSignal`, `MusicSignal`, `LocationSignal` etc. as discriminated union subtypes
+- [ ] `lib/ai/contextSignals.ts` — `ContextSignalProvider` abstraction: `fetchSignals(since: Date): Promise<ContextSignal[]>`. iOS implementation reads from Journaling Suggestions module. Android implementation returns empty (until 5D). Shared interface enables future data sources
+- [ ] Permission flow — `JournalingSuggestionsPicker` SwiftUI sheet (required by Apple) presented via native module. One-time authorization. Permission state persisted in `useAICapabilities`
+- [ ] Signal-to-prompt mapping — `lib/ai/signalPromptMapper.ts`: converts `ContextSignal[]` into natural language context strings for LLM prompts. E.g., workout signal → "You completed a 45-minute run 2 hours ago." Reusable across all prompt generation paths
+
+**5C-3 — Contextual Signals: HealthKit Integration**
+
+Deeper health data beyond Journaling Suggestions for mood-health correlation.
+
+- [ ] `NStilHealthModule.swift` — Expo native module wrapping HealthKit. `requestAuthorization(types: [String]): Bool`, `querySleep(since: Date): SleepData[]`, `queryHeartRate(since: Date): HeartRateData[]`, `queryMindfulMinutes(since: Date): number`
+- [ ] HealthKit observer — `HKObserverQuery` for workout completions + sleep analysis. Background delivery registration. On new data → fire local notification via existing `expo-notifications` infrastructure with context-aware body text
+- [ ] TypeScript types — `SleepSignal`, `HeartRateSignal` extending `ContextSignal`. Integrated into `ContextSignalProvider`
+- [ ] Settings UI — `HealthDataSettings` component in AI Profile screen. Per-signal-type toggles (sleep, workouts, heart rate). Stored in `user_ai_profiles.metadata`
+
+**5C-4 — Personalized Prompt Generation**
+
+Replace curated PromptBank selection with on-device LLM generation when available.
+
+- [ ] `lib/ai/promptGenerator.ts` — `OnDevicePromptGenerator` class. Takes `AIContextResponse` + `ContextSignal[]` → builds system prompt (user's mood history, recent entries summary, active goals, current context signals) → calls Foundation Models `generateStructured` → returns typed `GeneratedPrompt { content: string, promptType: PromptType, reasoning: string }`
+- [ ] Prompt templates — `lib/ai/promptTemplates.ts`: system prompt templates per generation task (check-in prompt, reflection, summary, notification). Shared between iOS and Android. Parameterized with context data. Kept in TypeScript (not native) for cross-platform reuse
+- [ ] Integration with existing flow — `useHomePrompt` gains `preferOnDevice: boolean` flag. When on-device AI available: generate locally → persist via `POST /ai/prompts/generate` with `source: 'on_device_llm'`. When unavailable: existing `POST /ai/prompts/generate` (curated PromptBank). Transparent to UI layer
+- [ ] Check-in flow enhancement — `CheckInOrchestrator` on mobile side: after mood selection, if on-device AI available, generate a personalized follow-up prompt based on the selected mood + recent context signals. Falls back to backend-generated prompt
+
+**5C-5 — Entry Reflections & Summaries**
+
+Post-entry intelligence: personalized reflections after saving, narrative summaries for insights.
+
+- [ ] `ReflectionEngine` (mobile) — after entry save, if on-device AI available: read entry body + mood + context signals → generate personalized reflection/reframe → persist as `ai_prompt` with `source='on_device_llm'`, `entry_id` linked. Show as a card below the entry on detail screen
+- [ ] Weekly narrative summaries — on-device LLM generates natural language summary on top of `InsightEngine`'s computed `weekly_summary` data. Persisted as `ai_insight` with `source='on_device_llm'`. Shown in Insights dashboard above the stats cards
+- [ ] Mood-aware notification text — when scheduling reminders, if on-device AI available: generate context-aware notification body based on recent mood patterns + time of day. Replace static `nudgeContent.ts` rotation
+
+**5C-6 — Contextual Notification Triggers**
+
+Proactive, context-aware notifications beyond scheduled reminders.
+
+- [ ] HealthKit background delivery — register `HKObserverQuery` for `HKWorkoutType` and `HKCategoryType.sleepAnalysis`. On new workout → generate "How did that workout make you feel?" notification. On poor sleep detected → morning prompt "You had a rough night — how are you starting your day?"
+- [ ] Journaling Suggestions donation — register NStil intents with system intelligence layer via App Intents framework. System can surface NStil suggestions in Dynamic Island / Lock Screen at contextually appropriate moments
+- [ ] Notification intelligence — `lib/ai/notificationIntelligence.ts`: decides whether to send a contextual notification based on user's recent engagement (don't spam), quiet hours, and signal significance. Rate limiting: max 3 contextual notifications per day, minimum 2 hours apart
 
 ### Subphase 5D — On-Device AI: Gemini Nano (Android)
 
 Equivalent intelligence features on Android using Gemini Nano via ML Kit GenAI APIs.
 
-- [ ] **Native module bridge** — Kotlin native module exposing ML Kit GenAI Prompt API to React Native. Availability check (AICore service, supported devices). Graceful fallback to curated prompts
-- [ ] **Feature parity** — same prompt generation, reflections, summaries, and mood-aware notifications as iOS. Shared prompt templates and context preparation logic in TypeScript. Platform-specific inference only
-- [ ] **Fallback strategy** — devices without on-device AI support get curated PromptBank selection. No cloud fallback — privacy first
+- [ ] **Native module bridge** — Kotlin native module exposing ML Kit GenAI Prompt API to React Native via Expo Modules API. `NStilAIModule.kt`: `isAvailable(): Boolean`, `generate(systemPrompt: String, userPrompt: String): String`. Availability check (AICore service, supported devices). Graceful fallback to curated prompts
+- [ ] **Health Connect integration** — `NStilHealthModule.kt` wrapping Health Connect APIs. Read workouts, sleep, heart rate. Change token-based polling via `WorkManager` for background detection. Maps to same `ContextSignal` TypeScript types as iOS
+- [ ] **Feature parity** — same `OnDevicePromptGenerator`, `promptTemplates`, `signalPromptMapper`, `notificationIntelligence` TypeScript modules as iOS. Platform-specific code is only the native module bridge layer. All prompt construction, context preparation, and persistence logic is shared
+- [ ] **Fallback strategy** — devices without on-device AI support get curated PromptBank selection. No cloud fallback — privacy first. `useAICapabilities` hook returns same interface on both platforms
 
-### Subphase 5E — Mobile AI Screens & Check-in Flow UI
+### Subphase 5E — Mobile AI Screens & Check-in Flow UI ✅
 
 The user-facing AI experience. Consumes the 17 backend endpoints from 5A. Works with curated PromptBank prompts now; on-device LLM (5C/5D) layers personalization on top later.
 
-- [ ] **Check-in flow UI** — notification tap or home card → check-in screen. Step 1: mood selector (existing Skia gradient pills). Step 2: contextual prompt from PromptEngine (`POST /ai/prompts/generate`). Step 3: optional free-text response (`POST /check-in/{id}/respond`). Step 4: save as check-in (`POST /check-in/{id}/complete`) or promote to full entry (`POST /check-in/{id}/convert`). Resume interrupted sessions (`GET /check-in/active`). Abandon flow (`POST /check-in/{id}/abandon`)
-- [ ] **Home screen check-in card** — contextual prompt card on home tab. Shows PromptEngine-generated prompt. Tap to start check-in flow. Dismissible (tracks engagement via `PATCH /ai/prompts/{id}`)
-- [ ] **Insights dashboard** — mood trends (Skia charts), streaks & stats, weekly digest from InsightEngine (`POST /insights/generate`, `GET /insights`), "Year in Pixels" mood grid
-- [ ] **AI profile settings** — prompt style selector, topics to avoid, goals management (`GET /ai/profile`, `PATCH /ai/profile`)
+- [x] **5E-1 — API service layer & types** — `types/ai.ts` (all AI interfaces), `services/api/checkIn.ts` (6 functions), `services/api/prompts.ts` (3 functions), `services/api/insights.ts` (3 functions), `services/api/aiProfile.ts` (2 functions), `queryKeys` additions
+- [x] **5E-2 — Check-in flow UI** — `useCheckIn` hook (state machine with lazy session creation, `stateRef` for stable callbacks), 4 step components (`CheckInLoading`, `CheckInMood`, `CheckInPrompt`, `CheckInOutcome`), `app/check-in.tsx` screen with abandon dialog, auto-complete timer, convert-to-entry navigation. Mood screen shows instantly (session created in background)
+- [x] **5E-3 — Home screen check-in card** — `useHomePrompt` (30-min stale query), `useDismissPrompt` (optimistic removal + background refetch), `useEngagePrompt`, `HomeCheckInSection` orchestrator with skeleton/prompt/fallback states, pull-to-refresh on home screen
+- [x] **5E-4 — Insights dashboard** — `useInsights` hooks (generate mutation + list query + update mutation), `useYearCalendar` (12-month parallel fetch), 7 components (`StreakBanner` with Skia gradient, `WeeklySummaryCard` with `MoodBar`, `MoodAnomalyCard`, `MoodTrendChart` with Skia line chart, `YearInPixels` grid with memoized cells, `InsightCard` with bookmark/dismiss), `insightUtils.ts` for type-safe metadata parsing
+- [x] **5E-5 — AI profile settings** — `useAIProfile`/`useUpdateAIProfile` (optimistic updates), `PromptStylePicker` (Skia gradient pills), `TopicsToAvoid` (tag input with plus button), `GoalsList` (add/remove with plus button), `AIProfileSettings` orchestrator (debounced/immediate update split), `app/settings/ai-profile.tsx` route, settings tab navigation card
 
 ---
 

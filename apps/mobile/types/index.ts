@@ -1,3 +1,27 @@
+export type {
+  AIInsight,
+  AIInsightUpdate,
+  AIProfile,
+  AIProfileUpdate,
+  AIPrompt,
+  AIPromptUpdate,
+  AISession,
+  CheckInResponse,
+  ConvertCheckInRequest,
+  GeneratePromptRequest,
+  InsightSource,
+  InsightStatus,
+  InsightType,
+  PromptSource,
+  PromptStatus,
+  PromptStyle,
+  PromptType,
+  RespondCheckInRequest,
+  SessionStatus,
+  SessionType,
+  StartCheckInRequest,
+  TriggerSource,
+} from "./ai";
 export type { CursorParams, PaginatedResponse, SearchParams } from "./api";
 export type {
   DeepLinkType,

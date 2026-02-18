@@ -41,7 +41,7 @@ export default function RootLayout() {
 
   const handleNotificationTap = useCallback(() => {
     if (navigationReady.current) {
-      router.push("/entry/create?source=notification");
+      router.push("/check-in?source=notification");
     }
   }, [router]);
 

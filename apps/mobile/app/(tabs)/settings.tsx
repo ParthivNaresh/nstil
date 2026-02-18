@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Bell } from "lucide-react-native";
+import { Bell, Sparkles } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
@@ -37,6 +37,10 @@ export default function SettingsScreen() {
     router.push("/settings/notifications");
   }, [router]);
 
+  const handleAIProfile = useCallback(() => {
+    router.push("/settings/ai-profile");
+  }, [router]);
+
   return (
     <ScreenContainer>
       <View style={styles.content}>
@@ -64,6 +68,23 @@ export default function SettingsScreen() {
               </AppText>
               <AppText variant="caption" color={colors.textTertiary}>
                 {t("settings.notifications.subtitle")}
+              </AppText>
+            </View>
+          </View>
+        </Card>
+
+        <Card
+          onPress={handleAIProfile}
+          showChevron
+        >
+          <View style={styles.menuRow}>
+            <Icon icon={Sparkles} size="md" color={colors.accent} />
+            <View style={styles.menuText}>
+              <AppText variant="label">
+                {t("settings.aiProfile.title")}
+              </AppText>
+              <AppText variant="caption" color={colors.textTertiary}>
+                {t("settings.aiProfile.subtitle")}
               </AppText>
             </View>
           </View>

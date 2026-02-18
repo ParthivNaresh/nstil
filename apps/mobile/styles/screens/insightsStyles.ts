@@ -13,6 +13,13 @@ export const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.xl,
-    gap: spacing.lg,
+    gap: spacing.md,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  loadingContainer: {
+    gap: spacing.md,
   },
 });
