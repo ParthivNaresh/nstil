@@ -109,7 +109,20 @@ function toExpoWeekday(backendDay: number): number {
   return backendDay + 1;
 }
 
-export async function scheduleReminders(prefs: SchedulablePreferences): Promise<number> {
+function pickMessage(
+  personalizedTexts: readonly string[] | undefined,
+  index: number,
+): string {
+  if (personalizedTexts && personalizedTexts.length > 0) {
+    return personalizedTexts[index % personalizedTexts.length];
+  }
+  return getRandomNudgeMessage();
+}
+
+export async function scheduleReminders(
+  prefs: SchedulablePreferences,
+  personalizedTexts?: readonly string[],
+): Promise<number> {
   await cancelAllScheduled();
 
   const { reminderTimes, activeDays, quietHoursStart, quietHoursEnd } = prefs;
@@ -129,7 +142,7 @@ export async function scheduleReminders(prefs: SchedulablePreferences): Promise<
       await Notifications.scheduleNotificationAsync({
         content: {
           title: NOTIFICATION_TITLE,
-          body: getRandomNudgeMessage(),
+          body: pickMessage(personalizedTexts, scheduled),
           data: { action: "check_in" },
           ...(Platform.OS === "android" ? { channelId: ANDROID_CHANNEL_ID } : {}),
         },

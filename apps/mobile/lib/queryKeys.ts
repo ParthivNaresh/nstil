@@ -43,6 +43,9 @@ export const queryKeys = {
     list: (type?: string, status?: string) =>
       [...queryKeys.prompts.lists(), { type, status }] as const,
     generated: () => [...queryKeys.prompts.all, "generated"] as const,
+    reflections: () => [...queryKeys.prompts.all, "reflection"] as const,
+    reflection: (entryId: string) =>
+      [...queryKeys.prompts.reflections(), entryId] as const,
   },
   insights: {
     all: ["insights"] as const,
@@ -53,5 +56,10 @@ export const queryKeys = {
   },
   aiProfile: {
     all: ["aiProfile"] as const,
+  },
+  ai: {
+    all: ["ai"] as const,
+    capabilities: () => [...queryKeys.ai.all, "capabilities"] as const,
+    context: () => [...queryKeys.ai.all, "context"] as const,
   },
 } as const;

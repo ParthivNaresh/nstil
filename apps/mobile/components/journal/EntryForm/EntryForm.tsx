@@ -16,6 +16,7 @@ import { spacing } from "@/styles";
 import type { EntryFormProps } from "./types";
 
 export function EntryForm({
+  reflectionSlot,
   journals,
   journalId,
   body,
@@ -89,6 +90,8 @@ export function EntryForm({
           onLocationChange={onLocationChange}
         />
       </View>
+
+      {reflectionSlot}
 
       <TextArea
         label={t("journal.body")}

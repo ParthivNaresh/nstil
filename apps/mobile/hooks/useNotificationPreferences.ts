@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { tryGeneratePersonalizedTexts } from "@/lib/ai/personalizedNotifications";
 import { queryKeys } from "@/lib/queryKeys";
 import type { SchedulablePreferences } from "@/lib/notifications";
 import {
@@ -63,7 +64,8 @@ export function useUpdateNotificationPreferences() {
       );
 
       if (updated.reminders_enabled) {
-        await syncSchedule(toSchedulablePreferences(updated));
+        const personalizedTexts = await tryGeneratePersonalizedTexts();
+        await syncSchedule(toSchedulablePreferences(updated), personalizedTexts);
       } else {
         await useNotificationStore.getState().clearScheduled();
       }

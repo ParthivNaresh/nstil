@@ -2,6 +2,8 @@ import type {
   AIInsight,
   AIInsightUpdate,
   CursorParams,
+  InsightSource,
+  InsightType,
   PaginatedResponse,
 } from "@/types";
 
@@ -12,6 +14,19 @@ const INSIGHTS_PATH = "/api/v1/insights";
 interface ListInsightsParams extends CursorParams {
   readonly type?: string;
   readonly status?: string;
+  readonly source?: string;
+}
+
+interface CreateInsightPayload {
+  readonly insight_type: InsightType;
+  readonly title: string;
+  readonly content: string;
+  readonly source: InsightSource;
+  readonly supporting_entry_ids?: string[];
+  readonly confidence?: number | null;
+  readonly period_start?: string | null;
+  readonly period_end?: string | null;
+  readonly metadata?: Record<string, unknown>;
 }
 
 export function listInsights(
@@ -30,9 +45,21 @@ export function listInsights(
   if (params?.status) {
     searchParams.set("status", params.status);
   }
+  if (params?.source) {
+    searchParams.set("source", params.source);
+  }
   const query = searchParams.toString();
   const path = query ? `${INSIGHTS_PATH}?${query}` : INSIGHTS_PATH;
   return apiFetch<PaginatedResponse<AIInsight>>(path);
+}
+
+export function createInsight(
+  data: CreateInsightPayload,
+): Promise<AIInsight> {
+  return apiFetch<AIInsight>(INSIGHTS_PATH, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export function generateInsights(): Promise<AIInsight[]> {

@@ -189,3 +189,63 @@ export interface AIProfileUpdate {
   readonly topics_to_avoid?: string[];
   readonly goals?: Record<string, unknown>[];
 }
+
+export interface AIContextEntry {
+  readonly id: string;
+  readonly title: string;
+  readonly body: string;
+  readonly mood_category: string | null;
+  readonly mood_specific: string | null;
+  readonly tags: string[];
+  readonly entry_type: string;
+  readonly location: string | null;
+  readonly journal_name: string;
+  readonly created_at: string;
+}
+
+export interface AIContextMoodDistribution {
+  readonly mood_category: string;
+  readonly mood_specific: string | null;
+  readonly count: number;
+}
+
+export interface AIContextPrompt {
+  readonly prompt_type: string;
+  readonly content: string;
+  readonly status: string;
+  readonly source: string;
+  readonly created_at: string;
+}
+
+export interface AIContextSession {
+  readonly id: string;
+  readonly session_type: string;
+  readonly status: string;
+  readonly trigger_source: string | null;
+  readonly created_at: string;
+  readonly completed_at: string | null;
+}
+
+export interface AIContextStats {
+  readonly total_entries: number;
+  readonly entries_last_7d: number;
+  readonly check_ins_total: number;
+  readonly check_ins_last_7d: number;
+  readonly avg_entry_length_7d: number | null;
+  readonly last_entry_at: string | null;
+}
+
+export interface AIContextProfile {
+  readonly prompt_style: string;
+  readonly topics_to_avoid: string[];
+  readonly goals: Record<string, unknown>[];
+}
+
+export interface AIContextResponse {
+  readonly recent_entries: AIContextEntry[];
+  readonly mood_distribution: AIContextMoodDistribution[];
+  readonly recent_prompts: AIContextPrompt[];
+  readonly recent_sessions: AIContextSession[];
+  readonly stats: AIContextStats;
+  readonly profile: AIContextProfile;
+}

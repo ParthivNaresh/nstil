@@ -8,6 +8,7 @@ import {
   InsightCard,
   MoodAnomalyCard,
   MoodTrendChart,
+  NarrativeSummary,
   StreakBanner,
   WeeklySummaryCard,
   YearInPixels,
@@ -15,6 +16,7 @@ import {
 import { EmptyState, Header, Skeleton } from "@/components/ui";
 import {
   useGenerateInsights,
+  useGenerateNarrativeSummary,
   useHeaderHeight,
   useInsightsList,
   useTheme,
@@ -60,38 +62,67 @@ export default function InsightsScreen() {
     [insightsResponse?.items],
   );
 
-  const { streakInsight, weeklySummaryInsight, anomalyInsight, otherInsights } =
-    useMemo(() => {
-      let streak: AIInsight | null = null;
-      let weekly: AIInsight | null = null;
-      let anomaly: AIInsight | null = null;
-      const others: AIInsight[] = [];
+  const { mutate: generateNarrative } = useGenerateNarrativeSummary();
+  const narrativeAttempted = useRef(false);
 
-      for (const insight of insights) {
-        if (insight.status === "dismissed") continue;
+  const {
+    streakInsight,
+    weeklySummaryInsight,
+    narrativeInsight,
+    anomalyInsight,
+    otherInsights,
+  } = useMemo(() => {
+    let streak: AIInsight | null = null;
+    let weekly: AIInsight | null = null;
+    let narrative: AIInsight | null = null;
+    let anomaly: AIInsight | null = null;
+    const others: AIInsight[] = [];
 
-        switch (insight.insight_type) {
-          case "streak_milestone":
-            if (!streak) streak = insight;
-            break;
-          case "weekly_summary":
-            if (!weekly) weekly = insight;
-            break;
-          case "anomaly":
-            if (!anomaly) anomaly = insight;
-            break;
-          default:
+    for (const insight of insights) {
+      if (insight.status === "dismissed") continue;
+
+      switch (insight.insight_type) {
+        case "streak_milestone":
+          if (!streak && parseStreakData(insight)) {
+            streak = insight;
+          } else {
             others.push(insight);
-        }
+          }
+          break;
+        case "weekly_summary":
+          if (insight.source === "on_device_llm") {
+            if (!narrative) narrative = insight;
+          } else {
+            if (!weekly) weekly = insight;
+          }
+          break;
+        case "anomaly":
+          if (!anomaly) anomaly = insight;
+          break;
+        default:
+          others.push(insight);
       }
+    }
 
-      return {
-        streakInsight: streak,
-        weeklySummaryInsight: weekly,
-        anomalyInsight: anomaly,
-        otherInsights: others,
-      };
-    }, [insights]);
+    return {
+      streakInsight: streak,
+      weeklySummaryInsight: weekly,
+      narrativeInsight: narrative,
+      anomalyInsight: anomaly,
+      otherInsights: others,
+    };
+  }, [insights]);
+
+  useEffect(() => {
+    if (
+      weeklySummaryInsight &&
+      !narrativeInsight &&
+      !narrativeAttempted.current
+    ) {
+      narrativeAttempted.current = true;
+      generateNarrative(weeklySummaryInsight);
+    }
+  }, [weeklySummaryInsight, narrativeInsight, generateNarrative]);
 
   const streakData = useMemo(
     () => (streakInsight ? parseStreakData(streakInsight) : null),
@@ -176,6 +207,13 @@ export default function InsightsScreen() {
           <>
             {streakData ? (
               <StreakBanner data={streakData} />
+            ) : null}
+
+            {narrativeInsight ? (
+              <NarrativeSummary
+                insight={narrativeInsight}
+                onDismiss={handleDismiss}
+              />
             ) : null}
 
             {weeklySummaryData ? (

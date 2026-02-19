@@ -89,10 +89,6 @@ export default function RootLayout() {
     return cleanup;
   }, []);
 
-  if (!authInitialized || !themeInitialized) {
-    return null;
-  }
-
   return (
     <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.background }]}>
       <SafeAreaProvider>

@@ -1,4 +1,11 @@
 export type {
+  AIContextEntry,
+  AIContextMoodDistribution,
+  AIContextProfile,
+  AIContextPrompt,
+  AIContextResponse,
+  AIContextSession,
+  AIContextStats,
   AIInsight,
   AIInsightUpdate,
   AIProfile,

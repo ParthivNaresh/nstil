@@ -279,8 +279,8 @@ export function useCheckIn(triggerSource: TriggerSource = "manual"): UseCheckInR
 
     try {
       await abandonCheckIn(current.session.id);
-    } catch {
-      // best-effort
+    } catch (err) {
+      console.warn("[check-in] Failed to abandon session:", err);
     }
   }, []);
 

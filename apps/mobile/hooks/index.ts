@@ -1,4 +1,7 @@
+export { useAICapabilities } from "./useAICapabilities";
+export type { AICapabilities } from "./useAICapabilities";
 export { useAIProfile, useUpdateAIProfile } from "./useAIProfile";
+export { useEntryReflection, useGenerateReflection } from "./useEntryReflection";
 export { useCheckIn } from "./useCheckIn";
 export type { CheckInStep, UseCheckInReturn } from "./useCheckIn";
 export {
@@ -11,6 +14,7 @@ export {
   useInsightsList,
   useUpdateInsight,
 } from "./useInsights";
+export { useGenerateNarrativeSummary } from "./useNarrativeSummary";
 export { useYearCalendar } from "./useYearCalendar";
 export { useCalendarRange } from "./useCalendar";
 export { useDayEntries } from "./useDayEntries";

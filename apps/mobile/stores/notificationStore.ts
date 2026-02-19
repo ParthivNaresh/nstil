@@ -16,7 +16,10 @@ interface NotificationState {
   initialize: () => Promise<void>;
   requestPermission: () => Promise<NotificationPermissionStatus>;
   refreshPermissionStatus: () => Promise<void>;
-  syncSchedule: (prefs: SchedulablePreferences) => Promise<void>;
+  syncSchedule: (
+    prefs: SchedulablePreferences,
+    personalizedTexts?: readonly string[],
+  ) => Promise<void>;
   clearScheduled: () => Promise<void>;
 }
 
@@ -40,12 +43,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ permissionStatus: status });
   },
 
-  syncSchedule: async (prefs: SchedulablePreferences) => {
+  syncSchedule: async (
+    prefs: SchedulablePreferences,
+    personalizedTexts?: readonly string[],
+  ) => {
     const { permissionStatus } = get();
     if (permissionStatus !== PermissionStatus.GRANTED) {
       return;
     }
-    await scheduleReminders(prefs);
+    await scheduleReminders(prefs, personalizedTexts);
   },
 
   clearScheduled: async () => {

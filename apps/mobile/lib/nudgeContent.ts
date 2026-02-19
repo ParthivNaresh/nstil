@@ -20,7 +20,3 @@ export function getRandomNudgeMessage(): string {
   const index = Math.floor(Math.random() * NUDGE_MESSAGES.length);
   return NUDGE_MESSAGES[index];
 }
-
-export function getNudgeMessageCount(): number {
-  return NUDGE_MESSAGES.length;
-}

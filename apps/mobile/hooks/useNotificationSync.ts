@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
+import { tryGeneratePersonalizedTexts } from "@/lib/ai/personalizedNotifications";
 import { PermissionStatus, type SchedulablePreferences } from "@/lib/notifications";
 import { queryKeys } from "@/lib/queryKeys";
 import { queryClient } from "@/lib/queryClient";
@@ -32,12 +33,13 @@ async function fetchAndSchedule(): Promise<void> {
     queryClient.setQueryData(queryKeys.notifications.preferences(), prefs);
 
     if (prefs.reminders_enabled) {
-      await syncSchedule(toSchedulablePreferences(prefs));
+      const personalizedTexts = await tryGeneratePersonalizedTexts();
+      await syncSchedule(toSchedulablePreferences(prefs), personalizedTexts);
     } else {
       await clearScheduled();
     }
-  } catch {
-    // non-critical — will retry on next foreground
+  } catch (err) {
+    console.error("[notifications] fetchAndSchedule failed:", err);
   }
 }
 
@@ -95,14 +97,15 @@ export function useNotificationSync(): void {
         queryClient.setQueryData(queryKeys.notifications.preferences(), prefs);
 
         if (prefs.reminders_enabled) {
+          const personalizedTexts = await tryGeneratePersonalizedTexts();
           await useNotificationStore
             .getState()
-            .syncSchedule(toSchedulablePreferences(prefs));
+            .syncSchedule(toSchedulablePreferences(prefs), personalizedTexts);
         } else {
           await useNotificationStore.getState().clearScheduled();
         }
-      } catch {
-        // non-critical
+      } catch (err) {
+        console.error("[notifications] syncOnForeground failed:", err);
       }
     }
 
