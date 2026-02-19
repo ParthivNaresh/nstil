@@ -60,6 +60,3 @@ def create_app() -> FastAPI:
     logger.info("app.created", debug=settings.debug)
 
     return application
-
-
-app = create_app()

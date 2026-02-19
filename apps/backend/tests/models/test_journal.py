@@ -333,9 +333,7 @@ class TestCreateWithCoordinates:
 
     def test_create_latitude_out_of_range_rejected(self) -> None:
         with pytest.raises(ValidationError, match="latitude must be between"):
-            JournalEntryCreate(
-                journal_id=JID, body="test", latitude=91.0, longitude=0.0
-            )
+            JournalEntryCreate(journal_id=JID, body="test", latitude=91.0, longitude=0.0)
 
     def test_create_defaults_no_coords(self) -> None:
         entry = JournalEntryCreate(journal_id=JID, body="test")

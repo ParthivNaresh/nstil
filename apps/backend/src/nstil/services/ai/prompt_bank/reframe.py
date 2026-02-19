@@ -72,8 +72,7 @@ REFRAME_PROMPTS: tuple[CuratedPrompt, ...] = (
         id="re-009",
         prompt_type="reframe",
         content=(
-            "Sometimes setbacks are setups for something better."
-            " Can you see a possibility here?"
+            "Sometimes setbacks are setups for something better. Can you see a possibility here?"
         ),
         mood_categories=DIFFICULT,
         tags=frozenset({PromptTag.RESILIENCE, PromptTag.FUTURE}),

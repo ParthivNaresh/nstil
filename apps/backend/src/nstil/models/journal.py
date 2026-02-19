@@ -126,10 +126,7 @@ class JournalEntryUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_mood_and_fields(self) -> "JournalEntryUpdate":
-        has_value = any(
-            getattr(self, field) is not None
-            for field in self.__class__.model_fields
-        )
+        has_value = any(getattr(self, field) is not None for field in self.__class__.model_fields)
         if not has_value:
             msg = "At least one field must be provided"
             raise ValueError(msg)
@@ -181,11 +178,7 @@ class JournalEntryUpdate(BaseModel):
         return v.strip()
 
     def to_update_dict(self) -> dict[str, str | int | bool | list[str]]:
-        return {
-            k: v
-            for k, v in self.model_dump(mode="json").items()
-            if v is not None
-        }
+        return {k: v for k, v in self.model_dump(mode="json").items() if v is not None}
 
 
 class JournalEntryRow(BaseModel):

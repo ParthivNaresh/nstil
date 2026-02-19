@@ -25,17 +25,13 @@ logger = get_logger("nstil.cache.entry")
 
 
 class EntryCacheService(BaseCacheService):
-    async def get_entry(
-        self, user_id: UUID, entry_id: UUID
-    ) -> JournalEntryRow | None:
+    async def get_entry(self, user_id: UUID, entry_id: UUID) -> JournalEntryRow | None:
         data = await self._get(entry_key(user_id, entry_id))
         if data is None:
             return None
         return self._deserialize(JournalEntryRow, data)
 
-    async def set_entry(
-        self, user_id: UUID, entry_id: UUID, row: JournalEntryRow
-    ) -> None:
+    async def set_entry(self, user_id: UUID, entry_id: UUID, row: JournalEntryRow) -> None:
         await self._set(
             entry_key(user_id, entry_id),
             self._serialize(row),
@@ -76,10 +72,12 @@ class EntryCacheService(BaseCacheService):
         has_more: bool,
         journal_id: str | None = None,
     ) -> None:
-        payload = json.dumps({
-            "items": [row.model_dump(mode="json") for row in rows],
-            "has_more": has_more,
-        })
+        payload = json.dumps(
+            {
+                "items": [row.model_dump(mode="json") for row in rows],
+                "has_more": has_more,
+            }
+        )
         await self._set(
             entry_list_key(user_id, cursor, limit, journal_id),
             payload,
@@ -119,10 +117,12 @@ class EntryCacheService(BaseCacheService):
         has_more: bool,
         journal_id: str | None = None,
     ) -> None:
-        payload = json.dumps({
-            "items": [row.model_dump(mode="json") for row in rows],
-            "has_more": has_more,
-        })
+        payload = json.dumps(
+            {
+                "items": [row.model_dump(mode="json") for row in rows],
+                "has_more": has_more,
+            }
+        )
         await self._set(
             search_key(user_id, query, cursor, limit, journal_id),
             payload,
@@ -163,7 +163,11 @@ class EntryCacheService(BaseCacheService):
             return None
 
     async def set_calendar(
-        self, user_id: UUID, year: int, month: int, days: list[CalendarDay],
+        self,
+        user_id: UUID,
+        year: int,
+        month: int,
+        days: list[CalendarDay],
         timezone: str = "UTC",
     ) -> None:
         payload = json.dumps([day.model_dump(mode="json") for day in days])

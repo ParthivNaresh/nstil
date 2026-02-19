@@ -145,13 +145,9 @@ class InsightEngine:
             insight_type=InsightType.WEEKLY_SUMMARY.value,
         )
         if existing:
-            return await self._regenerate_summary(
-                user_id, existing[0], week_start, week_end
-            )
+            return await self._regenerate_summary(user_id, existing[0], week_start, week_end)
 
-        context = await self._context.get_context(
-            user_id, entry_limit=50, days_back=14
-        )
+        context = await self._context.get_context(user_id, entry_limit=50, days_back=14)
 
         create_data = compute_weekly_summary(context, week_start, week_end)
         row = await self._insights.create(user_id, create_data)
@@ -172,9 +168,7 @@ class InsightEngine:
         week_start: date,
         week_end: date,
     ) -> AIInsightRow | None:
-        context = await self._context.get_context(
-            user_id, entry_limit=50, days_back=14
-        )
+        context = await self._context.get_context(user_id, entry_limit=50, days_back=14)
         create_data = compute_weekly_summary(context, week_start, week_end)
 
         if create_data.metadata.get("entry_count", 0) == 0:
@@ -211,9 +205,7 @@ class InsightEngine:
         if existing:
             return None
 
-        context = await self._context.get_context(
-            user_id, entry_limit=50, days_back=28
-        )
+        context = await self._context.get_context(user_id, entry_limit=50, days_back=28)
 
         create_data = detect_mood_anomaly(context, week_start, week_end)
         if create_data is None:

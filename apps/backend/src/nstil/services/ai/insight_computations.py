@@ -11,14 +11,8 @@ ENTRY_MILESTONES: tuple[int, ...] = (1, 5, 10, 25, 50, 100, 200, 365, 500, 1000)
 ANOMALY_THRESHOLD = 0.3
 
 
-def compute_streak_from_calendar(
-    days: list[CalendarDay], reference_date: date
-) -> int:
-    dates_with_entries = {
-        date.fromisoformat(d.date)
-        for d in days
-        if d.entry_count > 0
-    }
+def compute_streak_from_calendar(days: list[CalendarDay], reference_date: date) -> int:
+    dates_with_entries = {date.fromisoformat(d.date) for d in days if d.entry_count > 0}
     check_date = reference_date
     if check_date not in dates_with_entries:
         check_date = check_date - timedelta(days=1)
@@ -45,9 +39,7 @@ def find_entry_milestone(total_entries: int) -> int | None:
     return None
 
 
-def build_streak_insight(
-    streak: int, milestone: int, reference_date: date
-) -> AIInsightCreate:
+def build_streak_insight(streak: int, milestone: int, reference_date: date) -> AIInsightCreate:
     return AIInsightCreate(
         insight_type=InsightType.STREAK_MILESTONE,
         title=f"{milestone}-day journaling streak!",
@@ -148,16 +140,15 @@ def detect_mood_anomaly(
 
     difficult_moods = frozenset({"sad", "anxious", "angry"})
 
-    overall_difficult_ratio = sum(
-        m.count for m in context.mood_distribution
-        if m.mood_category in difficult_moods
-    ) / overall_total
+    overall_difficult_ratio = (
+        sum(m.count for m in context.mood_distribution if m.mood_category in difficult_moods)
+        / overall_total
+    )
 
     week_total = sum(week_moods.values())
-    week_difficult_ratio = sum(
-        count for mood, count in week_moods.items()
-        if mood in difficult_moods
-    ) / week_total
+    week_difficult_ratio = (
+        sum(count for mood, count in week_moods.items() if mood in difficult_moods) / week_total
+    )
 
     diff = week_difficult_ratio - overall_difficult_ratio
     if abs(diff) < ANOMALY_THRESHOLD:
@@ -203,20 +194,13 @@ def _entries_in_period(
     period_start: date,
     period_end: date,
 ) -> list[AIContextEntry]:
-    return [
-        e for e in entries
-        if period_start <= e.created_at.date() <= period_end
-    ]
+    return [e for e in entries if period_start <= e.created_at.date() <= period_end]
 
 
 def _mood_distribution_from_entries(
     entries: list[AIContextEntry],
 ) -> Counter[str]:
-    return Counter(
-        e.mood_category
-        for e in entries
-        if e.mood_category is not None
-    )
+    return Counter(e.mood_category for e in entries if e.mood_category is not None)
 
 
 def _tag_distribution_from_entries(

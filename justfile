@@ -56,7 +56,7 @@ backend-install:
     cd apps/backend && uv sync --extra dev
 
 backend-dev:
-    cd apps/backend && uv run uvicorn nstil.main:app --reload --host 0.0.0.0 --port 8000
+    cd apps/backend && uv run uvicorn nstil.main:create_app --factory --reload --host 0.0.0.0 --port 8000
 
 backend-lint:
     cd apps/backend && uv run ruff check src tests
@@ -76,7 +76,7 @@ backend-test:
 backend-test-coverage:
     cd apps/backend && uv run pytest -v --cov=nstil --cov-report=xml:coverage.xml
 
-backend-check: backend-lint backend-typecheck backend-test
+backend-check: backend-format-check backend-lint backend-typecheck backend-test
 
 # ── Mobile ───────────────────────────────────────────────
 

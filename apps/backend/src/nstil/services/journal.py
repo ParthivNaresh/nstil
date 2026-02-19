@@ -33,11 +33,7 @@ class JournalService:
         }
         if data.created_at is not None:
             payload["created_at"] = data.created_at.isoformat()
-        result = await (
-            self._client.table(TABLE)
-            .insert(payload)
-            .execute()
-        )
+        result = await self._client.table(TABLE).insert(payload).execute()
         return JournalEntryRow.model_validate(result.data[0])
 
     async def get_by_id(self, user_id: UUID, entry_id: UUID) -> JournalEntryRow | None:
@@ -129,9 +125,7 @@ class JournalService:
         if journal_id is not None:
             rpc_params["p_journal_id"] = str(journal_id)
 
-        result = await self._client.rpc(
-            "search_journal_entries", rpc_params
-        ).execute()
+        result = await self._client.rpc("search_journal_entries", rpc_params).execute()
 
         data: list[dict[str, Any]] = result.data  # type: ignore[assignment]
         rows = [JournalEntryRow.model_validate(row) for row in data]
@@ -142,9 +136,7 @@ class JournalService:
 
         return rows, has_more
 
-    async def get_calendar(
-        self, user_id: UUID, params: CalendarParams
-    ) -> list[CalendarDay]:
+    async def get_calendar(self, user_id: UUID, params: CalendarParams) -> list[CalendarDay]:
         rpc_params: dict[str, str | int] = {
             "p_user_id": str(user_id),
             "p_year": params.year,

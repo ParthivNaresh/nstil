@@ -20,21 +20,25 @@ class MediaContentType(StrEnum):
 
 ALLOWED_CONTENT_TYPES: frozenset[str] = frozenset(ct.value for ct in MediaContentType)
 
-IMAGE_CONTENT_TYPES: frozenset[str] = frozenset({
-    MediaContentType.JPEG,
-    MediaContentType.PNG,
-    MediaContentType.HEIC,
-    MediaContentType.WEBP,
-})
+IMAGE_CONTENT_TYPES: frozenset[str] = frozenset(
+    {
+        MediaContentType.JPEG,
+        MediaContentType.PNG,
+        MediaContentType.HEIC,
+        MediaContentType.WEBP,
+    }
+)
 
-AUDIO_CONTENT_TYPES: frozenset[str] = frozenset({
-    MediaContentType.M4A,
-    MediaContentType.MP4_AUDIO,
-    MediaContentType.AAC,
-    MediaContentType.WAV,
-    MediaContentType.MPEG,
-    MediaContentType.X_M4A,
-})
+AUDIO_CONTENT_TYPES: frozenset[str] = frozenset(
+    {
+        MediaContentType.M4A,
+        MediaContentType.MP4_AUDIO,
+        MediaContentType.AAC,
+        MediaContentType.WAV,
+        MediaContentType.MPEG,
+        MediaContentType.X_M4A,
+    }
+)
 
 ALLOWED_EXTENSIONS: dict[str, MediaContentType] = {
     ".jpg": MediaContentType.JPEG,

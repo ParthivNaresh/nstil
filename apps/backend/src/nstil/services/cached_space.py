@@ -17,17 +17,13 @@ class CachedSpaceService:
         self._cache = cache
         self._entry_cache = entry_cache
 
-    async def create(
-        self, user_id: UUID, data: JournalSpaceCreate
-    ) -> JournalSpaceRow:
+    async def create(self, user_id: UUID, data: JournalSpaceCreate) -> JournalSpaceRow:
         row = await self._db.create(user_id, data)
         await self._cache.set_space(user_id, row.id, row)
         await self._cache.invalidate_space_list(user_id)
         return row
 
-    async def get_by_id(
-        self, user_id: UUID, space_id: UUID
-    ) -> JournalSpaceRow | None:
+    async def get_by_id(self, user_id: UUID, space_id: UUID) -> JournalSpaceRow | None:
         cached = await self._cache.get_space(user_id, space_id)
         if cached is not None:
             return cached

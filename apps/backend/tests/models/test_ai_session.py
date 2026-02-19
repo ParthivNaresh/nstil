@@ -85,9 +85,7 @@ class TestAISessionUpdate:
         assert "flow_state" not in result
 
     def test_flow_state_update(self) -> None:
-        update = AISessionUpdate(
-            flow_state={"step": "responded", "mood": "happy"}
-        )
+        update = AISessionUpdate(flow_state={"step": "responded", "mood": "happy"})
         result = update.to_update_dict()
         assert result["flow_state"] == {"step": "responded", "mood": "happy"}
 
@@ -143,8 +141,6 @@ class TestAISessionResponse:
         assert response.parent_session_id is None
 
     def test_from_row_with_flow_state(self) -> None:
-        row = make_ai_session_row(
-            flow_state={"step": "prompted", "prompt_id": "abc"}
-        )
+        row = make_ai_session_row(flow_state={"step": "prompted", "prompt_id": "abc"})
         response = AISessionResponse.from_row(row)
         assert response.flow_state == {"step": "prompted", "prompt_id": "abc"}

@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterator
 from unittest.mock import AsyncMock
 
@@ -21,7 +22,6 @@ from nstil.api.deps import (
     get_supabase,
 )
 from nstil.config import Settings
-from nstil.main import create_app
 from nstil.services.ai.check_in import CheckInOrchestrator
 from nstil.services.ai.insight import AIInsightService
 from nstil.services.ai.insight_engine import InsightEngine
@@ -33,6 +33,9 @@ from nstil.services.cached_journal import CachedJournalService
 from nstil.services.cached_notification import CachedNotificationService
 from nstil.services.cached_space import CachedSpaceService
 from nstil.services.media import MediaService
+
+os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
+os.environ.setdefault("SUPABASE_JWT_SECRET", "test-jwt-secret")
 
 
 @pytest.fixture
@@ -121,6 +124,9 @@ def client(
     mock_ai_prompt_service: AsyncMock,
     mock_prompt_engine: AsyncMock,
 ) -> Iterator[TestClient]:
+    from nstil.main import create_app
+
+    get_settings.cache_clear()
     app = create_app()
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_redis] = lambda: mock_redis
@@ -139,3 +145,4 @@ def client(
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+    get_settings.cache_clear()

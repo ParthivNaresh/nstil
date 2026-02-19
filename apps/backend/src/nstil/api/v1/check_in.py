@@ -43,11 +43,7 @@ def _build_response(result: CheckInResult) -> CheckInResponse:
     return CheckInResponse(
         session=AISessionResponse.from_row(result.session),
         prompt_content=result.prompt_content,
-        entry=(
-            JournalEntryResponse.from_row(result.entry)
-            if result.entry is not None
-            else None
-        ),
+        entry=(JournalEntryResponse.from_row(result.entry) if result.entry is not None else None),
     )
 
 
@@ -62,9 +58,7 @@ async def start_check_in(
     orchestrator: Annotated[CheckInOrchestrator, Depends(get_check_in_orchestrator)],
 ) -> CheckInResponse:
     try:
-        result = await orchestrator.start(
-            UUID(user.sub), trigger_source=data.trigger_source
-        )
+        result = await orchestrator.start(UUID(user.sub), trigger_source=data.trigger_source)
     except CheckInError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

@@ -173,9 +173,7 @@ def make_ai_session_row(
     return AISessionRow(
         id=uuid.UUID(session_id) if session_id else uuid.uuid4(),
         user_id=uuid.UUID(user_id),
-        parent_session_id=(
-            uuid.UUID(parent_session_id) if parent_session_id else None
-        ),
+        parent_session_id=(uuid.UUID(parent_session_id) if parent_session_id else None),
         session_type=session_type,
         status=status,
         entry_id=uuid.UUID(entry_id) if entry_id else None,
@@ -222,9 +220,7 @@ def make_ai_prompt_row(
         mood_category=mood_category,
         session_id=uuid.UUID(session_id) if session_id else None,
         entry_id=uuid.UUID(entry_id) if entry_id else None,
-        converted_entry_id=(
-            uuid.UUID(converted_entry_id) if converted_entry_id else None
-        ),
+        converted_entry_id=(uuid.UUID(converted_entry_id) if converted_entry_id else None),
         status=status,
         delivered_at=delivered_at,
         seen_at=seen_at,
@@ -263,9 +259,7 @@ def make_ai_insight_row(
         insight_type=insight_type,
         title=title,
         content=content,
-        supporting_entry_ids=[
-            uuid.UUID(eid) for eid in (supporting_entry_ids or [])
-        ],
+        supporting_entry_ids=[uuid.UUID(eid) for eid in (supporting_entry_ids or [])],
         source=source,
         model_id=model_id,
         confidence=confidence,

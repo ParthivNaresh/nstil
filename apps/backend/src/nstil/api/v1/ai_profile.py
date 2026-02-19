@@ -64,9 +64,7 @@ async def get_notification_preferences(
     return NotificationPreferencesResponse.from_row(row)
 
 
-@router.patch(
-    "/notifications", response_model=NotificationPreferencesResponse
-)
+@router.patch("/notifications", response_model=NotificationPreferencesResponse)
 async def update_notification_preferences(
     data: NotificationPreferencesUpdate,
     user: Annotated[UserPayload, Depends(get_current_user)],

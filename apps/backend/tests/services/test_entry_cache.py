@@ -56,9 +56,7 @@ class TestKeyGeneration:
 
 class TestEntryCacheGetSet:
     @pytest.mark.asyncio
-    async def test_get_entry_miss(
-        self, cache: EntryCacheService, mock_redis: AsyncMock
-    ) -> None:
+    async def test_get_entry_miss(self, cache: EntryCacheService, mock_redis: AsyncMock) -> None:
         mock_redis.get.return_value = None
         result = await cache.get_entry(USER_ID, ENTRY_ID)
         assert result is None
@@ -95,17 +93,13 @@ class TestEntryCacheGetSet:
 
 class TestEntryCacheList:
     @pytest.mark.asyncio
-    async def test_get_list_miss(
-        self, cache: EntryCacheService, mock_redis: AsyncMock
-    ) -> None:
+    async def test_get_list_miss(self, cache: EntryCacheService, mock_redis: AsyncMock) -> None:
         mock_redis.get.return_value = None
         result = await cache.get_list(USER_ID, None, 20)
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_set_and_get_list(
-        self, cache: EntryCacheService, mock_redis: AsyncMock
-    ) -> None:
+    async def test_set_and_get_list(self, cache: EntryCacheService, mock_redis: AsyncMock) -> None:
         rows = [make_entry_row(user_id=str(USER_ID)) for _ in range(3)]
         await cache.set_list(USER_ID, None, 20, rows, True)
         mock_redis.setex.assert_called_once()
@@ -138,9 +132,7 @@ class TestEntryCacheList:
 
 class TestEntryCacheInvalidation:
     @pytest.mark.asyncio
-    async def test_invalidate_entry(
-        self, cache: EntryCacheService, mock_redis: AsyncMock
-    ) -> None:
+    async def test_invalidate_entry(self, cache: EntryCacheService, mock_redis: AsyncMock) -> None:
         await cache.invalidate_entry(USER_ID, ENTRY_ID)
         mock_redis.delete.assert_called_once_with(entry_key(USER_ID, ENTRY_ID))
 
@@ -162,9 +154,7 @@ class TestEntryCacheInvalidation:
         mock_redis.delete.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_invalidate_all(
-        self, cache: EntryCacheService, mock_redis: AsyncMock
-    ) -> None:
+    async def test_invalidate_all(self, cache: EntryCacheService, mock_redis: AsyncMock) -> None:
         mock_redis.scan.return_value = (0, [])
         await cache.invalidate_all(USER_ID, ENTRY_ID)
         mock_redis.delete.assert_called_once_with(entry_key(USER_ID, ENTRY_ID))

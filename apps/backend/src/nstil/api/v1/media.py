@@ -135,8 +135,7 @@ async def list_media(
     signed_urls = await media_service.create_signed_urls(paths)
 
     items = [
-        EntryMediaResponse.from_row(row, url)
-        for row, url in zip(rows, signed_urls, strict=True)
+        EntryMediaResponse.from_row(row, url) for row, url in zip(rows, signed_urls, strict=True)
     ]
     return EntryMediaListResponse(items=items, count=len(items))
 

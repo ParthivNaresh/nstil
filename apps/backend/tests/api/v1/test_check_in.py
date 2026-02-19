@@ -180,9 +180,7 @@ class TestAbandonCheckIn:
 
 
 class TestGetActiveCheckIn:
-    def test_active_found(
-        self, client: TestClient, mock_check_in_orchestrator: AsyncMock
-    ) -> None:
+    def test_active_found(self, client: TestClient, mock_check_in_orchestrator: AsyncMock) -> None:
         session = make_ai_session_row()
         mock_check_in_orchestrator.get_active.return_value = CheckInResult(
             session=session, prompt_content="How are you?"

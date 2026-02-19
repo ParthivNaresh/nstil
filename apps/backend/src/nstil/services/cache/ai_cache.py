@@ -21,7 +21,6 @@ logger = get_logger("nstil.cache.ai")
 
 
 class AICacheService(BaseCacheService):
-
     async def get_context(
         self, user_id: UUID, entry_limit: int, days_back: int
     ) -> AIContextResponse | None:
@@ -59,9 +58,7 @@ class AICacheService(BaseCacheService):
             return None
         return self._deserialize(UserAIProfileRow, data)
 
-    async def set_profile(
-        self, user_id: UUID, profile: UserAIProfileRow
-    ) -> None:
+    async def set_profile(self, user_id: UUID, profile: UserAIProfileRow) -> None:
         await self._set(
             ai_profile_key(user_id),
             self._serialize(profile),
@@ -71,9 +68,7 @@ class AICacheService(BaseCacheService):
     async def invalidate_profile(self, user_id: UUID) -> None:
         await self._delete(ai_profile_key(user_id))
 
-    async def get_notification_prefs(
-        self, user_id: UUID
-    ) -> NotificationPreferencesRow | None:
+    async def get_notification_prefs(self, user_id: UUID) -> NotificationPreferencesRow | None:
         data = await self._get(notification_prefs_key(user_id))
         if data is None:
             return None

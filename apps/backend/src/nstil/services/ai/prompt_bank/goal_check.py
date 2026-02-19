@@ -69,8 +69,7 @@ GOAL_CHECK_PROMPTS: tuple[CuratedPrompt, ...] = (
         id="gc-008",
         prompt_type="goal_check",
         content=(
-            "Who or what has been supporting you in your goals?"
-            " Take a moment to appreciate that."
+            "Who or what has been supporting you in your goals? Take a moment to appreciate that."
         ),
         mood_categories=ALL,
         tags=frozenset({PromptTag.GOALS, PromptTag.GRATITUDE}),

@@ -15,9 +15,7 @@ def _auth_headers(sub: str = DEFAULT_USER_ID) -> dict[str, str]:
 
 
 class TestCreateEntry:
-    def test_create_minimal(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_create_minimal(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         row = make_entry_row(body="Hello world")
         mock_journal_service.create.return_value = row
 
@@ -35,9 +33,7 @@ class TestCreateEntry:
         assert data["journal_id"] == JID
         mock_journal_service.create.assert_called_once()
 
-    def test_create_all_fields(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_create_all_fields(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         row = make_entry_row(
             title="My Day",
             body="Great day today",
@@ -157,9 +153,7 @@ class TestCreateEntry:
 
 
 class TestGetEntry:
-    def test_get_existing(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_get_existing(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         row = make_entry_row()
         mock_journal_service.get_by_id.return_value = row
 
@@ -174,9 +168,7 @@ class TestGetEntry:
         assert data["body"] == row.body
         assert data["journal_id"] == str(row.journal_id)
 
-    def test_get_not_found(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_get_not_found(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         mock_journal_service.get_by_id.return_value = None
 
         response = client.get(
@@ -192,9 +184,7 @@ class TestGetEntry:
 
 
 class TestListEntries:
-    def test_list_empty(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_list_empty(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         mock_journal_service.list_entries.return_value = ([], False)
 
         response = client.get(ENTRIES_URL, headers=_auth_headers())
@@ -205,9 +195,7 @@ class TestListEntries:
         assert data["has_more"] is False
         assert data["next_cursor"] is None
 
-    def test_list_with_entries(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_list_with_entries(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         rows = [make_entry_row(body=f"Entry {i}") for i in range(3)]
         mock_journal_service.list_entries.return_value = (rows, False)
 
@@ -243,9 +231,7 @@ class TestListEntries:
         assert data["has_more"] is True
         assert data["next_cursor"] is not None
 
-    def test_list_with_cursor(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_list_with_cursor(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         mock_journal_service.list_entries.return_value = ([], False)
         cursor = datetime.now(UTC).isoformat()
 
@@ -324,9 +310,7 @@ class TestUpdateEntry:
         assert data["mood_category"] == "happy"
         assert data["mood_specific"] == "proud"
 
-    def test_update_journal_id(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_update_journal_id(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         new_journal = "00000000-0000-0000-0000-000000000020"
         row = make_entry_row(journal_id=new_journal)
         mock_journal_service.update.return_value = row
@@ -340,9 +324,7 @@ class TestUpdateEntry:
         assert response.status_code == 200
         assert response.json()["journal_id"] == new_journal
 
-    def test_update_not_found(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_update_not_found(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         mock_journal_service.update.return_value = None
 
         response = client.patch(
@@ -478,9 +460,7 @@ class TestSearchEntries:
 
 
 class TestPinEntry:
-    def test_create_pinned(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_create_pinned(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         row = make_entry_row(body="Pinned entry", is_pinned=True)
         mock_journal_service.create.return_value = row
 
@@ -508,9 +488,7 @@ class TestPinEntry:
         assert response.status_code == 201
         assert response.json()["is_pinned"] is False
 
-    def test_pin_via_update(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_pin_via_update(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         row = make_entry_row(is_pinned=True)
         mock_journal_service.update.return_value = row
 
@@ -523,9 +501,7 @@ class TestPinEntry:
         assert response.status_code == 200
         assert response.json()["is_pinned"] is True
 
-    def test_unpin_via_update(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_unpin_via_update(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         row = make_entry_row(is_pinned=False)
         mock_journal_service.update.return_value = row
 
@@ -606,9 +582,7 @@ class TestBackdateEntry:
         )
         assert response.status_code == 422
 
-    def test_update_date(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_update_date(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         past = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
         row = make_entry_row(created_at=past)
         mock_journal_service.update.return_value = row
@@ -637,9 +611,7 @@ class TestBackdateEntry:
 
 
 class TestDeleteEntry:
-    def test_delete_existing(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_delete_existing(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         mock_journal_service.soft_delete.return_value = True
         entry_id = uuid.uuid4()
 
@@ -651,9 +623,7 @@ class TestDeleteEntry:
         assert response.status_code == 204
         mock_journal_service.soft_delete.assert_called_once()
 
-    def test_delete_not_found(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_delete_not_found(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         mock_journal_service.soft_delete.return_value = False
 
         response = client.delete(

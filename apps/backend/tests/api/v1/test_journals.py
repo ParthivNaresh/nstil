@@ -13,9 +13,7 @@ def _auth_headers(sub: str = DEFAULT_USER_ID) -> dict[str, str]:
 
 
 class TestCreateJournal:
-    def test_create_minimal(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_create_minimal(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         row = make_space_row(name="Work Stress")
         mock_space_service.create.return_value = row
 
@@ -32,9 +30,7 @@ class TestCreateJournal:
         assert data["user_id"] == DEFAULT_USER_ID
         mock_space_service.create.assert_called_once()
 
-    def test_create_all_fields(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_create_all_fields(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         row = make_space_row(
             name="Dreams",
             description="Nightly dreams",
@@ -116,9 +112,7 @@ class TestCreateJournal:
 
 
 class TestListJournals:
-    def test_list_empty(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_list_empty(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         mock_space_service.list_spaces.return_value = []
 
         response = client.get(JOURNALS_URL, headers=_auth_headers())
@@ -127,9 +121,7 @@ class TestListJournals:
         data = response.json()
         assert data["items"] == []
 
-    def test_list_with_journals(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_list_with_journals(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         rows = [
             make_space_row(name="My Journal", sort_order=0),
             make_space_row(name="Work", sort_order=1),
@@ -152,9 +144,7 @@ class TestListJournals:
 
 
 class TestGetJournal:
-    def test_get_existing(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_get_existing(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         row = make_space_row(name="Work", color="#FF0000")
         mock_space_service.get_by_id.return_value = row
 
@@ -169,9 +159,7 @@ class TestGetJournal:
         assert data["name"] == "Work"
         assert data["color"] == "#FF0000"
 
-    def test_get_not_found(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_get_not_found(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         mock_space_service.get_by_id.return_value = None
 
         response = client.get(
@@ -187,9 +175,7 @@ class TestGetJournal:
 
 
 class TestUpdateJournal:
-    def test_update_name(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_update_name(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         row = make_space_row(name="Updated Name")
         mock_space_service.update.return_value = row
 
@@ -224,9 +210,7 @@ class TestUpdateJournal:
         assert data["color"] == "#00FF00"
         assert data["icon"] == "star"
 
-    def test_update_not_found(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_update_not_found(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         mock_space_service.update.return_value = None
 
         response = client.patch(
@@ -254,9 +238,7 @@ class TestUpdateJournal:
 
 
 class TestDeleteJournal:
-    def test_delete_existing(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_delete_existing(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         mock_space_service.soft_delete.return_value = True
         journal_id = uuid.uuid4()
 
@@ -268,9 +250,7 @@ class TestDeleteJournal:
         assert response.status_code == 204
         mock_space_service.soft_delete.assert_called_once()
 
-    def test_delete_not_found(
-        self, client: TestClient, mock_space_service: AsyncMock
-    ) -> None:
+    def test_delete_not_found(self, client: TestClient, mock_space_service: AsyncMock) -> None:
         mock_space_service.soft_delete.return_value = False
 
         response = client.delete(

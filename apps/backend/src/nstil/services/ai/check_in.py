@@ -173,9 +173,7 @@ class CheckInOrchestrator:
 
         current_step = _get_flow_step(session)
         if current_step != CheckInStep.PROMPTED.value:
-            raise CheckInError(
-                f"Cannot respond: session is in step '{current_step}'"
-            )
+            raise CheckInError(f"Cannot respond: session is in step '{current_step}'")
 
         prompt_id = _get_flow_prompt_id(session)
         if prompt_id is not None:
@@ -234,9 +232,7 @@ class CheckInOrchestrator:
 
         current_step = _get_flow_step(session)
         if current_step != CheckInStep.RESPONDED.value:
-            raise CheckInError(
-                f"Cannot convert: session is in step '{current_step}'"
-            )
+            raise CheckInError(f"Cannot convert: session is in step '{current_step}'")
 
         target_journal_id = journal_id
         if target_journal_id is None:
@@ -310,9 +306,7 @@ class CheckInOrchestrator:
 
         current_step = _get_flow_step(session)
         if current_step != CheckInStep.RESPONDED.value:
-            raise CheckInError(
-                f"Cannot complete: session is in step '{current_step}'"
-            )
+            raise CheckInError(f"Cannot complete: session is in step '{current_step}'")
 
         now = datetime.now(UTC).isoformat()
         flow_state: dict[str, object] = {
@@ -392,9 +386,7 @@ class CheckInOrchestrator:
             return None
         return rows[0]
 
-    async def _force_abandon(
-        self, user_id: UUID, session: AISessionRow
-    ) -> None:
+    async def _force_abandon(self, user_id: UUID, session: AISessionRow) -> None:
         now = datetime.now(UTC).isoformat()
         await self._sessions.update(
             user_id,

@@ -14,28 +14,19 @@ class AIProfileService:
 
     async def get(self, user_id: UUID) -> UserAIProfileRow | None:
         result = await (
-            self._client.table(TABLE)
-            .select("*")
-            .eq("user_id", str(user_id))
-            .limit(1)
-            .execute()
+            self._client.table(TABLE).select("*").eq("user_id", str(user_id)).limit(1).execute()
         )
         if not result.data:
             return None
         return UserAIProfileRow.model_validate(result.data[0])
 
-    async def update(
-        self, user_id: UUID, data: UserAIProfileUpdate
-    ) -> UserAIProfileRow | None:
+    async def update(self, user_id: UUID, data: UserAIProfileUpdate) -> UserAIProfileRow | None:
         update_data: dict[str, Any] = data.to_update_dict()
         if not update_data:
             return await self.get(user_id)
 
         result = await (
-            self._client.table(TABLE)
-            .update(update_data)
-            .eq("user_id", str(user_id))
-            .execute()
+            self._client.table(TABLE).update(update_data).eq("user_id", str(user_id)).execute()
         )
         if not result.data:
             return None

@@ -22,9 +22,7 @@ _STYLE_TO_INTENSITY: dict[str, PromptIntensity] = {
     "motivational": PromptIntensity.DEEP,
 }
 
-_VALID_MOOD_CATEGORIES: frozenset[str] = frozenset(
-    m.value for m in MoodCategory
-)
+_VALID_MOOD_CATEGORIES: frozenset[str] = frozenset(m.value for m in MoodCategory)
 
 _DIFFICULT_MOODS: frozenset[str] = frozenset({"sad", "anxious", "angry"})
 
@@ -40,10 +38,7 @@ def _get_dominant_mood(
 def _has_check_in_today(context: AIContextResponse) -> bool:
     now = datetime.now(UTC)
     for entry in context.recent_entries:
-        if (
-            entry.entry_type == "check_in"
-            and entry.created_at.date() == now.date()
-        ):
+        if entry.entry_type == "check_in" and entry.created_at.date() == now.date():
             return True
     return False
 
@@ -58,20 +53,13 @@ def _days_since_last_entry(context: AIContextResponse) -> int | None:
 def _has_recent_goal_check(context: AIContextResponse) -> bool:
     cutoff = datetime.now(UTC) - timedelta(days=GOAL_CHECK_INTERVAL_DAYS)
     for prompt in context.recent_prompts:
-        if (
-            prompt.prompt_type == "goal_check"
-            and prompt.created_at >= cutoff
-        ):
+        if prompt.prompt_type == "goal_check" and prompt.created_at >= cutoff:
             return True
     return False
 
 
 def _count_difficult_moods(context: AIContextResponse) -> int:
-    return sum(
-        m.count
-        for m in context.mood_distribution
-        if m.mood_category in _DIFFICULT_MOODS
-    )
+    return sum(m.count for m in context.mood_distribution if m.mood_category in _DIFFICULT_MOODS)
 
 
 def _build_exclude_ids(context: AIContextResponse) -> frozenset[str]:
@@ -173,9 +161,7 @@ class PromptEngine:
             mood_category=_resolve_mood_for_db(dominant_mood),
             session_id=session_id,
             entry_id=entry_id,
-            context=_build_context_snapshot(
-                context, determined_type, dominant_mood
-            ),
+            context=_build_context_snapshot(context, determined_type, dominant_mood),
         )
 
         row = await self._prompts.create(user_id, create_data)
@@ -199,10 +185,7 @@ class PromptEngine:
             return PromptType.REFLECTION.value
 
         days_inactive = _days_since_last_entry(context)
-        if (
-            days_inactive is not None
-            and days_inactive >= INACTIVITY_THRESHOLD_DAYS
-        ):
+        if days_inactive is not None and days_inactive >= INACTIVITY_THRESHOLD_DAYS:
             return PromptType.NUDGE.value
 
         if not _has_check_in_today(context):
@@ -212,10 +195,7 @@ class PromptEngine:
         if difficult_count >= DIFFICULT_MOOD_THRESHOLD:
             return PromptType.AFFIRMATION.value
 
-        if (
-            context.profile.goals
-            and not _has_recent_goal_check(context)
-        ):
+        if context.profile.goals and not _has_recent_goal_check(context):
             return PromptType.GOAL_CHECK.value
 
         return PromptType.GUIDED.value

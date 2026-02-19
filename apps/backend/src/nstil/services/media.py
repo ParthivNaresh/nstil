@@ -48,9 +48,7 @@ class MediaService:
     def _storage_path(self, user_id: UUID, entry_id: UUID, file_id: UUID, ext: str) -> str:
         return f"{user_id}/{entry_id}/{file_id}{ext}"
 
-    async def _count_media_by_type(
-        self, entry_id: UUID, audio: bool
-    ) -> int:
+    async def _count_media_by_type(self, entry_id: UUID, audio: bool) -> int:
         result = await (
             self._client.table(TABLE)
             .select("id, content_type")
@@ -129,19 +127,21 @@ class MediaService:
 
         result = await (
             self._client.table(TABLE)
-            .insert({
-                "entry_id": str(entry_id),
-                "user_id": str(user_id),
-                "storage_path": storage_path,
-                "file_name": file_name,
-                "content_type": content_type,
-                "size_bytes": len(file_bytes),
-                "width": width,
-                "height": height,
-                "duration_ms": duration_ms,
-                "waveform": waveform,
-                "sort_order": sort_order,
-            })
+            .insert(
+                {
+                    "entry_id": str(entry_id),
+                    "user_id": str(user_id),
+                    "storage_path": storage_path,
+                    "file_name": file_name,
+                    "content_type": content_type,
+                    "size_bytes": len(file_bytes),
+                    "width": width,
+                    "height": height,
+                    "duration_ms": duration_ms,
+                    "waveform": waveform,
+                    "sort_order": sort_order,
+                }
+            )
             .execute()
         )
         return EntryMediaRow.model_validate(result.data[0])
@@ -157,9 +157,7 @@ class MediaService:
         )
         return [EntryMediaRow.model_validate(row) for row in result.data]
 
-    async def get_by_id(
-        self, media_id: UUID, user_id: UUID
-    ) -> EntryMediaRow | None:
+    async def get_by_id(self, media_id: UUID, user_id: UUID) -> EntryMediaRow | None:
         result = await (
             self._client.table(TABLE)
             .select("*")

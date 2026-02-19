@@ -34,10 +34,7 @@ async def _build_responses_with_previews(
     previews: dict[UUID, MediaPreview] = await media_service.get_previews_for_entries(
         entry_ids, user_id
     )
-    return [
-        JournalEntryResponse.from_row(row, previews.get(row.id))
-        for row in rows
-    ]
+    return [JournalEntryResponse.from_row(row, previews.get(row.id)) for row in rows]
 
 
 @router.post(
@@ -68,8 +65,11 @@ async def list_entries(
     user_id = UUID(user.sub)
     params = CursorParams(cursor=cursor, limit=limit)
     rows, has_more = await service.list_entries(
-        user_id, params, journal_id=journal_id,
-        entry_date=entry_date, timezone=timezone,
+        user_id,
+        params,
+        journal_id=journal_id,
+        entry_date=entry_date,
+        timezone=timezone,
     )
     items = await _build_responses_with_previews(rows, user_id, media_service)
     next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
@@ -120,9 +120,7 @@ async def search_entries(
         )
     user_id = UUID(user.sub)
     params = SearchParams(query=stripped, cursor=cursor, limit=limit)
-    rows, has_more = await service.search(
-        user_id, params, journal_id=journal_id
-    )
+    rows, has_more = await service.search(user_id, params, journal_id=journal_id)
     items = await _build_responses_with_previews(rows, user_id, media_service)
     next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
     return JournalEntryListResponse(

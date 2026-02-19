@@ -156,7 +156,7 @@ else
 fi
 
 step "Opening backend in new iTerm tab"
-open_iterm_tab "cd $REPO_ROOT/apps/backend && uv run uvicorn nstil.main:app --reload --host 0.0.0.0 --port 8000"
+open_iterm_tab "cd $REPO_ROOT/apps/backend && uv run uvicorn nstil.main:create_app --factory --reload --host 0.0.0.0 --port 8000"
 
 step "Waiting for backend to start"
 for i in $(seq 1 15); do

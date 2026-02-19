@@ -37,36 +37,46 @@ class MoodSpecific(StrEnum):
 
 
 MOOD_CATEGORY_SPECIFICS: dict[MoodCategory, frozenset[MoodSpecific]] = {
-    MoodCategory.HAPPY: frozenset({
-        MoodSpecific.JOYFUL,
-        MoodSpecific.GRATEFUL,
-        MoodSpecific.EXCITED,
-        MoodSpecific.PROUD,
-    }),
-    MoodCategory.CALM: frozenset({
-        MoodSpecific.PEACEFUL,
-        MoodSpecific.CONTENT,
-        MoodSpecific.RELAXED,
-        MoodSpecific.HOPEFUL,
-    }),
-    MoodCategory.SAD: frozenset({
-        MoodSpecific.DOWN,
-        MoodSpecific.LONELY,
-        MoodSpecific.DISAPPOINTED,
-        MoodSpecific.NOSTALGIC,
-    }),
-    MoodCategory.ANXIOUS: frozenset({
-        MoodSpecific.STRESSED,
-        MoodSpecific.WORRIED,
-        MoodSpecific.OVERWHELMED,
-        MoodSpecific.RESTLESS,
-    }),
-    MoodCategory.ANGRY: frozenset({
-        MoodSpecific.FRUSTRATED,
-        MoodSpecific.IRRITATED,
-        MoodSpecific.HURT,
-        MoodSpecific.RESENTFUL,
-    }),
+    MoodCategory.HAPPY: frozenset(
+        {
+            MoodSpecific.JOYFUL,
+            MoodSpecific.GRATEFUL,
+            MoodSpecific.EXCITED,
+            MoodSpecific.PROUD,
+        }
+    ),
+    MoodCategory.CALM: frozenset(
+        {
+            MoodSpecific.PEACEFUL,
+            MoodSpecific.CONTENT,
+            MoodSpecific.RELAXED,
+            MoodSpecific.HOPEFUL,
+        }
+    ),
+    MoodCategory.SAD: frozenset(
+        {
+            MoodSpecific.DOWN,
+            MoodSpecific.LONELY,
+            MoodSpecific.DISAPPOINTED,
+            MoodSpecific.NOSTALGIC,
+        }
+    ),
+    MoodCategory.ANXIOUS: frozenset(
+        {
+            MoodSpecific.STRESSED,
+            MoodSpecific.WORRIED,
+            MoodSpecific.OVERWHELMED,
+            MoodSpecific.RESTLESS,
+        }
+    ),
+    MoodCategory.ANGRY: frozenset(
+        {
+            MoodSpecific.FRUSTRATED,
+            MoodSpecific.IRRITATED,
+            MoodSpecific.HURT,
+            MoodSpecific.RESENTFUL,
+        }
+    ),
 }
 
 

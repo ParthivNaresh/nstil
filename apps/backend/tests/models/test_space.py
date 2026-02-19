@@ -85,9 +85,7 @@ class TestJournalSpaceUpdate:
         assert update.description is None
 
     def test_multiple_fields(self) -> None:
-        update = JournalSpaceUpdate(
-            name="Updated", color="#AABBCC", sort_order=5
-        )
+        update = JournalSpaceUpdate(name="Updated", color="#AABBCC", sort_order=5)
         assert update.name == "Updated"
         assert update.color == "#AABBCC"
         assert update.sort_order == 5

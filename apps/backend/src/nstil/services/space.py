@@ -20,11 +20,7 @@ class JournalSpaceService:
             "color": data.color,
             "icon": data.icon,
         }
-        result = await (
-            self._client.table(TABLE)
-            .insert(payload)
-            .execute()
-        )
+        result = await self._client.table(TABLE).insert(payload).execute()
         return JournalSpaceRow.model_validate(result.data[0])
 
     async def get_by_id(self, user_id: UUID, space_id: UUID) -> JournalSpaceRow | None:

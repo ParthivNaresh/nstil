@@ -14,11 +14,7 @@ class NotificationService:
 
     async def get(self, user_id: UUID) -> NotificationPreferencesRow | None:
         result = await (
-            self._client.table(TABLE)
-            .select("*")
-            .eq("user_id", str(user_id))
-            .limit(1)
-            .execute()
+            self._client.table(TABLE).select("*").eq("user_id", str(user_id)).limit(1).execute()
         )
         if not result.data:
             return None
@@ -32,10 +28,7 @@ class NotificationService:
             return await self.get(user_id)
 
         result = await (
-            self._client.table(TABLE)
-            .update(update_data)
-            .eq("user_id", str(user_id))
-            .execute()
+            self._client.table(TABLE).update(update_data).eq("user_id", str(user_id)).execute()
         )
         if not result.data:
             return None

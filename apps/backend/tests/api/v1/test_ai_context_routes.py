@@ -52,9 +52,7 @@ class TestGetContext:
         assert data["stats"]["total_entries"] == 5
         assert data["recent_entries"] == []
 
-    def test_custom_params(
-        self, client: TestClient, mock_ai_context_service: AsyncMock
-    ) -> None:
+    def test_custom_params(self, client: TestClient, mock_ai_context_service: AsyncMock) -> None:
         ctx = _make_context()
         mock_ai_context_service.get_context.return_value = ctx
 
@@ -71,9 +69,7 @@ class TestGetContext:
 
 
 class TestListPrompts:
-    def test_success(
-        self, client: TestClient, mock_ai_prompt_service: AsyncMock
-    ) -> None:
+    def test_success(self, client: TestClient, mock_ai_prompt_service: AsyncMock) -> None:
         rows = [make_ai_prompt_row(), make_ai_prompt_row()]
         mock_ai_prompt_service.list_prompts.return_value = (rows, False)
 
@@ -84,9 +80,7 @@ class TestListPrompts:
         assert len(data["items"]) == 2
         assert data["has_more"] is False
 
-    def test_with_type_filter(
-        self, client: TestClient, mock_ai_prompt_service: AsyncMock
-    ) -> None:
+    def test_with_type_filter(self, client: TestClient, mock_ai_prompt_service: AsyncMock) -> None:
         mock_ai_prompt_service.list_prompts.return_value = ([], False)
 
         response = client.get(
@@ -99,9 +93,7 @@ class TestListPrompts:
         call_kwargs = mock_ai_prompt_service.list_prompts.call_args
         assert call_kwargs.kwargs["prompt_type"] == "check_in"
 
-    def test_with_pagination(
-        self, client: TestClient, mock_ai_prompt_service: AsyncMock
-    ) -> None:
+    def test_with_pagination(self, client: TestClient, mock_ai_prompt_service: AsyncMock) -> None:
         rows = [make_ai_prompt_row()]
         mock_ai_prompt_service.list_prompts.return_value = (rows, True)
 
@@ -118,12 +110,8 @@ class TestListPrompts:
 
 
 class TestGeneratePrompt:
-    def test_success(
-        self, client: TestClient, mock_prompt_engine: AsyncMock
-    ) -> None:
-        row = make_ai_prompt_row(
-            prompt_type="check_in", content="How are you feeling?"
-        )
+    def test_success(self, client: TestClient, mock_prompt_engine: AsyncMock) -> None:
+        row = make_ai_prompt_row(prompt_type="check_in", content="How are you feeling?")
         mock_prompt_engine.generate.return_value = row
 
         response = client.post(
@@ -152,9 +140,7 @@ class TestGeneratePrompt:
 
 
 class TestUpdatePrompt:
-    def test_success(
-        self, client: TestClient, mock_ai_prompt_service: AsyncMock
-    ) -> None:
+    def test_success(self, client: TestClient, mock_ai_prompt_service: AsyncMock) -> None:
         row = make_ai_prompt_row(status="seen")
         mock_ai_prompt_service.update.return_value = row
 
@@ -167,9 +153,7 @@ class TestUpdatePrompt:
         assert response.status_code == 200
         assert response.json()["status"] == "seen"
 
-    def test_not_found(
-        self, client: TestClient, mock_ai_prompt_service: AsyncMock
-    ) -> None:
+    def test_not_found(self, client: TestClient, mock_ai_prompt_service: AsyncMock) -> None:
         mock_ai_prompt_service.update.return_value = None
 
         response = client.patch(

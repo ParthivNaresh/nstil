@@ -32,11 +32,7 @@ class AITaskService:
 
     async def get_by_id(self, task_id: UUID) -> AIAgentTaskRow | None:
         result = await (
-            self._client.table(TABLE)
-            .select("*")
-            .eq("id", str(task_id))
-            .limit(1)
-            .execute()
+            self._client.table(TABLE).select("*").eq("id", str(task_id)).limit(1).execute()
         )
         if not result.data:
             return None
@@ -60,11 +56,13 @@ class AITaskService:
         task = AIAgentTaskRow.model_validate(result.data[0])
         update_result = await (
             self._client.table(TABLE)
-            .update({
-                "status": "running",
-                "started_at": now,
-                "attempts": task.attempts + 1,
-            })
+            .update(
+                {
+                    "status": "running",
+                    "started_at": now,
+                    "attempts": task.attempts + 1,
+                }
+            )
             .eq("id", str(task.id))
             .eq("status", "pending")
             .execute()
@@ -79,10 +77,7 @@ class AITaskService:
             return await self.get_by_id(task_id)
 
         result = await (
-            self._client.table(TABLE)
-            .update(update_data)
-            .eq("id", str(task_id))
-            .execute()
+            self._client.table(TABLE).update(update_data).eq("id", str(task_id)).execute()
         )
         if not result.data:
             return None
@@ -98,12 +93,7 @@ class AITaskService:
         }
         if output is not None:
             payload["output"] = output
-        result = await (
-            self._client.table(TABLE)
-            .update(payload)
-            .eq("id", str(task_id))
-            .execute()
-        )
+        result = await self._client.table(TABLE).update(payload).eq("id", str(task_id)).execute()
         if not result.data:
             return None
         return AIAgentTaskRow.model_validate(result.data[0])

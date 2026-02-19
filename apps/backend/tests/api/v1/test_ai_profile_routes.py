@@ -17,9 +17,7 @@ def _auth_headers(sub: str = DEFAULT_USER_ID) -> dict[str, str]:
 
 
 class TestGetProfile:
-    def test_success(
-        self, client: TestClient, mock_ai_profile_service: AsyncMock
-    ) -> None:
+    def test_success(self, client: TestClient, mock_ai_profile_service: AsyncMock) -> None:
         row = make_ai_profile_row(prompt_style="direct", topics_to_avoid=["work"])
         mock_ai_profile_service.get.return_value = row
 
@@ -31,9 +29,7 @@ class TestGetProfile:
         assert data["topics_to_avoid"] == ["work"]
         assert data["ai_enabled"] is True
 
-    def test_not_found(
-        self, client: TestClient, mock_ai_profile_service: AsyncMock
-    ) -> None:
+    def test_not_found(self, client: TestClient, mock_ai_profile_service: AsyncMock) -> None:
         mock_ai_profile_service.get.return_value = None
 
         response = client.get(f"{AI_URL}/profile", headers=_auth_headers())
@@ -42,9 +38,7 @@ class TestGetProfile:
 
 
 class TestUpdateProfile:
-    def test_success(
-        self, client: TestClient, mock_ai_profile_service: AsyncMock
-    ) -> None:
+    def test_success(self, client: TestClient, mock_ai_profile_service: AsyncMock) -> None:
         row = make_ai_profile_row(prompt_style="analytical")
         mock_ai_profile_service.update.return_value = row
 
@@ -68,37 +62,27 @@ class TestUpdateProfile:
 
 
 class TestGetNotifications:
-    def test_success(
-        self, client: TestClient, mock_notification_service: AsyncMock
-    ) -> None:
+    def test_success(self, client: TestClient, mock_notification_service: AsyncMock) -> None:
         row = make_notification_prefs_row(frequency="twice_daily")
         mock_notification_service.get.return_value = row
 
-        response = client.get(
-            f"{AI_URL}/notifications", headers=_auth_headers()
-        )
+        response = client.get(f"{AI_URL}/notifications", headers=_auth_headers())
 
         assert response.status_code == 200
         data = response.json()
         assert data["frequency"] == "twice_daily"
         assert data["reminders_enabled"] is True
 
-    def test_not_found(
-        self, client: TestClient, mock_notification_service: AsyncMock
-    ) -> None:
+    def test_not_found(self, client: TestClient, mock_notification_service: AsyncMock) -> None:
         mock_notification_service.get.return_value = None
 
-        response = client.get(
-            f"{AI_URL}/notifications", headers=_auth_headers()
-        )
+        response = client.get(f"{AI_URL}/notifications", headers=_auth_headers())
 
         assert response.status_code == 404
 
 
 class TestUpdateNotifications:
-    def test_success(
-        self, client: TestClient, mock_notification_service: AsyncMock
-    ) -> None:
+    def test_success(self, client: TestClient, mock_notification_service: AsyncMock) -> None:
         row = make_notification_prefs_row(reminders_enabled=False)
         mock_notification_service.update.return_value = row
 

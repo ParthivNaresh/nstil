@@ -13,9 +13,7 @@ def _auth_headers(sub: str = DEFAULT_USER_ID) -> dict[str, str]:
 
 
 class TestGetCalendar:
-    def test_returns_days(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_returns_days(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         days = [
             CalendarDay(
                 date="2026-02-01",
@@ -49,9 +47,7 @@ class TestGetCalendar:
         assert data["days"][1]["date"] == "2026-02-14"
         assert data["total_entries"] == 3
 
-    def test_empty_month(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_empty_month(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         mock_journal_service.get_calendar.return_value = []
 
         response = client.get(
@@ -96,9 +92,7 @@ class TestGetCalendar:
         )
         assert response.status_code in (401, 403)
 
-    def test_passes_user_id(
-        self, client: TestClient, mock_journal_service: AsyncMock
-    ) -> None:
+    def test_passes_user_id(self, client: TestClient, mock_journal_service: AsyncMock) -> None:
         custom_user = "11111111-1111-1111-1111-111111111111"
         mock_journal_service.get_calendar.return_value = []
 
