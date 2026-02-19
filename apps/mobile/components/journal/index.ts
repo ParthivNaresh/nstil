@@ -18,6 +18,9 @@ export type { ImageAttachmentStripProps } from "./ImageAttachmentStrip";
 export { LocationPicker } from "./LocationPicker";
 export type { LocationPickerProps } from "./LocationPicker";
 
+export { ReflectionCard } from "./ReflectionCard";
+export type { ReflectionCardProps } from "./ReflectionCard";
+
 export { JournalFilterBar } from "./JournalFilterBar";
 export type { JournalFilterBarProps } from "./JournalFilterBar";
 

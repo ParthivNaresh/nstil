@@ -42,6 +42,29 @@ class AIPromptService:
             return None
         return AIPromptRow.model_validate(result.data[0])
 
+    async def get_by_entry_id(
+        self,
+        user_id: UUID,
+        entry_id: UUID,
+        prompt_type: str | None = None,
+    ) -> AIPromptRow | None:
+        query = (
+            self._client.table(TABLE)
+            .select("*")
+            .eq("user_id", str(user_id))
+            .eq("entry_id", str(entry_id))
+            .is_("deleted_at", "null")
+            .neq("status", "dismissed")
+            .order("created_at", desc=True)
+            .limit(1)
+        )
+        if prompt_type is not None:
+            query = query.eq("prompt_type", prompt_type)
+        result = await query.execute()
+        if not result.data:
+            return None
+        return AIPromptRow.model_validate(result.data[0])
+
     async def list_prompts(
         self,
         user_id: UUID,
@@ -49,6 +72,7 @@ class AIPromptService:
         prompt_type: str | None = None,
         status: str | None = None,
         source: str | None = None,
+        entry_id: UUID | None = None,
     ) -> tuple[list[AIPromptRow], bool]:
         query = (
             self._client.table(TABLE)
@@ -64,6 +88,8 @@ class AIPromptService:
             query = query.eq("status", status)
         if source is not None:
             query = query.eq("source", source)
+        if entry_id is not None:
+            query = query.eq("entry_id", str(entry_id))
         if params.cursor:
             query = query.lt("created_at", params.cursor)
 

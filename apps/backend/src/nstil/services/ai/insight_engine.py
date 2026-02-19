@@ -3,6 +3,7 @@ from uuid import UUID
 
 from nstil.models.ai_insight import AIInsightRow, InsightType
 from nstil.models.calendar import CalendarDay, CalendarParams
+from nstil.models.pagination import CursorParams
 from nstil.observability import get_logger
 from nstil.services.ai.insight import AIInsightService
 from nstil.services.ai.insight_computations import (
@@ -32,6 +33,8 @@ class InsightEngine:
         self._journal = journal_service
 
     async def run(self, user_id: UUID) -> list[AIInsightRow]:
+        await self._cleanup_empty_summaries(user_id)
+
         generated: list[AIInsightRow] = []
 
         streak_insight = await self.check_streaks(user_id)
@@ -132,7 +135,7 @@ class InsightEngine:
     ) -> AIInsightRow | None:
         today = datetime.now(UTC).date()
         if week_start is None:
-            week_start = today - timedelta(days=today.weekday() + 7)
+            week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
 
         existing = await self._insights.list_by_period(
@@ -142,7 +145,9 @@ class InsightEngine:
             insight_type=InsightType.WEEKLY_SUMMARY.value,
         )
         if existing:
-            return None
+            return await self._regenerate_summary(
+                user_id, existing[0], week_start, week_end
+            )
 
         context = await self._context.get_context(
             user_id, entry_limit=50, days_back=14
@@ -160,6 +165,33 @@ class InsightEngine:
 
         return row
 
+    async def _regenerate_summary(
+        self,
+        user_id: UUID,
+        old_insight: AIInsightRow,
+        week_start: date,
+        week_end: date,
+    ) -> AIInsightRow | None:
+        context = await self._context.get_context(
+            user_id, entry_limit=50, days_back=14
+        )
+        create_data = compute_weekly_summary(context, week_start, week_end)
+
+        if create_data.metadata.get("entry_count", 0) == 0:
+            return None
+
+        row = await self._insights.supersede(user_id, old_insight.id, create_data)
+
+        logger.info(
+            "insight_engine.weekly_summary.regenerated",
+            user_id=str(user_id),
+            period=f"{week_start} to {week_end}",
+            entry_count=create_data.metadata.get("entry_count"),
+            superseded=str(old_insight.id),
+        )
+
+        return row
+
     async def detect_mood_anomaly(
         self,
         user_id: UUID,
@@ -167,7 +199,7 @@ class InsightEngine:
     ) -> AIInsightRow | None:
         today = datetime.now(UTC).date()
         if week_start is None:
-            week_start = today - timedelta(days=today.weekday() + 7)
+            week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
 
         existing = await self._insights.list_by_period(
@@ -197,6 +229,36 @@ class InsightEngine:
         )
 
         return row
+
+    async def _cleanup_empty_summaries(self, user_id: UUID) -> None:
+        today = datetime.now(UTC).date()
+        current_week_start = today - timedelta(days=today.weekday())
+
+        params = CursorParams(limit=50)
+        rows, _ = await self._insights.list_insights(
+            user_id,
+            params,
+            insight_type=InsightType.WEEKLY_SUMMARY.value,
+        )
+
+        for row in rows:
+            if row.period_start is None:
+                continue
+            row_start = (
+                row.period_start
+                if isinstance(row.period_start, date)
+                else date.fromisoformat(str(row.period_start))
+            )
+            if row_start >= current_week_start:
+                continue
+            if row.metadata.get("entry_count", 0) == 0:
+                await self._insights.soft_delete(user_id, row.id)
+                logger.info(
+                    "insight_engine.cleanup.empty_summary",
+                    user_id=str(user_id),
+                    insight_id=str(row.id),
+                    period_start=str(row.period_start),
+                )
 
     async def _fetch_calendar_days(
         self,

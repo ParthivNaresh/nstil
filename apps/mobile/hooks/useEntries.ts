@@ -20,6 +20,8 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { useGenerateReflection } from "./useEntryReflection";
+
 const DEFAULT_PAGE_SIZE = 20;
 
 function useInvalidateEntryQueries() {
@@ -63,16 +65,21 @@ export function useEntry(id: string) {
 
 export function useCreateEntry() {
   const invalidate = useInvalidateEntryQueries();
+  const generateReflection = useGenerateReflection();
 
   return useMutation<JournalEntry, Error, JournalEntryCreate>({
     mutationFn: createEntry,
-    onSuccess: invalidate,
+    onSuccess: (createdEntry) => {
+      invalidate();
+      generateReflection.mutate(createdEntry);
+    },
   });
 }
 
 export function useUpdateEntry() {
   const queryClient = useQueryClient();
   const invalidate = useInvalidateEntryQueries();
+  const generateReflection = useGenerateReflection();
 
   return useMutation<
     JournalEntry,
@@ -86,6 +93,7 @@ export function useUpdateEntry() {
         updatedEntry,
       );
       invalidate();
+      generateReflection.mutate(updatedEntry);
     },
   });
 }

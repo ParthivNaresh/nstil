@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { CompressionProgress } from "@/hooks/useImagePicker";
 import type { LocationData } from "@/lib/locationUtils";
 import type {
@@ -11,6 +13,7 @@ import type {
 } from "@/types";
 
 export interface EntryFormProps {
+  readonly reflectionSlot?: ReactNode;
   readonly journals: JournalSpace[];
   readonly journalId: string;
   readonly body: string;

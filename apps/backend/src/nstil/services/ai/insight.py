@@ -53,6 +53,7 @@ class AIInsightService:
         params: CursorParams,
         insight_type: str | None = None,
         status: str | None = None,
+        source: str | None = None,
     ) -> tuple[list[AIInsightRow], bool]:
         query = (
             self._client.table(TABLE)
@@ -67,6 +68,8 @@ class AIInsightService:
             query = query.eq("insight_type", insight_type)
         if status is not None:
             query = query.eq("status", status)
+        if source is not None:
+            query = query.eq("source", source)
         if params.cursor:
             query = query.lt("created_at", params.cursor)
 

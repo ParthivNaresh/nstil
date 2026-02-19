@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from nstil.api.deps import (
     get_ai_context_service,
@@ -12,10 +12,13 @@ from nstil.api.deps import (
 )
 from nstil.models import (
     AIContextResponse,
+    AIPromptCreate,
     AIPromptListResponse,
     AIPromptResponse,
     AIPromptUpdate,
     CursorParams,
+    MoodCategory,
+    PromptSource,
     PromptType,
     UserPayload,
 )
@@ -29,6 +32,31 @@ router = APIRouter(prefix="/ai", tags=["ai-context"])
 class GeneratePromptRequest(BaseModel):
     prompt_type: PromptType | None = Field(default=None)
     entry_id: UUID | None = Field(default=None)
+
+
+_CLIENT_ALLOWED_SOURCES: frozenset[PromptSource] = frozenset({
+    PromptSource.ON_DEVICE_LLM,
+    PromptSource.CLOUD_LLM,
+})
+
+
+class CreatePromptRequest(BaseModel):
+    prompt_type: PromptType = Field(...)
+    content: str = Field(..., min_length=1, max_length=10_000)
+    source: PromptSource = Field(...)
+    mood_category: MoodCategory | None = Field(default=None)
+    session_id: UUID | None = Field(default=None)
+    entry_id: UUID | None = Field(default=None)
+    context: dict[str, object] = Field(default_factory=dict)
+
+    @field_validator("source")
+    @classmethod
+    def restrict_source(cls, v: PromptSource) -> PromptSource:
+        if v not in _CLIENT_ALLOWED_SOURCES:
+            allowed = ", ".join(s.value for s in _CLIENT_ALLOWED_SOURCES)
+            msg = f"Client source must be one of: {allowed}"
+            raise ValueError(msg)
+        return v
 
 
 @router.get("/context", response_model=AIContextResponse)
@@ -70,6 +98,49 @@ async def list_prompts(
         next_cursor=next_cursor,
         has_more=has_more,
     )
+
+
+@router.get(
+    "/prompts/entry/{entry_id}",
+    response_model=AIPromptResponse | None,
+)
+async def get_entry_reflection(
+    entry_id: UUID,
+    user: Annotated[UserPayload, Depends(get_current_user)],
+    service: Annotated[AIPromptService, Depends(get_ai_prompt_service)],
+    prompt_type: Annotated[str | None, Query(alias="type")] = None,
+) -> AIPromptResponse | None:
+    row = await service.get_by_entry_id(
+        UUID(user.sub),
+        entry_id,
+        prompt_type=prompt_type,
+    )
+    if row is None:
+        return None
+    return AIPromptResponse.from_row(row)
+
+
+@router.post(
+    "/prompts",
+    response_model=AIPromptResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_prompt(
+    data: CreatePromptRequest,
+    user: Annotated[UserPayload, Depends(get_current_user)],
+    service: Annotated[AIPromptService, Depends(get_ai_prompt_service)],
+) -> AIPromptResponse:
+    create_data = AIPromptCreate(
+        prompt_type=data.prompt_type,
+        content=data.content,
+        source=data.source,
+        mood_category=data.mood_category,
+        session_id=data.session_id,
+        entry_id=data.entry_id,
+        context=data.context,
+    )
+    row = await service.create(UUID(user.sub), create_data)
+    return AIPromptResponse.from_row(row)
 
 
 @router.post(
