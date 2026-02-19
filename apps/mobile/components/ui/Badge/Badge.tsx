@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { StyleSheet, View, type ViewStyle } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
-import { colors, radius } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { radius } from "@/styles";
 
 import type { BadgeProps } from "./types";
 
@@ -13,10 +14,12 @@ const COUNT_PADDING = 4;
 export function Badge({
   mode = "count",
   count = 0,
-  color = colors.error,
+  color,
   positioned = false,
   testID,
 }: BadgeProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.error;
   const displayCount = count > 99 ? "99+" : String(count);
 
   const positionStyle = useMemo<ViewStyle | undefined>(
@@ -30,7 +33,7 @@ export function Badge({
   if (mode === "dot") {
     return (
       <View
-        style={[styles.dot, { backgroundColor: color }, positionStyle]}
+        style={[styles.dot, { backgroundColor: resolvedColor }, positionStyle]}
         testID={testID}
       />
     );
@@ -42,7 +45,7 @@ export function Badge({
 
   return (
     <View
-      style={[styles.count, { backgroundColor: color }, positionStyle]}
+      style={[styles.count, { backgroundColor: resolvedColor }, positionStyle]}
       testID={testID}
     >
       <AppText variant="caption" color={colors.textPrimary} style={styles.text}>

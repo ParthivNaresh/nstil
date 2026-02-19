@@ -1,92 +1,93 @@
 import * as Haptics from "expo-haptics";
-import { useCallback } from "react";
-import { StyleSheet, Text } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+  Canvas,
+  LinearGradient,
+  RoundedRect,
+  vec,
+} from "@shopify/react-native-skia";
+import { useCallback, useState } from "react";
+import { Pressable, StyleSheet, type LayoutChangeEvent } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
-import { colors, easing, radius, spacing } from "@/styles";
-
-import type { MoodOption } from "./types";
+import { useTheme } from "@/hooks/useTheme";
+import { withAlpha } from "@/lib/colorUtils";
+import { getMoodGradient } from "@/lib/moodColors";
+import { getMoodLabel } from "@/lib/moodUtils";
+import { radius, spacing } from "@/styles";
+import type { MoodCategory } from "@/types";
 
 interface MoodItemProps {
-  option: MoodOption;
-  isSelected: boolean;
-  onSelect: () => void;
+  readonly category: MoodCategory;
+  readonly isSelected: boolean;
+  readonly onSelect: (category: MoodCategory) => void;
 }
 
-const PRESS_SCALE = 0.9;
-const SELECTED_SCALE = 1.15;
+const IDLE_OPACITY = 0.08;
+const SELECTED_OPACITY = 0.2;
+const PILL_RADIUS = 999;
 
-export function MoodItem({ option, isSelected, onSelect }: MoodItemProps) {
-  const scale = useSharedValue(isSelected ? SELECTED_SCALE : 1);
+export function MoodItem({ category, isSelected, onSelect }: MoodItemProps) {
+  const { colors } = useTheme();
+  const gradient = getMoodGradient(category);
+  const label = getMoodLabel(category);
+  const [size, setSize] = useState({ width: 0, height: 0 });
 
   const handlePress = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSelect();
-  }, [onSelect]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onSelect(category);
+  }, [category, onSelect]);
 
-  const tapGesture = Gesture.Tap()
-    .onBegin(() => {
-      scale.value = withSpring(PRESS_SCALE, easing.springBouncy);
-    })
-    .onFinalize(() => {
-      scale.value = withSpring(
-        isSelected ? SELECTED_SCALE : 1,
-        easing.springBouncy,
-      );
-    })
-    .onEnd(() => {
-      handlePress();
-    })
-    .runOnJS(true);
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setSize({ width, height });
+  }, []);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const opacity = isSelected ? SELECTED_OPACITY : IDLE_OPACITY;
+  const textColor = isSelected ? gradient.from : colors.textSecondary;
+  const borderColor = isSelected ? gradient.from : colors.glassBorder;
 
   return (
-    <GestureDetector gesture={tapGesture}>
-      <Animated.View
-        style={[
-          styles.item,
-          isSelected && styles.selected,
-          animatedStyle,
-        ]}
-        accessibilityRole="radio"
-        accessibilityState={{ selected: isSelected }}
-        accessibilityLabel={option.label}
-      >
-        <Text style={styles.emoji}>{option.emoji}</Text>
-        <AppText
-          variant="caption"
-          color={isSelected ? colors.accent : colors.textTertiary}
-        >
-          {option.label}
-        </AppText>
-      </Animated.View>
-    </GestureDetector>
+    <Pressable
+      onPress={handlePress}
+      onLayout={handleLayout}
+      style={[styles.pill, { borderColor }]}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: isSelected }}
+      accessibilityLabel={label ?? category}
+    >
+      {size.width > 0 ? (
+        <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
+          <RoundedRect
+            x={0}
+            y={0}
+            width={size.width}
+            height={size.height}
+            r={PILL_RADIUS}
+          >
+            <LinearGradient
+              start={vec(0, 0)}
+              end={vec(size.width, 0)}
+              colors={[
+                withAlpha(gradient.from, opacity),
+                withAlpha(gradient.to, opacity),
+              ]}
+            />
+          </RoundedRect>
+        </Canvas>
+      ) : null}
+      <AppText variant="caption" color={textColor}>
+        {label ?? category}
+      </AppText>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  item: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    gap: 2,
-    minWidth: 56,
-  },
-  selected: {
-    backgroundColor: colors.accentMuted,
-  },
-  emoji: {
-    fontSize: 28,
+  pill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    overflow: "hidden",
   },
 });

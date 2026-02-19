@@ -6,27 +6,15 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const NO_CONTENT = 204;
 
-export async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+function getAccessToken(): string {
   const session = useAuthStore.getState().session;
-
   if (!session?.access_token) {
     throw new NoSessionError();
   }
+  return session.access_token;
+}
 
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${session.access_token}`,
-    ...options.headers,
-  };
-
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  });
-
+async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     const error = new ApiError(response.status, body);
@@ -43,4 +31,41 @@ export async function apiFetch<T>(
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const token = getAccessToken();
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  return handleResponse<T>(response);
+}
+
+export async function apiUpload<T>(
+  path: string,
+  body: FormData,
+): Promise<T> {
+  const token = getAccessToken();
+
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body,
+  });
+
+  return handleResponse<T>(response);
 }

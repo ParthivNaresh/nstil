@@ -4,9 +4,11 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 
 import { AppText, Button, Card, ScreenContainer } from "@/components/ui";
-import { colors, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/styles";
 
 export default function WelcomeScreen() {
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
 

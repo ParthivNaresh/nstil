@@ -4,6 +4,7 @@ import {
   deleteEntry,
   getEntry,
   listEntries,
+  searchEntries,
   updateEntry,
 } from "@/services/api/entries";
 import type {
@@ -19,15 +20,34 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { useGenerateReflection } from "./useEntryReflection";
+
 const DEFAULT_PAGE_SIZE = 20;
 
-export function useEntries() {
+function useInvalidateEntryQueries() {
+  const queryClient = useQueryClient();
+
+  return () => {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.entries.lists(),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.entries.dayEntries(),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.entries.calendars(),
+    });
+  };
+}
+
+export function useEntries(journalId?: string) {
   return useInfiniteQuery<PaginatedResponse<JournalEntry>>({
-    queryKey: queryKeys.entries.lists(),
+    queryKey: queryKeys.entries.list(undefined, undefined, journalId),
     queryFn: ({ pageParam }) =>
       listEntries({
         cursor: pageParam as string | undefined,
         limit: DEFAULT_PAGE_SIZE,
+        journalId,
       }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) =>
@@ -44,20 +64,22 @@ export function useEntry(id: string) {
 }
 
 export function useCreateEntry() {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidateEntryQueries();
+  const generateReflection = useGenerateReflection();
 
   return useMutation<JournalEntry, Error, JournalEntryCreate>({
     mutationFn: createEntry,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.entries.lists(),
-      });
+    onSuccess: (createdEntry) => {
+      invalidate();
+      generateReflection.mutate(createdEntry);
     },
   });
 }
 
 export function useUpdateEntry() {
   const queryClient = useQueryClient();
+  const invalidate = useInvalidateEntryQueries();
+  const generateReflection = useGenerateReflection();
 
   return useMutation<
     JournalEntry,
@@ -70,15 +92,55 @@ export function useUpdateEntry() {
         queryKeys.entries.detail(updatedEntry.id),
         updatedEntry,
       );
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.entries.lists(),
-      });
+      invalidate();
+      generateReflection.mutate(updatedEntry);
     },
+  });
+}
+
+export function useTogglePin() {
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateEntryQueries();
+
+  return useMutation<
+    JournalEntry,
+    Error,
+    { id: string; isPinned: boolean }
+  >({
+    mutationFn: ({ id, isPinned }) =>
+      updateEntry(id, { is_pinned: !isPinned }),
+    onSuccess: (updatedEntry) => {
+      queryClient.setQueryData(
+        queryKeys.entries.detail(updatedEntry.id),
+        updatedEntry,
+      );
+      invalidate();
+    },
+  });
+}
+
+export function useSearchEntries(query: string, journalId?: string) {
+  const trimmed = query.trim();
+
+  return useInfiniteQuery<PaginatedResponse<JournalEntry>>({
+    queryKey: queryKeys.entries.search(trimmed, journalId),
+    queryFn: ({ pageParam }) =>
+      searchEntries({
+        query: trimmed,
+        cursor: pageParam as string | undefined,
+        limit: DEFAULT_PAGE_SIZE,
+        journalId,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.has_more ? lastPage.next_cursor : undefined,
+    enabled: trimmed.length > 0,
   });
 }
 
 export function useDeleteEntry() {
   const queryClient = useQueryClient();
+  const invalidate = useInvalidateEntryQueries();
 
   return useMutation<void, Error, string>({
     mutationFn: deleteEntry,
@@ -86,9 +148,7 @@ export function useDeleteEntry() {
       queryClient.removeQueries({
         queryKey: queryKeys.entries.detail(deletedId),
       });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.entries.lists(),
-      });
+      invalidate();
     },
   });
 }

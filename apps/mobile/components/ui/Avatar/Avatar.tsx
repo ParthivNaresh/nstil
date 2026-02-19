@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { View, type TextStyle, type ViewStyle } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
-import { colors, radius } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { radius } from "@/styles";
 
 import type { AvatarProps, AvatarSize } from "./types";
 
@@ -39,6 +40,7 @@ export function Avatar({
   accessibilityLabel,
   testID,
 }: AvatarProps) {
+  const { colors } = useTheme();
   const config = SIZE_MAP[size];
   const initials = useMemo(() => getInitials(name, email), [name, email]);
 
@@ -51,7 +53,7 @@ export function Avatar({
       alignItems: "center",
       justifyContent: "center",
     }),
-    [config.dimension],
+    [config.dimension, colors.accentMuted],
   );
 
   const textStyle = useMemo<TextStyle>(

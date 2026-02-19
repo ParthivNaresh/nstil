@@ -1,9 +1,11 @@
+import * as Haptics from "expo-haptics";
 import { useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { AppText } from "@/components/ui/AppText";
-import { colors, radius, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { radius, spacing } from "@/styles";
 import type { EntryType } from "@/types";
 
 import { ENTRY_TYPE_OPTIONS } from "./entryTypes";
@@ -15,9 +17,11 @@ export function EntryTypeSelector({
   label,
 }: EntryTypeSelectorProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   const handleSelect = useCallback(
     (type: EntryType) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onChange(type);
     },
     [onChange],
@@ -36,8 +40,14 @@ export function EntryTypeSelector({
           return (
             <Pressable
               key={option.value}
-              style={[styles.option, isSelected && styles.optionSelected]}
               onPress={() => handleSelect(option.value)}
+              style={[
+                styles.pill,
+                {
+                  backgroundColor: isSelected ? colors.accentMuted : colors.glass,
+                  borderColor: isSelected ? colors.accent : colors.glassBorder,
+                },
+              ]}
               accessibilityRole="radio"
               accessibilityState={{ selected: isSelected }}
             >
@@ -57,24 +67,17 @@ export function EntryTypeSelector({
 
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   options: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
-  option: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
+  pill: {
+    paddingHorizontal: spacing.md + 4,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
-    backgroundColor: colors.glass,
-  },
-  optionSelected: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentMuted,
   },
 });

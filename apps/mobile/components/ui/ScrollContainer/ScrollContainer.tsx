@@ -6,7 +6,7 @@ import {
   StyleSheet,
 } from "react-native";
 
-import { colors } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
 
 import type { ScrollContainerProps } from "./types";
 
@@ -17,6 +17,8 @@ export function ScrollContainer({
   contentContainerStyle,
   keyboardAware = true,
 }: ScrollContainerProps) {
+  const { colors } = useTheme();
+
   const refreshControl = onRefresh ? (
     <RefreshControl
       refreshing={refreshing}

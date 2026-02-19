@@ -4,9 +4,11 @@ import { StyleSheet, View } from "react-native";
 import { AuthFooterLink } from "@/components/auth";
 import { AppText, Button, Card, ScreenContainer, TextInput } from "@/components/ui";
 import { useForgotPassword } from "@/hooks";
-import { colors, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/styles";
 
 export default function ForgotPasswordScreen() {
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const {
     email,

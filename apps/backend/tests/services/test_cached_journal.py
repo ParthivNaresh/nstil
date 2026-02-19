@@ -8,7 +8,7 @@ from nstil.models.pagination import CursorParams
 from nstil.services.cache.entry_cache import EntryCacheService
 from nstil.services.cached_journal import CachedJournalService
 from nstil.services.journal import JournalService
-from tests.factories import make_entry_row
+from tests.factories import DEFAULT_JOURNAL_ID, make_entry_row
 
 USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 ENTRY_ID = uuid.UUID("00000000-0000-0000-0000-000000000099")
@@ -36,7 +36,7 @@ class TestCachedCreate:
     ) -> None:
         row = make_entry_row(user_id=str(USER_ID))
         mock_db.create.return_value = row
-        data = JournalEntryCreate(body="Hello")
+        data = JournalEntryCreate(journal_id=DEFAULT_JOURNAL_ID, body="Hello")
 
         result = await service.create(USER_ID, data)
 
@@ -49,7 +49,7 @@ class TestCachedCreate:
     ) -> None:
         row = make_entry_row(user_id=str(USER_ID))
         mock_db.create.return_value = row
-        data = JournalEntryCreate(body="Hello")
+        data = JournalEntryCreate(journal_id=DEFAULT_JOURNAL_ID, body="Hello")
 
         await service.create(USER_ID, data)
 
@@ -106,11 +106,11 @@ class TestCachedList:
         mock_cache.get_list.return_value = (rows, False)
         params = CursorParams(cursor=None, limit=20)
 
-        result_rows, has_more = await service.list(USER_ID, params)
+        result_rows, has_more = await service.list_entries(USER_ID, params)
 
         assert result_rows == rows
         assert has_more is False
-        mock_db.list.assert_not_called()
+        mock_db.list_entries.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_cache_miss_queries_db(
@@ -118,14 +118,34 @@ class TestCachedList:
     ) -> None:
         rows = [make_entry_row(user_id=str(USER_ID))]
         mock_cache.get_list.return_value = None
-        mock_db.list.return_value = (rows, True)
+        mock_db.list_entries.return_value = (rows, True)
         params = CursorParams(cursor=None, limit=20)
 
-        result_rows, has_more = await service.list(USER_ID, params)
+        result_rows, has_more = await service.list_entries(USER_ID, params)
 
         assert result_rows == rows
         assert has_more is True
-        mock_cache.set_list.assert_called_once_with(USER_ID, None, 20, rows, True)
+        mock_cache.set_list.assert_called_once_with(USER_ID, None, 20, rows, True, None)
+
+    @pytest.mark.asyncio
+    async def test_list_with_journal_filter(
+        self, service: CachedJournalService, mock_db: AsyncMock, mock_cache: AsyncMock
+    ) -> None:
+        journal_uuid = uuid.UUID(DEFAULT_JOURNAL_ID)
+        rows = [make_entry_row(user_id=str(USER_ID))]
+        mock_cache.get_list.return_value = None
+        mock_db.list_entries.return_value = (rows, False)
+        params = CursorParams(cursor=None, limit=20)
+
+        result_rows, has_more = await service.list_entries(
+            USER_ID, params, journal_id=journal_uuid
+        )
+
+        assert result_rows == rows
+        mock_db.list_entries.assert_called_once_with(USER_ID, params, journal_uuid)
+        mock_cache.set_list.assert_called_once_with(
+            USER_ID, None, 20, rows, False, DEFAULT_JOURNAL_ID
+        )
 
 
 class TestCachedUpdate:

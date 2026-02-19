@@ -1,79 +1,236 @@
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useCreateEntry, useUpdateEntry } from "@/hooks/useEntries";
-import type { MoodValue } from "@/components/ui/MoodSelector/types";
-import type { EntryType, JournalEntry } from "@/types";
+import { useImagePicker } from "@/hooks/useImagePicker";
+import type { CompressionProgress } from "@/hooks/useImagePicker";
+import type { LocationData } from "@/lib/locationUtils";
+import { getCurrentLocationSilent } from "@/lib/locationUtils";
+import { queryKeys } from "@/lib/queryKeys";
+import { deleteMedia, uploadAudio, uploadMedia } from "@/services/api/media";
+import type {
+  EntryMedia,
+  EntryType,
+  JournalEntry,
+  JournalSpace,
+  LocalAudio,
+  LocalImage,
+  MoodCategory,
+  MoodSpecific,
+} from "@/types";
+import { findExistingAudio } from "@/lib/audioMediaUtils";
 
 const MAX_TAGS = 10;
+const MAX_IMAGES = 10;
 
-interface EntryFormState {
-  readonly body: string;
-  readonly title: string;
-  readonly moodScore: MoodValue | null;
-  readonly tags: string[];
-  readonly entryType: EntryType;
+interface UseEntryFormOptions {
+  readonly entry?: JournalEntry;
+  readonly journals?: JournalSpace[];
+  readonly initialDate?: Date;
+  readonly existingMedia?: EntryMedia[];
 }
 
 interface UseEntryFormReturn {
-  readonly body: string;
   readonly title: string;
-  readonly moodScore: MoodValue | null;
+  readonly body: string;
+  readonly moodCategory: MoodCategory | null;
+  readonly moodSpecific: MoodSpecific | null;
   readonly tags: string[];
   readonly entryType: EntryType;
+  readonly entryDate: Date;
+  readonly journalId: string;
+  readonly location: LocationData | null;
   readonly bodyError: string | undefined;
   readonly isSubmitting: boolean;
   readonly canSubmit: boolean;
-  readonly setBody: (text: string) => void;
+  readonly localImages: LocalImage[];
+  readonly existingMedia: EntryMedia[];
+  readonly removedMediaIds: ReadonlySet<string>;
+  readonly maxImages: number;
+  readonly compressionProgress: CompressionProgress | null;
+  readonly localAudio: LocalAudio | null;
+  readonly existingAudio: EntryMedia | null;
   readonly setTitle: (text: string) => void;
-  readonly setMoodScore: (mood: MoodValue) => void;
+  readonly setBody: (text: string) => void;
+  readonly setMoodCategory: (category: MoodCategory) => void;
+  readonly setMoodSpecific: (specific: MoodSpecific) => void;
   readonly setEntryType: (type: EntryType) => void;
+  readonly setEntryDate: (date: Date) => void;
+  readonly setJournalId: (id: string) => void;
+  readonly setLocation: (location: LocationData | null) => void;
   readonly addTag: (tag: string) => void;
   readonly removeTag: (tag: string) => void;
+  readonly handlePickImages: () => void;
+  readonly removeLocalImage: (localId: string) => void;
+  readonly removeExistingMedia: (mediaId: string) => void;
+  readonly isRecordingAudio: boolean;
+  readonly startRecording: () => void;
+  readonly stopRecording: () => void;
+  readonly recordAudio: (audio: LocalAudio) => void;
+  readonly removeAudio: () => void;
   readonly handleSubmit: () => void;
   readonly maxTags: number;
 }
 
-function buildInitialState(entry?: JournalEntry): EntryFormState {
+interface InitialFormState {
+  readonly title: string;
+  readonly body: string;
+  readonly moodCategory: MoodCategory | null;
+  readonly moodSpecific: MoodSpecific | null;
+  readonly tags: string[];
+  readonly entryType: EntryType;
+  readonly entryDate: Date;
+}
+
+function buildInitialState(entry?: JournalEntry, initialDate?: Date): InitialFormState {
   if (!entry) {
     return {
-      body: "",
       title: "",
-      moodScore: null,
+      body: "",
+      moodCategory: null,
+      moodSpecific: null,
       tags: [],
       entryType: "journal",
+      entryDate: initialDate ?? new Date(),
     };
   }
   return {
-    body: entry.body,
     title: entry.title,
-    moodScore: entry.mood_score as MoodValue | null,
+    body: entry.body,
+    moodCategory: entry.mood_category,
+    moodSpecific: entry.mood_specific,
     tags: [...entry.tags],
     entryType: entry.entry_type,
+    entryDate: new Date(entry.created_at),
   };
 }
 
-export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
+function resolveInitialJournalId(
+  entry?: JournalEntry,
+  journals?: JournalSpace[],
+): string {
+  if (entry) {
+    return entry.journal_id;
+  }
+  if (journals && journals.length > 0) {
+    return journals[0].id;
+  }
+  return "";
+}
+
+export function useEntryForm(options: UseEntryFormOptions = {}): UseEntryFormReturn {
+  const { entry, journals, initialDate, existingMedia: initialMedia = [] } = options;
   const router = useRouter();
+  const queryClient = useQueryClient();
   const createMutation = useCreateEntry();
   const updateMutation = useUpdateEntry();
 
-  const initial = useMemo(() => buildInitialState(entry), [entry]);
+  const initial = useMemo(() => buildInitialState(entry, initialDate), [entry, initialDate]);
 
-  const [body, setBody] = useState(initial.body);
   const [title, setTitle] = useState(initial.title);
-  const [moodScore, setMoodScore] = useState<MoodValue | null>(initial.moodScore);
+  const [body, setBody] = useState(initial.body);
+  const [moodCategory, setMoodCategoryState] = useState<MoodCategory | null>(
+    initial.moodCategory,
+  );
+  const [moodSpecific, setMoodSpecificState] = useState<MoodSpecific | null>(
+    initial.moodSpecific,
+  );
   const [tags, setTags] = useState<string[]>(initial.tags);
   const [entryType, setEntryType] = useState<EntryType>(initial.entryType);
+  const [entryDate, setEntryDate] = useState<Date>(initial.entryDate);
+  const [journalId, setJournalId] = useState(() =>
+    resolveInitialJournalId(entry, journals),
+  );
+  const [location, setLocation] = useState<LocationData | null>(() => {
+    if (!entry) return null;
+    if (entry.latitude != null && entry.longitude != null) {
+      return {
+        latitude: entry.latitude,
+        longitude: entry.longitude,
+        displayName: entry.location ?? "",
+      };
+    }
+    return null;
+  });
   const [bodyError, setBodyError] = useState<string | undefined>(undefined);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const canSubmit = body.trim().length > 0 && !isSubmitting;
+  const [localImages, setLocalImages] = useState<LocalImage[]>([]);
+  const [existingMedia] = useState<EntryMedia[]>(initialMedia);
+  const [removedMediaIds, setRemovedMediaIds] = useState<Set<string>>(new Set());
+  const [compressionProgress, setCompressionProgress] = useState<CompressionProgress | null>(null);
 
-  const handleSetBody = useCallback((text: string) => {
-    setBody(text);
-    setBodyError(undefined);
+  const [localAudio, setLocalAudio] = useState<LocalAudio | null>(null);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const existingAudio = useMemo(
+    () => findExistingAudio(existingMedia, removedMediaIds),
+    [existingMedia, removedMediaIds],
+  );
+
+  const visibleExistingCount = existingMedia.length - removedMediaIds.size;
+  const totalImageCount = visibleExistingCount + localImages.length;
+
+  const handleCompressionProgress = useCallback((progress: CompressionProgress) => {
+    setCompressionProgress(progress);
+  }, []);
+
+  const handleImageReady = useCallback((image: LocalImage) => {
+    setLocalImages((prev) => [...prev, image]);
+  }, []);
+
+  const { pickImages } = useImagePicker({
+    currentCount: totalImageCount,
+    maxImages: MAX_IMAGES,
+    onProgress: handleCompressionProgress,
+    onImageReady: handleImageReady,
+  });
+
+  useEffect(() => {
+    if (!journalId && journals && journals.length > 0) {
+      setJournalId(journals[0].id);
+    }
+  }, [journalId, journals]);
+
+  const isNewEntry = !entry;
+  useEffect(() => {
+    if (!isNewEntry) return;
+    let cancelled = false;
+    void getCurrentLocationSilent().then((result) => {
+      if (!cancelled && result) {
+        setLocation(result);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isNewEntry]);
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || isUploading;
+  const canSubmit = !isSubmitting && !!journalId;
+
+  const handleBodyChange = useCallback(
+    (text: string) => {
+      setBody(text);
+      if (bodyError && text.trim()) {
+        setBodyError(undefined);
+      }
+    },
+    [bodyError],
+  );
+
+  const setMoodCategory = useCallback((category: MoodCategory) => {
+    setMoodCategoryState((prev) => {
+      if (prev !== category) {
+        setMoodSpecificState(null);
+      }
+      return category;
+    });
+  }, []);
+
+  const setMoodSpecific = useCallback((specific: MoodSpecific) => {
+    setMoodSpecificState(specific);
   }, []);
 
   const addTag = useCallback((tag: string) => {
@@ -87,6 +244,76 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
     setTags((prev) => prev.filter((t) => t !== tag));
   }, []);
 
+  const handlePickImages = useCallback(async () => {
+    await pickImages();
+    setCompressionProgress(null);
+  }, [pickImages]);
+
+  const removeLocalImage = useCallback((localId: string) => {
+    setLocalImages((prev) => prev.filter((img) => img.localId !== localId));
+  }, []);
+
+  const removeExistingMedia = useCallback((mediaId: string) => {
+    setRemovedMediaIds((prev) => new Set(prev).add(mediaId));
+  }, []);
+
+  const startRecording = useCallback(() => {
+    setIsRecordingAudio(true);
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    setIsRecordingAudio(false);
+  }, []);
+
+  const recordAudio = useCallback((audio: LocalAudio) => {
+    setLocalAudio(audio);
+  }, []);
+
+  const removeAudio = useCallback(() => {
+    if (localAudio) {
+      setLocalAudio(null);
+      return;
+    }
+    if (existingAudio) {
+      setRemovedMediaIds((prev) => new Set(prev).add(existingAudio.id));
+    }
+  }, [localAudio, existingAudio]);
+
+  const processMediaChanges = useCallback(
+    async (entryId: string) => {
+      const deletePromises = Array.from(removedMediaIds).map((mediaId) =>
+        deleteMedia(entryId, mediaId).catch(() => undefined),
+      );
+      await Promise.all(deletePromises);
+
+      for (const image of localImages) {
+        await uploadMedia({
+          entryId,
+          uri: image.uri,
+          fileName: image.fileName,
+          contentType: image.contentType,
+        });
+      }
+
+      if (localAudio) {
+        await uploadAudio({
+          entryId,
+          uri: localAudio.uri,
+          fileName: localAudio.fileName,
+          contentType: localAudio.contentType,
+          durationMs: localAudio.durationMs,
+          waveform: localAudio.waveform,
+        });
+      }
+    },
+    [localImages, localAudio, removedMediaIds],
+  );
+
+  const invalidateAfterSave = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.entries.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.media.all });
+  }, [queryClient]);
+
   const handleSubmit = useCallback(() => {
     const trimmedBody = body.trim();
     if (!trimmedBody) {
@@ -95,53 +322,120 @@ export function useEntryForm(entry?: JournalEntry): UseEntryFormReturn {
     }
 
     const trimmedTitle = title.trim();
+    const dateIso = entryDate.toISOString();
+    const hasMediaChanges = localImages.length > 0 || localAudio !== null || removedMediaIds.size > 0;
+
     const onError = () => {
       Alert.alert("Unable to save", "Please check your connection and try again.");
     };
+
+    const finishAndNavigateBack = async (entryId: string) => {
+      if (hasMediaChanges) {
+        setIsUploading(true);
+        try {
+          await processMediaChanges(entryId);
+        } catch {
+          Alert.alert("Media Error", "Some images may not have been saved.");
+        } finally {
+          setIsUploading(false);
+        }
+      }
+      invalidateAfterSave();
+      router.back();
+    };
+
+    const locationFields = location
+      ? {
+          location: location.displayName || undefined,
+          latitude: location.latitude,
+          longitude: location.longitude,
+        }
+      : {};
 
     if (entry) {
       updateMutation.mutate(
         {
           id: entry.id,
           data: {
+            journal_id: journalId,
             body: trimmedBody,
             title: trimmedTitle || undefined,
-            mood_score: moodScore ?? undefined,
+            mood_category: moodCategory ?? undefined,
+            mood_specific: moodSpecific ?? undefined,
             tags,
             entry_type: entryType,
+            created_at: dateIso,
+            ...locationFields,
           },
         },
-        { onSuccess: () => router.back(), onError },
+        {
+          onSuccess: () => {
+            void finishAndNavigateBack(entry.id);
+          },
+          onError,
+        },
       );
     } else {
       createMutation.mutate(
         {
+          journal_id: journalId,
           body: trimmedBody,
           title: trimmedTitle || undefined,
-          mood_score: moodScore ?? undefined,
+          mood_category: moodCategory ?? undefined,
+          mood_specific: moodSpecific ?? undefined,
           tags: tags.length > 0 ? tags : undefined,
           entry_type: entryType,
+          created_at: dateIso,
+          ...locationFields,
         },
-        { onSuccess: () => router.back(), onError },
+        {
+          onSuccess: (createdEntry) => {
+            void finishAndNavigateBack(createdEntry.id);
+          },
+          onError,
+        },
       );
     }
-  }, [body, title, moodScore, tags, entryType, entry, createMutation, updateMutation, router]);
+  }, [body, title, moodCategory, moodSpecific, tags, entryType, entryDate, journalId, location, entry, localImages, localAudio, removedMediaIds, createMutation, updateMutation, router, processMediaChanges, invalidateAfterSave]);
 
   return {
-    body,
     title,
-    moodScore,
+    body,
+    moodCategory,
+    moodSpecific,
     tags,
     entryType,
+    entryDate,
+    journalId,
+    location,
     bodyError,
     isSubmitting,
     canSubmit,
-    setBody: handleSetBody,
+    localImages,
+    existingMedia,
+    removedMediaIds,
+    compressionProgress,
+    maxImages: MAX_IMAGES,
     setTitle,
-    setMoodScore,
+    setBody: handleBodyChange,
+    setMoodCategory,
+    setMoodSpecific,
     setEntryType,
+    setEntryDate,
+    setJournalId,
+    setLocation,
     addTag,
     removeTag,
+    handlePickImages,
+    removeLocalImage,
+    isRecordingAudio,
+    startRecording,
+    stopRecording,
+    recordAudio,
+    removeAudio,
+    localAudio,
+    existingAudio,
+    removeExistingMedia,
     handleSubmit,
     maxTags: MAX_TAGS,
   };

@@ -1,8 +1,11 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from nstil.models.media import MediaPreview
+from nstil.models.mood import MoodCategory, MoodSpecific, validate_mood_pair
 
 
 class EntryType(StrEnum):
@@ -10,6 +13,7 @@ class EntryType(StrEnum):
     REFLECTION = "reflection"
     GRATITUDE = "gratitude"
     FREEWRITE = "freewrite"
+    CHECK_IN = "check_in"
 
 
 MAX_TITLE_LENGTH = 200
@@ -17,17 +21,66 @@ MAX_BODY_LENGTH = 50_000
 MAX_TAG_LENGTH = 50
 MAX_TAG_COUNT = 10
 MAX_LOCATION_LENGTH = 200
-MIN_MOOD = 1
-MAX_MOOD = 5
+MIN_LATITUDE = -90.0
+MAX_LATITUDE = 90.0
+MIN_LONGITUDE = -180.0
+MAX_LONGITUDE = 180.0
+FUTURE_TOLERANCE = timedelta(minutes=1)
+
+
+def validate_coordinate_pair(
+    latitude: float | None,
+    longitude: float | None,
+) -> None:
+    if (latitude is None) != (longitude is None):
+        msg = "latitude and longitude must both be provided or both be null"
+        raise ValueError(msg)
+    if latitude is not None and not (MIN_LATITUDE <= latitude <= MAX_LATITUDE):
+        msg = f"latitude must be between {MIN_LATITUDE} and {MAX_LATITUDE}"
+        raise ValueError(msg)
+    if longitude is not None and not (MIN_LONGITUDE <= longitude <= MAX_LONGITUDE):
+        msg = f"longitude must be between {MIN_LONGITUDE} and {MAX_LONGITUDE}"
+        raise ValueError(msg)
+
+
+def _validate_not_future(v: datetime | None) -> datetime | None:
+    if v is None:
+        return None
+    if v.tzinfo is None:
+        v = v.replace(tzinfo=UTC)
+    if v > datetime.now(UTC) + FUTURE_TOLERANCE:
+        msg = "Date cannot be in the future"
+        raise ValueError(msg)
+    return v
 
 
 class JournalEntryCreate(BaseModel):
+    journal_id: UUID = Field(...)
     title: str = Field(default="", max_length=MAX_TITLE_LENGTH)
-    body: str = Field(..., min_length=1, max_length=MAX_BODY_LENGTH)
-    mood_score: int | None = Field(default=None, ge=MIN_MOOD, le=MAX_MOOD)
+    body: str = Field(default="", max_length=MAX_BODY_LENGTH)
+    mood_category: MoodCategory | None = Field(default=None)
+    mood_specific: MoodSpecific | None = Field(default=None)
     tags: list[str] = Field(default_factory=list)
     location: str | None = Field(default=None, max_length=MAX_LOCATION_LENGTH)
+    latitude: float | None = Field(default=None)
+    longitude: float | None = Field(default=None)
     entry_type: EntryType = Field(default=EntryType.JOURNAL)
+    is_pinned: bool = Field(default=False)
+    created_at: datetime | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def validate_entry(self) -> "JournalEntryCreate":
+        if self.entry_type != EntryType.CHECK_IN and not self.body:
+            msg = "Body is required for non-check-in entries"
+            raise ValueError(msg)
+        validate_mood_pair(self.mood_category, self.mood_specific)
+        validate_coordinate_pair(self.latitude, self.longitude)
+        return self
+
+    @field_validator("created_at")
+    @classmethod
+    def validate_created_at(cls, v: datetime | None) -> datetime | None:
+        return _validate_not_future(v)
 
     @field_validator("tags")
     @classmethod
@@ -58,15 +111,21 @@ class JournalEntryCreate(BaseModel):
 
 
 class JournalEntryUpdate(BaseModel):
+    journal_id: UUID | None = Field(default=None)
     title: str | None = Field(default=None, max_length=MAX_TITLE_LENGTH)
     body: str | None = Field(default=None, min_length=1, max_length=MAX_BODY_LENGTH)
-    mood_score: int | None = Field(default=None, ge=MIN_MOOD, le=MAX_MOOD)
+    mood_category: MoodCategory | None = Field(default=None)
+    mood_specific: MoodSpecific | None = Field(default=None)
     tags: list[str] | None = Field(default=None)
     location: str | None = Field(default=None, max_length=MAX_LOCATION_LENGTH)
+    latitude: float | None = Field(default=None)
+    longitude: float | None = Field(default=None)
     entry_type: EntryType | None = Field(default=None)
+    is_pinned: bool | None = Field(default=None)
+    created_at: datetime | None = Field(default=None)
 
     @model_validator(mode="after")
-    def at_least_one_field(self) -> "JournalEntryUpdate":
+    def validate_mood_and_fields(self) -> "JournalEntryUpdate":
         has_value = any(
             getattr(self, field) is not None
             for field in self.__class__.model_fields
@@ -74,7 +133,19 @@ class JournalEntryUpdate(BaseModel):
         if not has_value:
             msg = "At least one field must be provided"
             raise ValueError(msg)
+        if self.mood_specific is not None and self.mood_category is None:
+            msg = "mood_specific requires mood_category"
+            raise ValueError(msg)
+        if self.mood_specific is not None and self.mood_category is not None:
+            validate_mood_pair(self.mood_category, self.mood_specific)
+        if self.latitude is not None or self.longitude is not None:
+            validate_coordinate_pair(self.latitude, self.longitude)
         return self
+
+    @field_validator("created_at")
+    @classmethod
+    def validate_created_at(cls, v: datetime | None) -> datetime | None:
+        return _validate_not_future(v)
 
     @field_validator("tags")
     @classmethod
@@ -109,10 +180,10 @@ class JournalEntryUpdate(BaseModel):
             return None
         return v.strip()
 
-    def to_update_dict(self) -> dict[str, str | int | list[str]]:
+    def to_update_dict(self) -> dict[str, str | int | bool | list[str]]:
         return {
             k: v
-            for k, v in self.model_dump().items()
+            for k, v in self.model_dump(mode="json").items()
             if v is not None
         }
 
@@ -120,12 +191,17 @@ class JournalEntryUpdate(BaseModel):
 class JournalEntryRow(BaseModel):
     id: UUID
     user_id: UUID
+    journal_id: UUID
     title: str
     body: str
-    mood_score: int | None
+    mood_category: str | None
+    mood_specific: str | None
     tags: list[str]
     location: str | None
+    latitude: float | None
+    longitude: float | None
     entry_type: str
+    is_pinned: bool
     metadata: dict[str, object]
     created_at: datetime
     updated_at: datetime
@@ -137,26 +213,42 @@ class JournalEntryRow(BaseModel):
 class JournalEntryResponse(BaseModel):
     id: UUID
     user_id: UUID
+    journal_id: UUID
     title: str
     body: str
-    mood_score: int | None
+    mood_category: str | None
+    mood_specific: str | None
     tags: list[str]
     location: str | None
+    latitude: float | None
+    longitude: float | None
     entry_type: str
+    is_pinned: bool
+    media_preview: MediaPreview | None
     created_at: datetime
     updated_at: datetime
 
     @classmethod
-    def from_row(cls, row: JournalEntryRow) -> "JournalEntryResponse":
+    def from_row(
+        cls,
+        row: JournalEntryRow,
+        media_preview: MediaPreview | None = None,
+    ) -> "JournalEntryResponse":
         return cls(
             id=row.id,
             user_id=row.user_id,
+            journal_id=row.journal_id,
             title=row.title,
             body=row.body,
-            mood_score=row.mood_score,
+            mood_category=row.mood_category,
+            mood_specific=row.mood_specific,
             tags=row.tags,
             location=row.location,
+            latitude=row.latitude,
+            longitude=row.longitude,
             entry_type=row.entry_type,
+            is_pinned=row.is_pinned,
+            media_preview=media_preview,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )

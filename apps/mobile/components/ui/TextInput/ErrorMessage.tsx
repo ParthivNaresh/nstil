@@ -1,14 +1,17 @@
 import { StyleSheet, Text } from "react-native";
 
-import { colors, spacing, typography } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing, typography } from "@/styles";
 
 interface ErrorMessageProps {
   message: string;
 }
 
 export function ErrorMessage({ message }: ErrorMessageProps) {
+  const { colors } = useTheme();
+
   return (
-    <Text style={styles.error} accessibilityRole="alert">
+    <Text style={[styles.error, { color: colors.error }]}>
       {message}
     </Text>
   );
@@ -17,7 +20,6 @@ export function ErrorMessage({ message }: ErrorMessageProps) {
 const styles = StyleSheet.create({
   error: {
     ...typography.caption,
-    color: colors.error,
     marginTop: spacing.xs,
     marginLeft: spacing.xs,
   },

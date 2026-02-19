@@ -2,6 +2,9 @@
   "expo": {
     "name": "NStil",
     "slug": "nstil",
+    "autolinking": {
+      "nativeModulesDir": "./modules"
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,7 +34,32 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow NStil to access your photos to attach images to journal entries.",
+          "cameraPermission": "Allow NStil to use your camera to take photos for journal entries."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow NStil to access your location to tag journal entries with where you are."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow NStil to access your microphone to record voice memos for journal entries."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0A0A0F"
+        }
+      ]
     ]
   }
 }

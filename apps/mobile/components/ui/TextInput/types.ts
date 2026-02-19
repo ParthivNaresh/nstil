@@ -1,10 +1,13 @@
 import type { TextInput as RNTextInput } from "react-native";
 
+export type TextInputVariant = "outlined" | "flat";
+
 export interface TextInputProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   error?: string;
+  variant?: TextInputVariant;
   secureTextEntry?: boolean;
   keyboardType?: "default" | "email-address" | "numeric";
   autoCapitalize?: "none" | "sentences" | "words" | "characters";

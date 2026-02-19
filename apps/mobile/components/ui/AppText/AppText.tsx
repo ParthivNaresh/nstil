@@ -1,25 +1,29 @@
 import { useMemo } from "react";
 import { Text, type TextStyle } from "react-native";
 
-import { colors, typography } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { typography } from "@/styles";
 
 import type { AppTextProps } from "./types";
 
 export function AppText({
   variant = "body",
-  color = colors.textPrimary,
+  color,
   align,
   style,
   children,
   ...rest
 }: AppTextProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.textPrimary;
+
   const textStyle = useMemo<TextStyle>(
     () => ({
       ...typography[variant],
-      color,
+      color: resolvedColor,
       ...(align && { textAlign: align }),
     }),
-    [variant, color, align],
+    [variant, resolvedColor, align],
   );
 
   return (

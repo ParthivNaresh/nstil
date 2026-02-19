@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   StyleSheet,
@@ -10,7 +10,8 @@ import {
   withTiming,
 } from "react-native-reanimated";
 
-import { colors, duration, radius, spacing, typography } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { duration, radius, spacing, typography } from "@/styles";
 
 import { ErrorMessage } from "./ErrorMessage";
 import { FloatingLabel } from "./FloatingLabel";
@@ -24,6 +25,7 @@ export function TextInput({
   value,
   onChangeText,
   error,
+  variant = "outlined",
   secureTextEntry = false,
   keyboardType = "default",
   autoCapitalize = "none",
@@ -35,9 +37,11 @@ export function TextInput({
   testID,
 }: TextInputProps) {
   const { t } = useTranslation();
+  const { colors, keyboardAppearance } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const [isSecureVisible, setIsSecureVisible] = useState(false);
   const labelProgress = useSharedValue(value ? 1 : 0);
+  const isFlat = variant === "flat";
 
   const hasError = Boolean(error);
   const isActive = isFocused || Boolean(value);
@@ -64,13 +68,30 @@ export function TextInput({
       ? colors.borderFocused
       : colors.glassBorder;
 
+  const containerStyle = useMemo(
+    () =>
+      isFlat
+        ? [styles.flatContainer, { borderBottomColor: borderColor }]
+        : [styles.inputContainer, { borderColor, backgroundColor: colors.glass }],
+    [isFlat, borderColor, colors.glass],
+  );
+
+  const inputStyle = useMemo(
+    () => [
+      isFlat ? styles.flatInput : styles.input,
+      { color: colors.textPrimary },
+      secureTextEntry && styles.inputWithToggle,
+    ],
+    [isFlat, colors.textPrimary, secureTextEntry],
+  );
+
   return (
     <View style={styles.container}>
-      <View style={[styles.inputContainer, { borderColor }]}>
+      <View style={containerStyle}>
         <FloatingLabel label={label} progress={labelProgress} hasError={hasError} />
         <RNTextInput
           ref={inputRef}
-          style={[styles.input, secureTextEntry && styles.inputWithToggle]}
+          style={inputStyle}
           value={value}
           onChangeText={onChangeText}
           onFocus={handleFocus}
@@ -83,7 +104,7 @@ export function TextInput({
           onSubmitEditing={onSubmitEditing}
           placeholderTextColor="transparent"
           selectionColor={colors.accent}
-          keyboardAppearance="dark"
+          keyboardAppearance={keyboardAppearance}
           accessibilityLabel={accessibilityLabel ?? label}
           accessibilityState={{ selected: isActive }}
           testID={testID}
@@ -107,18 +128,28 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   inputContainer: {
-    backgroundColor: colors.glass,
     borderWidth: 1,
     borderRadius: radius.md,
     height: 56,
     justifyContent: "center",
   },
+  flatContainer: {
+    borderBottomWidth: 1,
+    height: 48,
+    justifyContent: "center",
+  },
   input: {
     ...typography.body,
-    color: colors.textPrimary,
     paddingHorizontal: spacing.md,
     paddingTop: 22,
     paddingBottom: 8,
+    height: "100%",
+  },
+  flatInput: {
+    ...typography.body,
+    paddingHorizontal: 0,
+    paddingTop: 18,
+    paddingBottom: 6,
     height: "100%",
   },
   inputWithToggle: {

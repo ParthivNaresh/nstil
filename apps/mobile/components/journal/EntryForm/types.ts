@@ -1,18 +1,54 @@
-import type { MoodValue } from "@/components/ui/MoodSelector/types";
-import type { EntryType } from "@/types";
+import type { ReactNode } from "react";
+
+import type { CompressionProgress } from "@/hooks/useImagePicker";
+import type { LocationData } from "@/lib/locationUtils";
+import type {
+  EntryMedia,
+  EntryType,
+  JournalSpace,
+  LocalAudio,
+  LocalImage,
+  MoodCategory,
+  MoodSpecific,
+} from "@/types";
 
 export interface EntryFormProps {
+  readonly reflectionSlot?: ReactNode;
+  readonly journals: JournalSpace[];
+  readonly journalId: string;
   readonly body: string;
   readonly title: string;
-  readonly moodScore: MoodValue | null;
+  readonly moodCategory: MoodCategory | null;
+  readonly moodSpecific: MoodSpecific | null;
   readonly tags: string[];
   readonly entryType: EntryType;
+  readonly entryDate: Date;
+  readonly location: LocationData | null;
   readonly bodyError: string | undefined;
   readonly maxTags: number;
+  readonly localImages: LocalImage[];
+  readonly existingMedia: EntryMedia[];
+  readonly removedMediaIds: ReadonlySet<string>;
+  readonly maxImages: number;
+  readonly compressionProgress: CompressionProgress | null;
+  readonly onJournalChange: (id: string) => void;
   readonly onBodyChange: (text: string) => void;
   readonly onTitleChange: (text: string) => void;
-  readonly onMoodChange: (mood: MoodValue) => void;
+  readonly onMoodCategoryChange: (category: MoodCategory) => void;
+  readonly onMoodSpecificChange: (specific: MoodSpecific) => void;
   readonly onEntryTypeChange: (type: EntryType) => void;
+  readonly onDateChange: (date: Date) => void;
+  readonly onLocationChange: (location: LocationData | null) => void;
   readonly onAddTag: (tag: string) => void;
   readonly onRemoveTag: (tag: string) => void;
+  readonly onPickImages: () => void;
+  readonly onRemoveLocalImage: (localId: string) => void;
+  readonly localAudio: LocalAudio | null;
+  readonly existingAudio: EntryMedia | null;
+  readonly isRecordingAudio: boolean;
+  readonly onStartRecording: () => void;
+  readonly onStopRecording: () => void;
+  readonly onRecordAudio: (audio: LocalAudio) => void;
+  readonly onRemoveAudio: () => void;
+  readonly onRemoveExistingMedia: (mediaId: string) => void;
 }

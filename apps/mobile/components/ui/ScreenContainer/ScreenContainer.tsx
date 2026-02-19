@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { colors } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
 
 import type { ScreenContainerProps } from "./types";
 
@@ -17,6 +17,8 @@ export function ScreenContainer({
   scrollable = true,
   centered = false,
 }: ScreenContainerProps) {
+  const { isDark } = useTheme();
+
   const content = centered ? (
     <View style={styles.centeredContent}>{children}</View>
   ) : (
@@ -25,7 +27,7 @@ export function ScreenContainer({
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.keyboardView}
@@ -52,7 +54,6 @@ export function ScreenContainer({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   safeArea: {
     flex: 1,

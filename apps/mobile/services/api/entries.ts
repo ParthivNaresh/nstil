@@ -4,11 +4,22 @@ import type {
   JournalEntryCreate,
   JournalEntryUpdate,
   PaginatedResponse,
+  SearchParams,
 } from "@/types";
 
 import { apiFetch } from "./client";
 
 const ENTRIES_PATH = "/api/v1/entries";
+
+interface ListEntriesParams extends CursorParams {
+  readonly journalId?: string;
+  readonly date?: string;
+  readonly timezone?: string;
+}
+
+interface SearchEntriesParams extends SearchParams {
+  readonly journalId?: string;
+}
 
 export function createEntry(
   data: JournalEntryCreate,
@@ -24,7 +35,7 @@ export function getEntry(id: string): Promise<JournalEntry> {
 }
 
 export function listEntries(
-  params?: CursorParams,
+  params?: ListEntriesParams,
 ): Promise<PaginatedResponse<JournalEntry>> {
   const searchParams = new URLSearchParams();
   if (params?.cursor) {
@@ -32,6 +43,15 @@ export function listEntries(
   }
   if (params?.limit !== undefined) {
     searchParams.set("limit", String(params.limit));
+  }
+  if (params?.journalId) {
+    searchParams.set("journal_id", params.journalId);
+  }
+  if (params?.date) {
+    searchParams.set("date", params.date);
+  }
+  if (params?.timezone) {
+    searchParams.set("timezone", params.timezone);
   }
   const query = searchParams.toString();
   const path = query ? `${ENTRIES_PATH}?${query}` : ENTRIES_PATH;
@@ -46,6 +66,25 @@ export function updateEntry(
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+export function searchEntries(
+  params: SearchEntriesParams,
+): Promise<PaginatedResponse<JournalEntry>> {
+  const searchParams = new URLSearchParams();
+  searchParams.set("q", params.query);
+  if (params.cursor) {
+    searchParams.set("cursor", params.cursor);
+  }
+  if (params.limit !== undefined) {
+    searchParams.set("limit", String(params.limit));
+  }
+  if (params.journalId) {
+    searchParams.set("journal_id", params.journalId);
+  }
+  return apiFetch<PaginatedResponse<JournalEntry>>(
+    `${ENTRIES_PATH}/search?${searchParams.toString()}`,
+  );
 }
 
 export function deleteEntry(id: string): Promise<void> {

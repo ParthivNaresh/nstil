@@ -4,6 +4,7 @@ export interface SearchInputProps {
   onSearch?: (query: string) => void;
   placeholder?: string;
   debounceMs?: number;
+  autoFocus?: boolean;
   accessibilityLabel?: string;
   testID?: string;
 }

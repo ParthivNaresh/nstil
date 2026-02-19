@@ -2,13 +2,16 @@ import { AlertCircle } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
-import { colors, radius, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { radius, spacing } from "@/styles";
 
 import type { FormErrorProps } from "./types";
 
 export function FormError({ message }: FormErrorProps) {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.container} accessibilityRole="alert">
+    <View style={[styles.container, { backgroundColor: colors.errorMuted }]} accessibilityRole="alert">
       <AlertCircle size={16} color={colors.error} />
       <AppText variant="bodySmall" color={colors.error} style={styles.text}>
         {message}
@@ -21,7 +24,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.errorMuted,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

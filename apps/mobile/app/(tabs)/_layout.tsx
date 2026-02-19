@@ -9,11 +9,19 @@ export default function TabLayout() {
   return (
     <Tabs
       tabBar={(props) => <TabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: "transparent" } }}
     >
       <Tabs.Screen
         name="index"
-        options={{ title: t("tabs.journal") }}
+        options={{ title: t("tabs.home") }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{ title: t("tabs.history") }}
+      />
+      <Tabs.Screen
+        name="create"
+        options={{ title: t("tabs.create") }}
       />
       <Tabs.Screen
         name="insights"

@@ -9,3 +9,7 @@ const dateFormatter = new Intl.DateTimeFormat("en", {
 export function formatFullDate(isoDate: string): string {
   return dateFormatter.format(new Date(isoDate));
 }
+
+export function formatFullDateTime(date: Date): string {
+  return dateFormatter.format(date);
+}

@@ -1,4 +1,5 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useMemo } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,19 +12,50 @@ import { useTranslation } from "react-i18next";
 
 import { EntryForm } from "@/components/journal";
 import { Header, HeaderAction } from "@/components/ui";
-import { useEntryForm, useHeaderHeight } from "@/hooks";
-import { colors, spacing } from "@/styles";
+import {
+  useEntryForm,
+  useHeaderHeight,
+  useJournals,
+  useTheme,
+} from "@/hooks";
+import { spacing } from "@/styles";
+
+function buildDateWithCurrentTime(dateString: string): Date {
+  const [yearStr, monthStr, dayStr] = dateString.split("-");
+  const now = new Date();
+  return new Date(
+    Number(yearStr),
+    Number(monthStr) - 1,
+    Number(dayStr),
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds(),
+  );
+}
 
 export default function CreateEntryScreen() {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
-  const form = useEntryForm();
+  const params = useLocalSearchParams<{ date?: string }>();
+  const { data: journals = [] } = useJournals();
+
+  const initialDate = useMemo(
+    () => (params.date ? buildDateWithCurrentTime(params.date) : undefined),
+    [params.date],
+  );
+
+  const form = useEntryForm({ journals, initialDate });
+
+  const handleSave = useCallback(() => {
+    form.handleSubmit();
+  }, [form]);
 
   const saveAction = (
     <HeaderAction
       title={t("journal.save")}
-      onPress={form.handleSubmit}
+      onPress={handleSave}
       loading={form.isSubmitting}
       disabled={!form.canSubmit}
     />
@@ -31,7 +63,7 @@ export default function CreateEntryScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Header
         title={t("journal.newEntry")}
         onBack={router.back}
@@ -51,19 +83,43 @@ export default function CreateEntryScreen() {
         >
           <View style={styles.content}>
             <EntryForm
+              journals={journals}
+              journalId={form.journalId}
               body={form.body}
               title={form.title}
-              moodScore={form.moodScore}
+              moodCategory={form.moodCategory}
+              moodSpecific={form.moodSpecific}
               tags={form.tags}
               entryType={form.entryType}
+              entryDate={form.entryDate}
+              location={form.location}
               bodyError={form.bodyError}
               maxTags={form.maxTags}
+              localImages={form.localImages}
+              existingMedia={form.existingMedia}
+              removedMediaIds={form.removedMediaIds}
+              maxImages={form.maxImages}
+              compressionProgress={form.compressionProgress}
+              onJournalChange={form.setJournalId}
               onBodyChange={form.setBody}
               onTitleChange={form.setTitle}
-              onMoodChange={form.setMoodScore}
+              onMoodCategoryChange={form.setMoodCategory}
+              onMoodSpecificChange={form.setMoodSpecific}
               onEntryTypeChange={form.setEntryType}
+              onDateChange={form.setEntryDate}
+              onLocationChange={form.setLocation}
               onAddTag={form.addTag}
               onRemoveTag={form.removeTag}
+              onPickImages={form.handlePickImages}
+              onRemoveLocalImage={form.removeLocalImage}
+              localAudio={form.localAudio}
+              existingAudio={form.existingAudio}
+              isRecordingAudio={form.isRecordingAudio}
+              onStartRecording={form.startRecording}
+              onStopRecording={form.stopRecording}
+              onRecordAudio={form.recordAudio}
+              onRemoveAudio={form.removeAudio}
+              onRemoveExistingMedia={form.removeExistingMedia}
             />
           </View>
         </ScrollView>
@@ -75,7 +131,6 @@ export default function CreateEntryScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   flex: {
     flex: 1,

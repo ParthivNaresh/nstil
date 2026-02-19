@@ -1,11 +1,14 @@
 import { StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
-import { colors, spacing } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/styles";
 
 import type { CardHeaderProps } from "./types";
 
 export function CardHeader({ title, subtitle, right }: CardHeaderProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container}>
       <View style={styles.text}>
@@ -16,7 +19,7 @@ export function CardHeader({ title, subtitle, right }: CardHeaderProps) {
           </AppText>
         ) : null}
       </View>
-      {right ? <View style={styles.right}>{right}</View> : null}
+      {right}
     </View>
   );
 }
@@ -25,13 +28,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: spacing.sm,
   },
   text: {
     flex: 1,
     gap: 2,
-  },
-  right: {
-    marginLeft: spacing.sm,
   },
 });

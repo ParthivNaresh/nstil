@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet } from "react-native";
 
-import { colors } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import type { ColorPalette } from "@/styles/palettes";
 
 import type { ButtonVariant } from "./types";
 
@@ -8,17 +9,23 @@ interface ButtonSpinnerProps {
   variant: ButtonVariant;
 }
 
-const SPINNER_COLORS: Record<ButtonVariant, string> = {
-  primary: colors.textPrimary,
-  secondary: colors.accent,
-  ghost: colors.accent,
-};
+function getSpinnerColor(variant: ButtonVariant, colors: ColorPalette): string {
+  switch (variant) {
+    case "primary":
+      return colors.textPrimary;
+    case "secondary":
+    case "ghost":
+      return colors.accent;
+  }
+}
 
 export function ButtonSpinner({ variant }: ButtonSpinnerProps) {
+  const { colors } = useTheme();
+
   return (
     <ActivityIndicator
       size="small"
-      color={SPINNER_COLORS[variant]}
+      color={getSpinnerColor(variant, colors)}
       style={styles.spinner}
     />
   );

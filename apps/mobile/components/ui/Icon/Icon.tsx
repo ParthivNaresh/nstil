@@ -1,4 +1,4 @@
-import { colors } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
 
 import type { IconProps, IconSize } from "./types";
 
@@ -13,15 +13,18 @@ const SIZE_MAP: Record<IconSize, number> = {
 export function Icon({
   icon: LucideIcon,
   size = "md",
-  color = colors.textPrimary,
+  color,
   strokeWidth = 2,
   accessibilityLabel,
   testID,
 }: IconProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.textPrimary;
+
   return (
     <LucideIcon
       size={SIZE_MAP[size]}
-      color={color}
+      color={resolvedColor}
       strokeWidth={strokeWidth}
       accessibilityLabel={accessibilityLabel}
       testID={testID}

@@ -8,7 +8,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { colors, duration, radius } from "@/styles";
+import { useTheme } from "@/hooks/useTheme";
+import { duration, radius } from "@/styles";
 
 import type { SkeletonProps, SkeletonShape } from "./types";
 
@@ -32,6 +33,7 @@ export function Skeleton({
   height,
   testID,
 }: SkeletonProps) {
+  const { colors } = useTheme();
   const opacity = useSharedValue(0.3);
   const config = SHAPE_MAP[shape];
 
@@ -56,9 +58,10 @@ export function Skeleton({
     [width, height, config],
   );
 
+  const bgColor = colors.surfaceElevated;
   const animatedStyle = useAnimatedStyle(() => ({
     flex: 1,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: bgColor,
     opacity: opacity.value,
   }));
 
