@@ -53,7 +53,7 @@ install: backend-install mobile-install
 # ── Backend ──────────────────────────────────────────────
 
 backend-install:
-    cd apps/backend && uv sync --dev
+    cd apps/backend && uv sync --extra dev
 
 backend-dev:
     cd apps/backend && uv run uvicorn nstil.main:app --reload --host 0.0.0.0 --port 8000
@@ -72,6 +72,9 @@ backend-typecheck:
 
 backend-test:
     cd apps/backend && uv run pytest -v
+
+backend-test-coverage:
+    cd apps/backend && uv run pytest -v --cov=nstil --cov-report=xml:coverage.xml
 
 backend-check: backend-lint backend-typecheck backend-test
 
@@ -102,6 +105,14 @@ mobile-typecheck:
     cd apps/mobile && npx tsc --noEmit
 
 mobile-check: mobile-typecheck mobile-lint
+
+# ── Docs ─────────────────────────────────────────────────
+
+docs-serve:
+    cd apps/backend && uv run mkdocs serve -f ../../mkdocs.yml
+
+docs-build:
+    cd apps/backend && uv run mkdocs build -f ../../mkdocs.yml --strict
 
 # ── Database ─────────────────────────────────────────────
 
