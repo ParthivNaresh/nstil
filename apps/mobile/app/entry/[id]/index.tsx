@@ -14,13 +14,14 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
 
-import { EntryForm } from "@/components/journal";
+import { EntryForm, ReflectionCard } from "@/components/journal";
 import { EmptyState, Header, HeaderAction, Icon, Skeleton } from "@/components/ui";
 import {
   useDeleteEntry,
   useEntry,
   useEntryForm,
   useEntryMedia,
+  useEntryReflection,
   useHeaderHeight,
   useJournals,
   useTheme,
@@ -90,6 +91,11 @@ function EntryFormScreen({ entryId, existingMediaItems }: EntryFormScreenProps) 
   const { data: journals = [] } = useJournals();
   const deleteMutation = useDeleteEntry();
   const togglePinMutation = useTogglePin();
+  const {
+    reflection,
+    dismiss: dismissReflection,
+    isDismissing,
+  } = useEntryReflection(entryId);
   const form = useEntryForm({
     entry,
     journals,
@@ -176,6 +182,15 @@ function EntryFormScreen({ entryId, existingMediaItems }: EntryFormScreenProps) 
         >
           <View style={styles.content}>
             <EntryForm
+              reflectionSlot={
+                reflection ? (
+                  <ReflectionCard
+                    content={reflection.content}
+                    onDismiss={dismissReflection}
+                    isDismissing={isDismissing}
+                  />
+                ) : undefined
+              }
               journals={journals}
               journalId={form.journalId}
               body={form.body}

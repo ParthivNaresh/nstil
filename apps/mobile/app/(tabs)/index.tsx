@@ -1,36 +1,50 @@
-import { useRouter } from "expo-router";
-import { Feather } from "lucide-react-native";
-import { useCallback } from "react";
-import { View } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { EmptyState, Header } from "@/components/ui";
-import { useHeaderHeight } from "@/hooks";
+import { HomeCheckInSection } from "@/components/home";
+import { Header } from "@/components/ui";
+import { useHeaderHeight, useTheme } from "@/hooks";
+import { queryKeys } from "@/lib/queryKeys";
 import { spacing } from "@/styles";
 
 import { styles } from "@/styles/screens/homeStyles";
 
 export default function HomeScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
+  const { colors } = useTheme();
   const headerHeight = useHeaderHeight();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleCreatePress = useCallback(() => {
-    router.push("/entry/create");
-  }, [router]);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.prompts.generated() });
+    setRefreshing(false);
+  }, [queryClient]);
 
   return (
     <View style={styles.root}>
       <Header title={t("home.title")} />
-      <View style={[styles.content, { paddingTop: headerHeight + spacing.xl }]}>
-        <EmptyState
-          icon={Feather}
-          title="Welcome to NStil"
-          subtitle="Your personal reflection companion"
-          actionLabel={t("journal.emptyAction")}
-          onAction={handleCreatePress}
-        />
-      </View>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: headerHeight + spacing.xl },
+        ]}
+        showsVerticalScrollIndicator={false}
+        alwaysBounceVertical
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.textTertiary}
+          />
+        }
+      >
+        <HomeCheckInSection />
+      </ScrollView>
     </View>
   );
 }

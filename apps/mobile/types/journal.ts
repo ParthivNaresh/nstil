@@ -1,6 +1,6 @@
 import type { MediaPreview } from "./media";
 
-export type EntryType = "journal" | "reflection" | "gratitude" | "freewrite";
+export type EntryType = "journal" | "reflection" | "gratitude" | "freewrite" | "check_in";
 
 export type MoodCategory = "happy" | "calm" | "sad" | "anxious" | "angry";
 

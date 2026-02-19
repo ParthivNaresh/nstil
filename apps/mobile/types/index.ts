@@ -1,3 +1,34 @@
+export type {
+  AIContextEntry,
+  AIContextMoodDistribution,
+  AIContextProfile,
+  AIContextPrompt,
+  AIContextResponse,
+  AIContextSession,
+  AIContextStats,
+  AIInsight,
+  AIInsightUpdate,
+  AIProfile,
+  AIProfileUpdate,
+  AIPrompt,
+  AIPromptUpdate,
+  AISession,
+  CheckInResponse,
+  ConvertCheckInRequest,
+  GeneratePromptRequest,
+  InsightSource,
+  InsightStatus,
+  InsightType,
+  PromptSource,
+  PromptStatus,
+  PromptStyle,
+  PromptType,
+  RespondCheckInRequest,
+  SessionStatus,
+  SessionType,
+  StartCheckInRequest,
+  TriggerSource,
+} from "./ai";
 export type { CursorParams, PaginatedResponse, SearchParams } from "./api";
 export type {
   DeepLinkType,
@@ -27,6 +58,12 @@ export type {
   MediaPreview,
   MediaPreviewItem,
 } from "./media";
+export type {
+  NotificationPreferences,
+  NotificationPreferencesUpdate,
+  ReminderFrequency,
+  ReminderTime,
+} from "./notification";
 export type {
   JournalSpace,
   JournalSpaceCreate,

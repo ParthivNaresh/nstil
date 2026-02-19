@@ -54,7 +54,12 @@ export function Header({
   }
 
   return (
-    <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={styles.blur}>
+    <BlurView
+      intensity={40}
+      tint={isDark ? "dark" : "light"}
+      style={styles.blur}
+      pointerEvents="box-none"
+    >
       {content}
       <View style={[styles.borderBottom, { backgroundColor: colors.border }]} />
     </BlurView>
