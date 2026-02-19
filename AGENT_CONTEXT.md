@@ -55,6 +55,10 @@ This project is in active development. Backwards compatibility is not a concern.
 | `SETUP.md` | Full setup instructions from fresh clone |
 | `justfile` | Task runner for all commands |
 | `docker-compose.yml` | Backend + worker + Redis |
+| `mkdocs.yml` | MkDocs Material documentation site config |
+| `docs/` | Documentation source (architecture, setup, conventions) |
+| `sonar-project.properties` | SonarCloud analysis config |
+| `.github/workflows/` | CI — `lint.yml` (format + lint + typecheck + docs build), `test.yml` (pytest + SonarCloud) |
 | `supabase/config.toml` | Local Supabase config (auth, email, DB) |
 | `supabase/migrations/` | SQL migrations (8 consolidated domain-based files) |
 | `packages/shared/` | Placeholder for shared types/constants |
@@ -99,18 +103,22 @@ Source lives in `src/nstil/` (hatchling src layout).
 ## 4. Commands
 
 ```sh
-just backend-dev          # uvicorn --reload on :8000
-just backend-check        # lint + typecheck + test (all three)
+just dev                  # infra-up + backend-dev
+just device               # expo run:ios --device (physical device build)
+just backend-dev          # uvicorn --factory --reload on :8000
+just backend-check        # format-check + lint + typecheck + test
+just backend-format       # auto-format with ruff
 just mobile-ios           # expo run:ios
 just mobile-check         # typecheck + lint
-just device               # expo run:ios --device (physical device build)
-just db-start             # supabase start (runs migrations)
+just infra-up             # supabase start + redis (runs migrations)
 just db-reset             # reset + re-migrate
+just docs-serve           # local mkdocs dev server
+just docs-build           # strict mkdocs build (used in CI)
 ```
 
 Direct commands:
 ```sh
-cd apps/backend && uv run ruff check src tests && uv run mypy src && uv run pytest -v
+cd apps/backend && uv run ruff format --check src tests && uv run ruff check src tests && uv run mypy src && uv run pytest -v
 cd apps/mobile && npx tsc --noEmit && npx eslint .
 ```
 
@@ -198,7 +206,7 @@ All AI inference runs on-device via Apple Foundation Models (iOS 26+). No cloud 
 
 `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL`
 
-Get keys via `supabase status` after `just db-start`.
+Get keys via `supabase status` after `just infra-up`.
 
 ---
 

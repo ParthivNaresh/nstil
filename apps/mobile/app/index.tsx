@@ -4,8 +4,13 @@ import { useAuthStore } from "@/stores/authStore";
 
 export default function Index() {
   const session = useAuthStore((s) => s.session);
+  const initialized = useAuthStore((s) => s.initialized);
   const isEmailVerified = useAuthStore((s) => s.isEmailVerified);
   const pendingDeepLinkType = useAuthStore((s) => s.pendingDeepLinkType);
+
+  if (!initialized) {
+    return null;
+  }
 
   if (!session) {
     return <Redirect href="/(auth)" />;

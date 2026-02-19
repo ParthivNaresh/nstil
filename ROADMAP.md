@@ -189,7 +189,7 @@ CI/CD pipelines, production Supabase project, monitoring, error tracking, app st
 - [ ] Token revocation — Redis-based token blacklist for immediate invalidation on sign-out
 - [ ] API gateway rate limiting
 - [ ] CORS production configuration
-- [ ] CI/CD pipelines — automated lint, typecheck, test on every PR
+- [x] CI/CD pipelines — GitHub Actions: lint workflow (backend format-check + lint + typecheck, mobile typecheck + lint, docs build), test workflow (pytest with coverage → SonarCloud). All jobs use `just` commands
 - [ ] Error tracking — Sentry integration for backend and mobile
 - [ ] Log aggregation — structured log shipping
 - [ ] Performance budgets — bundle size limits, API response time targets

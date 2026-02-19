@@ -56,8 +56,12 @@ nstil/
 ├── supabase/
 │   ├── config.toml          # Local Supabase config
 │   └── migrations/          # 8 consolidated SQL migrations
+├── docs/                    # MkDocs documentation source
+├── .github/workflows/       # CI (lint, test, SonarCloud, docs build)
 ├── docker-compose.yml       # Backend + worker + Redis
 ├── justfile                 # Task runner
+├── mkdocs.yml               # Documentation site config
+├── sonar-project.properties # SonarCloud config
 ├── SETUP.md                 # Full setup instructions
 ├── ROADMAP.md               # Development roadmap
 └── AGENT_CONTEXT.md         # AI agent onboarding context
@@ -68,8 +72,7 @@ nstil/
 See [SETUP.md](SETUP.md) for full setup instructions from a fresh clone.
 
 ```sh
-just db-start             # Start local Supabase
-just backend-dev          # Start FastAPI dev server
+just dev                  # Start infrastructure + backend dev server
 just mobile-ios           # Build and run on iOS Simulator
 just device               # Build and run on physical iOS device
 ```
@@ -77,14 +80,27 @@ just device               # Build and run on physical iOS device
 ## Development
 
 ```sh
-# Backend (lint + typecheck + test)
+# Backend (format-check + lint + typecheck + test)
 just backend-check
 
 # Mobile (typecheck + lint)
 just mobile-check
+
+# Documentation
+just docs-serve           # Local dev server at localhost:8000
+just docs-build           # Strict build (used in CI)
 ```
 
-583 backend tests. All code passes ruff, mypy (strict), tsc, and eslint.
+583 backend tests. All code passes ruff format, ruff check, mypy (strict), tsc, and eslint.
+
+## CI/CD
+
+GitHub Actions run on every push to `main` and every PR:
+
+- **Lint workflow** — backend format-check + lint + typecheck, mobile typecheck + lint, docs build
+- **Test workflow** — pytest with coverage → SonarCloud analysis
+
+All CI jobs use `just` commands for consistency with local development.
 
 ## Architecture Highlights
 
