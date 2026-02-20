@@ -31,6 +31,7 @@ export { useEntryForm } from "./useEntryForm";
 export { useForgotPassword } from "./useForgotPassword";
 export { useFormField } from "./useFormField";
 export { useHeaderHeight } from "./useHeaderHeight";
+export { useTabBarHeight } from "./useTabBarHeight";
 export { useImagePicker } from "./useImagePicker";
 export {
   useDeleteMedia,

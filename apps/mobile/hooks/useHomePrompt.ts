@@ -38,6 +38,7 @@ export function useHomePrompt() {
     queryKey: queryKeys.prompts.generated(),
     queryFn: generateHomePrompt,
     staleTime: STALE_TIME_MS,
+    gcTime: STALE_TIME_MS,
     retry: false,
   });
 }

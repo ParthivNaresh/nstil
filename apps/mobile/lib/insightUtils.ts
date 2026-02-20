@@ -1,10 +1,5 @@
 import type { AIInsight, MoodCategory } from "@/types";
 
-export interface StreakData {
-  readonly streakLength: number;
-  readonly milestone: number;
-}
-
 export interface WeeklySummaryData {
   readonly entryCount: number;
   readonly dominantMood: MoodCategory | null;
@@ -24,18 +19,6 @@ const MOOD_CATEGORIES: readonly string[] = ["happy", "calm", "sad", "anxious", "
 
 function isMoodCategory(value: unknown): value is MoodCategory {
   return typeof value === "string" && MOOD_CATEGORIES.includes(value);
-}
-
-export function parseStreakData(insight: AIInsight): StreakData | null {
-  const { metadata } = insight;
-  const streakLength = metadata.streak_length;
-  const milestone = metadata.milestone;
-
-  if (typeof streakLength !== "number" || typeof milestone !== "number") {
-    return null;
-  }
-
-  return { streakLength, milestone };
 }
 
 export function parseWeeklySummaryData(insight: AIInsight): WeeklySummaryData | null {

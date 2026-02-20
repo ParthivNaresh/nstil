@@ -3,9 +3,14 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { HomeCheckInSection } from "@/components/home";
+import { HomeCheckInSection, StreakBanner } from "@/components/home";
 import { Header } from "@/components/ui";
-import { useHeaderHeight, useTheme } from "@/hooks";
+import {
+  useCalendarRange,
+  useHeaderHeight,
+  useTabBarHeight,
+  useTheme,
+} from "@/hooks";
 import { queryKeys } from "@/lib/queryKeys";
 import { spacing } from "@/styles";
 
@@ -15,12 +20,18 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const headerHeight = useHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
 
+  const { streak } = useCalendarRange();
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.prompts.generated() });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.prompts.generated() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.entries.calendars() }),
+    ]);
     setRefreshing(false);
   }, [queryClient]);
 
@@ -31,7 +42,10 @@ export default function HomeScreen() {
         style={styles.content}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: headerHeight + spacing.xl },
+          {
+            paddingTop: headerHeight + spacing.xl,
+            paddingBottom: tabBarHeight + spacing.md,
+          },
         ]}
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical
@@ -43,6 +57,7 @@ export default function HomeScreen() {
           />
         }
       >
+        {streak > 0 ? <StreakBanner streak={streak} /> : null}
         <HomeCheckInSection />
       </ScrollView>
     </View>

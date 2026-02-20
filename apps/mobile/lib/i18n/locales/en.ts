@@ -21,6 +21,7 @@ const en = {
     checkIn: "Check In",
     fallbackPrompt: "How are you feeling right now?",
     quickCheckIn: "Quick Check-in",
+    streakCount: "{{count}}-day streak",
   },
   settings: {
     appearance: "Appearance",
@@ -158,8 +159,6 @@ const en = {
     emptyTitle: "No insights yet",
     emptySubtitle: "Insights will appear as you journal",
     title: "Insights",
-    streakCount: "{{count}}-day streak",
-    streakMilestone: "🎉 {{milestone}}-day milestone!",
     weeklySummary: "Weekly Summary",
     entries: "Entries",
     avgLength: "Avg. Length",

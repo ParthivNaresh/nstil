@@ -11,6 +11,8 @@ import { CREATE_ROUTE } from "./tabIcons";
 import { TabBarItem } from "./TabBarItem";
 import type { TabBarProps } from "./types";
 
+export const TAB_BAR_CONTENT_HEIGHT = 60;
+
 export function TabBar({ state, descriptors, navigation }: TabBarProps) {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();

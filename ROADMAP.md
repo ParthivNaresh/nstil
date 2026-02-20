@@ -181,7 +181,47 @@ Full user-facing AI experience consuming 20 backend endpoints. Check-in flow wit
 
 ---
 
-## Phase 6 — Production Deployment & Observability
+## Phase 6 — Onboarding & Home Screen
+
+Post-signup onboarding flow and a home screen that feels alive. The onboarding captures the minimum data needed for personalization while keeping friction low. The home screen becomes the emotional center of the app — a daily snapshot that motivates the user to journal.
+
+### Subphase 6A — Backend: Profile Service & Onboarding State
+
+Wire up the existing `profiles` table (currently unused) with a backend service, cache layer, and API endpoints. Track onboarding completion so the app knows whether to show the onboarding flow or the main tabs.
+
+- [ ] **Profile model** — Pydantic models for `ProfileRow`, `ProfileCreate`, `ProfileUpdate`, `ProfileResponse`
+- [ ] **Profile service** — `ProfileService` with `get`, `create`, `update`, `upsert`. Reads/writes `profiles` table
+- [ ] **Cached profile service** — Redis cache with TTL-based invalidation, same pattern as other cached services
+- [ ] **Profile API endpoints** — `GET /api/v1/profile`, `PATCH /api/v1/profile` (auto-creates on first access via upsert)
+- [ ] **Onboarding state** — `onboarding_completed_at` column on `profiles` table. `PATCH /api/v1/profile/onboarding-complete` endpoint
+- [ ] **Tests** — Model, service, and API route tests
+
+### Subphase 6B — Mobile: Onboarding Flow
+
+3-screen onboarding flow that appears once after email verification. Minimal, fast, skippable. Persists completion state so it never shows again.
+
+- [ ] **Onboarding route group** — `app/(onboarding)/` with `_layout.tsx`, step screens, and progress indicator
+- [ ] **Step 1: Name** — "What should we call you?" Single text input for display name. Optional (skip button). Writes to `profiles.display_name`
+- [ ] **Step 2: Prompt style** — "Set your vibe" Quick picker (Gentle / Direct / Analytical / Motivational). Writes to `user_ai_profiles.prompt_style`. Reuses existing Skia gradient pill components
+- [ ] **Step 3: Notifications** — "Stay on track" Notification permission request. Reuses existing notification permission UI from settings
+- [ ] **Completion** — Calls `PATCH /api/v1/profile/onboarding-complete`, navigates to `/(tabs)`
+- [ ] **Root redirect logic** — `app/index.tsx` checks `profile.onboarding_completed_at`: if null → `/(onboarding)`, else → `/(tabs)`
+- [ ] **Profile hook** — `useProfile` query hook for fetching/caching profile data
+- [ ] **Auth store integration** — Profile data available globally after sign-in
+
+### Subphase 6C — Home Screen Enhancements
+
+Transform the home screen from a single check-in card into a daily dashboard.
+
+- [ ] **Time-of-day greeting** — "Good morning, Parthiv" / "Good afternoon" / "Good evening". Uses `profiles.display_name`, gracefully degrades to no name
+- [ ] **Streak banner** ✅ — Moved from Insights tab, uses calendar data directly
+- [ ] **Today's mood summary** — Compact card showing today's entries and moods, or "No entries yet" with quick-log CTA
+- [ ] **Recent entries** — Last 2–3 entries (title, mood orb, relative time). Tap navigates to detail
+- [ ] **Weekly mood dots** — 7 small dots (Mon–Sun) colored by dominant mood per day, empty for no-entry days
+
+---
+
+## Phase 7 — Production Deployment & Observability
 
 CI/CD pipelines, production Supabase project, monitoring, error tracking, app store submission.
 

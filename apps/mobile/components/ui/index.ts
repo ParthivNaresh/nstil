@@ -46,7 +46,7 @@ export type { SearchInputProps } from "./SearchInput";
 export { Skeleton } from "./Skeleton";
 export type { SkeletonProps, SkeletonShape } from "./Skeleton";
 
-export { TabBar } from "./TabBar";
+export { TabBar, TAB_BAR_CONTENT_HEIGHT } from "./TabBar";
 
 export { TextArea } from "./TextArea";
 export type { TextAreaProps } from "./TextArea";

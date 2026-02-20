@@ -1,6 +1,7 @@
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
+from nstil.models.ai_context import AIContextResponse
 from nstil.models.ai_insight import AIInsightRow, InsightType
 from nstil.models.calendar import CalendarDay, CalendarParams
 from nstil.models.pagination import CursorParams
@@ -19,6 +20,34 @@ from nstil.services.cached_ai_context import CachedAIContextService
 from nstil.services.cached_journal import CachedJournalService
 
 logger = get_logger("nstil.ai.insight_engine")
+
+PAST_WEEKS_TO_BACKFILL = 3
+BACKFILL_DAYS_BACK = 28
+
+
+def _find_weeks_with_entries(
+    calendar_days: list[CalendarDay],
+    current_week_start: date,
+    max_past_weeks: int,
+) -> list[date]:
+    dates_with_entries: set[date] = {
+        date.fromisoformat(d.date)
+        for d in calendar_days
+        if d.entry_count > 0
+    }
+
+    weeks: list[date] = []
+    for offset in range(max_past_weeks + 1):
+        week_start = current_week_start - timedelta(weeks=offset)
+        week_end = week_start + timedelta(days=6)
+        has_entries = any(
+            week_start <= d <= week_end for d in dates_with_entries
+        )
+        if has_entries:
+            weeks.append(week_start)
+
+    weeks.sort()
+    return weeks
 
 
 class InsightEngine:
@@ -45,9 +74,8 @@ class InsightEngine:
         if milestone_insight is not None:
             generated.append(milestone_insight)
 
-        summary_insight = await self.generate_weekly_summary(user_id)
-        if summary_insight is not None:
-            generated.append(summary_insight)
+        summary_insights = await self._generate_weekly_summaries(user_id)
+        generated.extend(summary_insights)
 
         anomaly_insight = await self.detect_mood_anomaly(user_id)
         if anomaly_insight is not None:
@@ -128,6 +156,29 @@ class InsightEngine:
 
         return row
 
+    async def _generate_weekly_summaries(
+        self,
+        user_id: UUID,
+    ) -> list[AIInsightRow]:
+        today = datetime.now(UTC).date()
+        current_week_start = today - timedelta(days=today.weekday())
+        calendar_days = await self._fetch_calendar_days(user_id, today, months_back=2)
+        weeks_with_entries = _find_weeks_with_entries(
+            calendar_days, current_week_start, PAST_WEEKS_TO_BACKFILL
+        )
+
+        context = await self._context.get_context(
+            user_id, entry_limit=100, days_back=BACKFILL_DAYS_BACK
+        )
+
+        generated: list[AIInsightRow] = []
+        for week_start in weeks_with_entries:
+            row = await self._generate_summary_for_week(user_id, week_start, context)
+            if row is not None:
+                generated.append(row)
+
+        return generated
+
     async def generate_weekly_summary(
         self,
         user_id: UUID,
@@ -136,6 +187,20 @@ class InsightEngine:
         today = datetime.now(UTC).date()
         if week_start is None:
             week_start = today - timedelta(days=today.weekday())
+
+        days_from_start = (today - week_start).days
+        days_back = max(days_from_start + 7, 14)
+        context = await self._context.get_context(
+            user_id, entry_limit=100, days_back=days_back
+        )
+        return await self._generate_summary_for_week(user_id, week_start, context)
+
+    async def _generate_summary_for_week(
+        self,
+        user_id: UUID,
+        week_start: date,
+        context: AIContextResponse,
+    ) -> AIInsightRow | None:
         week_end = week_start + timedelta(days=6)
 
         existing = await self._insights.list_by_period(
@@ -144,46 +209,33 @@ class InsightEngine:
             period_end=week_end,
             insight_type=InsightType.WEEKLY_SUMMARY.value,
         )
-        if existing:
-            return await self._regenerate_summary(user_id, existing[0], week_start, week_end)
-
-        context = await self._context.get_context(user_id, entry_limit=50, days_back=14)
 
         create_data = compute_weekly_summary(context, week_start, week_end)
-        row = await self._insights.create(user_id, create_data)
+        entry_count: int = create_data.metadata.get("entry_count", 0)  # type: ignore[assignment]
 
+        if existing:
+            old_entry_count: int = existing[0].metadata.get("entry_count", 0)  # type: ignore[assignment]
+            if entry_count == old_entry_count:
+                return None
+            if entry_count == 0:
+                return None
+            row = await self._insights.supersede(user_id, existing[0].id, create_data)
+            logger.info(
+                "insight_engine.weekly_summary.regenerated",
+                user_id=str(user_id),
+                period=f"{week_start} to {week_end}",
+                entry_count=entry_count,
+                superseded=str(existing[0].id),
+            )
+            return row
+
+        row = await self._insights.create(user_id, create_data)
         logger.info(
             "insight_engine.weekly_summary",
             user_id=str(user_id),
             period=f"{week_start} to {week_end}",
-            entry_count=create_data.metadata.get("entry_count"),
+            entry_count=entry_count,
         )
-
-        return row
-
-    async def _regenerate_summary(
-        self,
-        user_id: UUID,
-        old_insight: AIInsightRow,
-        week_start: date,
-        week_end: date,
-    ) -> AIInsightRow | None:
-        context = await self._context.get_context(user_id, entry_limit=50, days_back=14)
-        create_data = compute_weekly_summary(context, week_start, week_end)
-
-        if create_data.metadata.get("entry_count", 0) == 0:
-            return None
-
-        row = await self._insights.supersede(user_id, old_insight.id, create_data)
-
-        logger.info(
-            "insight_engine.weekly_summary.regenerated",
-            user_id=str(user_id),
-            period=f"{week_start} to {week_end}",
-            entry_count=create_data.metadata.get("entry_count"),
-            superseded=str(old_insight.id),
-        )
-
         return row
 
     async def detect_mood_anomaly(

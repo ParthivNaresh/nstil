@@ -3,7 +3,6 @@ import { Feather, Search } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -21,6 +20,7 @@ import {
   useCalendarRange,
   useDayEntries,
   useHeaderHeight,
+  useTabBarHeight,
   useTheme,
 } from "@/hooks";
 import { formatDateString } from "@/lib/calendarUtils";
@@ -43,8 +43,8 @@ export default function HistoryScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
 
   const [selectedDate, setSelectedDate] = useState(getTodayString);
   const [inlineSearch, setInlineSearch] = useState("");
@@ -209,7 +209,7 @@ export default function HistoryScreen() {
           styles.list,
           {
             paddingTop: headerHeight + spacing.sm,
-            paddingBottom: insets.bottom + spacing.lg,
+            paddingBottom: tabBarHeight + spacing.md,
           },
           displayEntries.length === 0 && styles.emptyList,
         ]}
