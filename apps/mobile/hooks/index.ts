@@ -17,6 +17,7 @@ export {
 export { useGenerateNarrativeSummary } from "./useNarrativeSummary";
 export { useYearCalendar } from "./useYearCalendar";
 export { useCalendarRange } from "./useCalendar";
+export { useMoodTrends } from "./useMoodTrends";
 export { useDayEntries } from "./useDayEntries";
 export {
   useCreateEntry,

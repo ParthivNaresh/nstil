@@ -1,5 +1,6 @@
-import { memo, useCallback, useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { memo, useCallback, useMemo, useState } from "react";
+import type { LayoutChangeEvent } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { AppText, Card } from "@/components/ui";
@@ -20,41 +21,42 @@ interface PixelDay {
   readonly hasEntries: boolean;
 }
 
-const CELL_SIZE = 14;
-const CELL_GAP = 2;
-const WEEKS_IN_YEAR = 53;
+const TRAILING_WEEKS = 26;
 const DAYS_IN_WEEK = 7;
+const CELL_GAP = 2;
 const EMPTY_OPACITY = 0.06;
 const FILLED_OPACITY = 0.7;
 
 const MONTH_LABELS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
-function buildPixelGrid(days: CalendarDay[]): PixelDay[][] {
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function buildTrailingGrid(days: CalendarDay[]): PixelDay[][] {
   const dayMap = new Map<string, CalendarDay>();
   for (const day of days) {
     dayMap.set(day.date, day);
   }
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const startDate = new Date(year, 0, 1);
-  const startDow = startDate.getDay();
+  const today = new Date();
+  const todayDow = today.getDay();
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(today.getDate() + (6 - todayDow));
+
+  const totalDays = TRAILING_WEEKS * DAYS_IN_WEEK;
+  const startDate = new Date(endOfWeek);
+  startDate.setDate(endOfWeek.getDate() - totalDays + 1);
 
   const grid: PixelDay[][] = [];
   let currentWeek: PixelDay[] = [];
+  const cursor = new Date(startDate);
 
-  for (let i = 0; i < startDow; i++) {
-    currentWeek.push({ date: "", mood: null, hasEntries: false });
-  }
-
-  const endDate = new Date(year, 11, 31);
-  const current = new Date(startDate);
-
-  while (current <= endDate) {
-    const y = current.getFullYear();
-    const m = String(current.getMonth() + 1).padStart(2, "0");
-    const d = String(current.getDate()).padStart(2, "0");
-    const dateStr = `${y}-${m}-${d}`;
+  for (let i = 0; i < totalDays; i++) {
+    const dateStr = toISODate(cursor);
     const calDay = dayMap.get(dateStr);
 
     currentWeek.push({
@@ -68,7 +70,7 @@ function buildPixelGrid(days: CalendarDay[]): PixelDay[][] {
       currentWeek = [];
     }
 
-    current.setDate(current.getDate() + 1);
+    cursor.setDate(cursor.getDate() + 1);
   }
 
   if (currentWeek.length > 0) {
@@ -78,12 +80,36 @@ function buildPixelGrid(days: CalendarDay[]): PixelDay[][] {
   return grid;
 }
 
+function computeMonthPositions(
+  grid: PixelDay[][],
+): { label: string; index: number }[] {
+  const positions: { label: string; index: number }[] = [];
+  let lastMonth = -1;
+
+  for (let weekIdx = 0; weekIdx < grid.length; weekIdx++) {
+    const week = grid[weekIdx];
+    for (const day of week) {
+      if (!day.date) continue;
+      const month = new Date(day.date).getMonth();
+      if (month !== lastMonth) {
+        positions.push({ label: MONTH_LABELS[month], index: weekIdx });
+        lastMonth = month;
+      }
+      break;
+    }
+  }
+
+  return positions;
+}
+
 const PixelCell = memo(function PixelCell({
   day,
+  size,
   emptyColor,
   onPress,
 }: {
   readonly day: PixelDay;
+  readonly size: number;
   readonly emptyColor: string;
   readonly onPress: (dateString: string) => void;
 }) {
@@ -92,10 +118,6 @@ const PixelCell = memo(function PixelCell({
       onPress(day.date);
     }
   }, [day.date, onPress]);
-
-  if (!day.date) {
-    return <View style={styles.cell} />;
-  }
 
   const backgroundColor = day.mood
     ? withAlpha(getMoodAccentColor(day.mood), FILLED_OPACITY)
@@ -106,7 +128,7 @@ const PixelCell = memo(function PixelCell({
   return (
     <Pressable
       onPress={handlePress}
-      style={[styles.cell, { backgroundColor }]}
+      style={[styles.cell, { width: size, height: size, backgroundColor }]}
       accessibilityLabel={day.date}
     />
   );
@@ -115,47 +137,33 @@ const PixelCell = memo(function PixelCell({
 export function YearInPixels({ days, onDayPress }: YearInPixelsProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const [containerWidth, setContainerWidth] = useState(0);
 
-  const grid = useMemo(() => buildPixelGrid(days), [days]);
+  const grid = useMemo(() => buildTrailingGrid(days), [days]);
+  const monthPositions = useMemo(() => computeMonthPositions(grid), [grid]);
 
-  const monthPositions = useMemo(() => {
-    const positions: { label: string; index: number }[] = [];
-    let lastMonth = -1;
+  const handleLayout = (event: LayoutChangeEvent) => {
+    setContainerWidth(event.nativeEvent.layout.width);
+  };
 
-    for (let weekIdx = 0; weekIdx < grid.length; weekIdx++) {
-      const week = grid[weekIdx];
-      for (const day of week) {
-        if (!day.date) continue;
-        const month = new Date(day.date).getMonth();
-        if (month !== lastMonth) {
-          positions.push({ label: MONTH_LABELS[month], index: weekIdx });
-          lastMonth = month;
-        }
-        break;
-      }
-    }
-
-    return positions;
-  }, [grid]);
+  const cellSize = containerWidth > 0
+    ? (containerWidth - (TRAILING_WEEKS - 1) * CELL_GAP) / TRAILING_WEEKS
+    : 0;
 
   return (
     <Card>
-      <View style={styles.container}>
+      <View style={styles.container} onLayout={handleLayout}>
         <AppText variant="h3" color={colors.textPrimary}>
           {t("insights.yearInPixels")}
         </AppText>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        {cellSize > 0 ? (
           <View>
             <View style={styles.monthRow}>
-              {Array.from({ length: WEEKS_IN_YEAR }, (_, i) => {
+              {Array.from({ length: TRAILING_WEEKS }, (_, i) => {
                 const monthEntry = monthPositions.find((p) => p.index === i);
                 return (
-                  <View key={i} style={styles.monthCell}>
+                  <View key={i} style={[styles.monthCell, { width: cellSize + CELL_GAP }]}>
                     {monthEntry ? (
                       <AppText variant="caption" color={colors.textTertiary}>
                         {monthEntry.label}
@@ -172,12 +180,18 @@ export function YearInPixels({ days, onDayPress }: YearInPixelsProps) {
                   {grid.map((week, weekIdx) => {
                     const day = week[rowIdx];
                     if (!day) {
-                      return <View key={weekIdx} style={styles.cell} />;
+                      return (
+                        <View
+                          key={weekIdx}
+                          style={[styles.cell, { width: cellSize, height: cellSize }]}
+                        />
+                      );
                     }
                     return (
                       <PixelCell
                         key={weekIdx}
                         day={day}
+                        size={cellSize}
                         emptyColor={colors.textTertiary}
                         onPress={onDayPress}
                       />
@@ -187,7 +201,7 @@ export function YearInPixels({ days, onDayPress }: YearInPixelsProps) {
               ))}
             </View>
           </View>
-        </ScrollView>
+        ) : null}
       </View>
     </Card>
   );
@@ -197,15 +211,11 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.md,
   },
-  scrollContent: {
-    paddingRight: spacing.sm,
-  },
   monthRow: {
     flexDirection: "row",
     marginBottom: spacing.xs,
   },
   monthCell: {
-    width: CELL_SIZE + CELL_GAP,
     alignItems: "center",
   },
   grid: {
@@ -216,8 +226,6 @@ const styles = StyleSheet.create({
     gap: CELL_GAP,
   },
   cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
     borderRadius: radius.xs,
   },
 });

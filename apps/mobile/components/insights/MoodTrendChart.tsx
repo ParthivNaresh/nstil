@@ -1,63 +1,66 @@
 import {
   Canvas,
   Circle,
-  Line as SkiaLine,
+  LinearGradient,
+  Path,
+  Skia,
   vec,
 } from "@shopify/react-native-skia";
-import { useMemo, useState } from "react";
-import type { LayoutChangeEvent } from "react-native";
-import { StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 
 import { AppText, Card } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { withAlpha } from "@/lib/colorUtils";
-import { getMoodAccentColor } from "@/lib/moodColors";
-import { spacing } from "@/styles";
-import type { AIInsight, MoodCategory } from "@/types";
+import { getMoodAccentColor, getMoodGradient } from "@/lib/moodColors";
+import { duration, easing, radius, spacing } from "@/styles";
+import type { DailyMoodCount, MoodCategory } from "@/types";
 
 interface MoodTrendChartProps {
-  readonly insights: AIInsight[];
+  readonly items: readonly DailyMoodCount[];
 }
 
-interface WeekMoodData {
+interface DayMoodData {
+  readonly dateKey: string;
   readonly label: string;
+  readonly dayNumber: string;
   readonly distribution: Readonly<Record<string, number>>;
   readonly total: number;
   readonly hasData: boolean;
+  readonly dominantMood: MoodCategory | null;
 }
 
-interface ChartPoint {
-  readonly x: number;
-  readonly y: number;
-  readonly hasData: boolean;
+interface WheelSegment {
+  readonly mood: MoodCategory;
+  readonly count: number;
+  readonly startAngle: number;
+  readonly sweepAngle: number;
 }
 
-const CHART_HEIGHT = 160;
-const CHART_PADDING_LEFT = 8;
-const CHART_PADDING_RIGHT = 8;
-const CHART_PADDING_TOP = 16;
-const CHART_PADDING_BOTTOM = 28;
-const DOT_RADIUS = 4;
-const LINE_WIDTH = 2;
-const LINE_OPACITY = 0.6;
-const MIN_WEEKS_FOR_TREND = 2;
-const MAX_WEEKS_DISPLAYED = 4;
-const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+const DISPLAY_DAYS = 7;
+const WHEEL_SIZE = 150;
+const STROKE_WIDTH = 18;
+const SEGMENT_GAP_DEGREES = 3;
+const EMPTY_RING_OPACITY = 0.1;
+const SWIPE_THRESHOLD = 40;
+const SWIPE_VELOCITY_THRESHOLD = 300;
+const DATE_PILL_SIZE = 36;
+const PILL_IDLE_OPACITY = 0.15;
+const PILL_SELECTED_OPACITY = 0.3;
+const PILL_BORDER_OPACITY = 0.35;
+const WHEEL_ANIM_DURATION = 500;
 
 const TRACKED_MOODS: readonly MoodCategory[] = ["happy", "calm", "sad", "anxious", "angry"];
-
-function parseDateParts(dateStr: string): Date | null {
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return null;
-  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-}
-
-function formatWeekLabel(dateStr: string): string {
-  const d = parseDateParts(dateStr);
-  if (!d) return "";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
+const DAY_LABELS: readonly string[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function toISODate(d: Date): string {
   const y = d.getFullYear();
@@ -66,215 +69,393 @@ function toISODate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function extractDistribution(insight: AIInsight): Readonly<Record<string, number>> {
-  const raw = insight.metadata.mood_distribution;
-  if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
-    return raw as Record<string, number>;
-  }
-  return {};
-}
-
-function deduplicateByPeriod(summaries: readonly AIInsight[]): Map<string, AIInsight> {
-  const byPeriod = new Map<string, AIInsight>();
-
-  for (const insight of summaries) {
-    const key = insight.period_start ?? "";
-    if (!key) continue;
-
-    const existing = byPeriod.get(key);
-    if (!existing) {
-      byPeriod.set(key, insight);
-      continue;
-    }
-
-    if (existing.source !== "computed" && insight.source === "computed") {
-      byPeriod.set(key, insight);
+function groupByDate(
+  items: readonly DailyMoodCount[],
+): Map<string, Record<string, number>> {
+  const map = new Map<string, Record<string, number>>();
+  for (const item of items) {
+    const existing = map.get(item.date);
+    if (existing) {
+      existing[item.mood_category] = (existing[item.mood_category] ?? 0) + item.entry_count;
+    } else {
+      map.set(item.date, { [item.mood_category]: item.entry_count });
     }
   }
-
-  return byPeriod;
+  return map;
 }
 
-function fillGapWeeks(dataByPeriod: Map<string, AIInsight>): WeekMoodData[] {
-  if (dataByPeriod.size === 0) return [];
+function findDominantMood(distribution: Readonly<Record<string, number>>): MoodCategory | null {
+  let maxCount = 0;
+  let dominant: MoodCategory | null = null;
+  for (const mood of TRACKED_MOODS) {
+    const count = distribution[mood] ?? 0;
+    if (count > maxCount) {
+      maxCount = count;
+      dominant = mood;
+    }
+  }
+  return dominant;
+}
 
-  const sortedKeys = Array.from(dataByPeriod.keys()).sort();
-  const earliest = parseDateParts(sortedKeys[0]);
-  const latest = parseDateParts(sortedKeys[sortedKeys.length - 1]);
-  if (!earliest || !latest) return [];
+function buildDayData(items: readonly DailyMoodCount[]): DayMoodData[] {
+  const grouped = groupByDate(items);
+  const today = new Date();
+  const result: DayMoodData[] = [];
 
-  const weeks: WeekMoodData[] = [];
-  const current = new Date(earliest);
+  for (let i = DISPLAY_DAYS - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = toISODate(d);
+    const distribution = grouped.get(key);
+    const dayOfWeek = d.getDay();
 
-  while (current <= latest) {
-    const key = toISODate(current);
-    const insight = dataByPeriod.get(key);
-
-    if (insight) {
-      const distribution = extractDistribution(insight);
+    if (distribution) {
       const total = Object.values(distribution).reduce((s, c) => s + c, 0);
-      weeks.push({
-        label: formatWeekLabel(key),
+      result.push({
+        dateKey: key,
+        label: DAY_LABELS[dayOfWeek],
+        dayNumber: String(d.getDate()),
         distribution,
         total,
         hasData: total > 0,
+        dominantMood: findDominantMood(distribution),
       });
     } else {
-      weeks.push({
-        label: formatWeekLabel(key),
+      result.push({
+        dateKey: key,
+        label: DAY_LABELS[dayOfWeek],
+        dayNumber: String(d.getDate()),
         distribution: {},
         total: 0,
         hasData: false,
+        dominantMood: null,
       });
     }
-
-    current.setTime(current.getTime() + MS_PER_WEEK);
   }
 
-  return weeks.slice(-MAX_WEEKS_DISPLAYED);
+  return result;
 }
 
-function buildWeekData(summaries: readonly AIInsight[]): WeekMoodData[] {
-  const dataByPeriod = deduplicateByPeriod(summaries);
-  return fillGapWeeks(dataByPeriod);
-}
+function computeWheelSegments(day: DayMoodData): WheelSegment[] {
+  if (day.total === 0) return [];
 
-function getActiveMoods(weeks: readonly WeekMoodData[]): MoodCategory[] {
-  const seen = new Set<string>();
-  for (const week of weeks) {
-    for (const mood of Object.keys(week.distribution)) {
-      seen.add(mood);
-    }
+  const moods = TRACKED_MOODS.filter((m) => (day.distribution[m] ?? 0) > 0);
+  if (moods.length === 0) return [];
+
+  if (moods.length === 1) {
+    return [{
+      mood: moods[0],
+      count: day.distribution[moods[0]] ?? 0,
+      startAngle: -90,
+      sweepAngle: 360,
+    }];
   }
-  return TRACKED_MOODS.filter((m) => seen.has(m));
+
+  const totalGap = SEGMENT_GAP_DEGREES * moods.length;
+  const availableDegrees = 360 - totalGap;
+  const segments: WheelSegment[] = [];
+  let currentAngle = -90;
+
+  for (const mood of moods) {
+    const count = day.distribution[mood] ?? 0;
+    const sweep = (count / day.total) * availableDegrees;
+    segments.push({
+      mood,
+      count,
+      startAngle: currentAngle,
+      sweepAngle: sweep,
+    });
+    currentAngle += sweep + SEGMENT_GAP_DEGREES;
+  }
+
+  return segments;
 }
 
-function countWeeksWithData(weeks: readonly WeekMoodData[]): number {
-  return weeks.filter((w) => w.hasData).length;
+function createArcPath(
+  cx: number,
+  cy: number,
+  r: number,
+  startAngleDeg: number,
+  sweepAngleDeg: number,
+): ReturnType<typeof Skia.Path.Make> {
+  const path = Skia.Path.Make();
+  const oval = Skia.XYWHRect(cx - r, cy - r, r * 2, r * 2);
+  path.addArc(oval, startAngleDeg, sweepAngleDeg);
+  return path;
 }
 
-function computeMoodRatio(week: WeekMoodData, mood: MoodCategory): number {
-  if (week.total === 0) return 0;
-  return (week.distribution[mood] ?? 0) / week.total;
+function getActiveMoodsForDay(day: DayMoodData): MoodCategory[] {
+  return TRACKED_MOODS.filter((m) => (day.distribution[m] ?? 0) > 0);
 }
 
-function computeChartPoints(
-  weeks: readonly WeekMoodData[],
-  mood: MoodCategory,
-  drawableWidth: number,
-  drawableHeight: number,
-  stepX: number,
-): ChartPoint[] {
-  return weeks.map((week, i) => {
-    const ratio = computeMoodRatio(week, mood);
-    return {
-      x: CHART_PADDING_LEFT + i * stepX,
-      y: CHART_PADDING_TOP + drawableHeight * (1 - ratio),
-      hasData: week.hasData,
-    };
-  });
+function DatePill({
+  day,
+  isSelected,
+  isToday,
+  onSelect,
+  textPrimary,
+  textTertiary,
+  glassBorder,
+}: {
+  readonly day: DayMoodData;
+  readonly isSelected: boolean;
+  readonly isToday: boolean;
+  readonly onSelect: (dateKey: string) => void;
+  readonly textPrimary: string;
+  readonly textTertiary: string;
+  readonly glassBorder: string;
+}) {
+  const handlePress = useCallback(() => {
+    onSelect(day.dateKey);
+  }, [day.dateKey, onSelect]);
+
+  const moodColor = day.dominantMood
+    ? getMoodAccentColor(day.dominantMood)
+    : null;
+
+  const pillBg = isSelected && moodColor
+    ? withAlpha(moodColor, PILL_SELECTED_OPACITY)
+    : moodColor
+      ? withAlpha(moodColor, PILL_IDLE_OPACITY)
+      : "transparent";
+
+  const borderColor = isSelected && moodColor
+    ? withAlpha(moodColor, PILL_BORDER_OPACITY)
+    : isToday
+      ? withAlpha(glassBorder, 0.3)
+      : "transparent";
+
+  const labelColor = isSelected ? textPrimary : textTertiary;
+  const numberColor = moodColor && !isSelected
+    ? withAlpha(moodColor, 0.9)
+    : isSelected
+      ? textPrimary
+      : textTertiary;
+
+  return (
+    <Pressable onPress={handlePress} style={styles.datePillWrapper}>
+      <AppText variant="caption" color={withAlpha(labelColor, 0.7)}>
+        {day.label}
+      </AppText>
+      <View
+        style={[
+          styles.datePill,
+          {
+            backgroundColor: pillBg,
+            borderColor,
+          },
+        ]}
+      >
+        <AppText variant="caption" color={numberColor} style={styles.datePillText}>
+          {day.dayNumber}
+        </AppText>
+      </View>
+    </Pressable>
+  );
 }
 
-export function MoodTrendChart({ insights }: MoodTrendChartProps) {
+function MoodWheel({
+  day,
+  emptyColor,
+  progress,
+}: {
+  readonly day: DayMoodData;
+  readonly emptyColor: string;
+  readonly progress: number;
+}) {
+  const segments = useMemo(() => computeWheelSegments(day), [day]);
+  const cx = WHEEL_SIZE / 2;
+  const cy = WHEEL_SIZE / 2;
+  const r = (WHEEL_SIZE - STROKE_WIDTH) / 2;
+
+  if (!day.hasData) {
+    return (
+      <Canvas style={styles.wheelCanvas}>
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          style="stroke"
+          strokeWidth={STROKE_WIDTH}
+          color={withAlpha(emptyColor, EMPTY_RING_OPACITY)}
+        />
+      </Canvas>
+    );
+  }
+
+  const cap = segments.length === 1 ? "round" : "butt";
+
+  return (
+    <Canvas style={styles.wheelCanvas}>
+      {segments.map((segment) => {
+        const animatedSweep = segment.sweepAngle * progress;
+        if (animatedSweep < 0.5) return null;
+
+        const path = createArcPath(cx, cy, r, segment.startAngle, animatedSweep);
+        const gradient = getMoodGradient(segment.mood);
+
+        const midAngle = segment.startAngle + animatedSweep / 2;
+        const midRad = (midAngle * Math.PI) / 180;
+        const gradStart = vec(
+          cx + r * Math.cos(midRad - Math.PI / 4),
+          cy + r * Math.sin(midRad - Math.PI / 4),
+        );
+        const gradEnd = vec(
+          cx + r * Math.cos(midRad + Math.PI / 4),
+          cy + r * Math.sin(midRad + Math.PI / 4),
+        );
+
+        return (
+          <Path
+            key={segment.mood}
+            path={path}
+            style="stroke"
+            strokeWidth={STROKE_WIDTH}
+            strokeCap={cap}
+          >
+            <LinearGradient
+              start={gradStart}
+              end={gradEnd}
+              colors={[gradient.from, gradient.to]}
+            />
+          </Path>
+        );
+      })}
+    </Canvas>
+  );
+}
+
+export function MoodTrendChart({ items }: MoodTrendChartProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const [containerWidth, setContainerWidth] = useState(0);
+  const dayData = useMemo(() => buildDayData(items), [items]);
 
-  const summaries = useMemo(
-    () => insights.filter((i) => i.insight_type === "weekly_summary"),
-    [insights],
+  const todayKey = useMemo(() => toISODate(new Date()), []);
+  const [selectedDate, setSelectedDate] = useState(todayKey);
+
+  const wheelProgress = useSharedValue(0);
+  const [renderProgress, setRenderProgress] = useState(0);
+
+  useEffect(() => {
+    wheelProgress.value = 0;
+    setRenderProgress(0);
+
+    const steps = 20;
+    const stepDuration = WHEEL_ANIM_DURATION / steps;
+    let step = 0;
+
+    const interval = setInterval(() => {
+      step++;
+      const t = step / steps;
+      const eased = 1 - Math.pow(1 - t, 3);
+      setRenderProgress(eased);
+
+      if (step >= steps) {
+        clearInterval(interval);
+        setRenderProgress(1);
+      }
+    }, stepDuration);
+
+    return () => clearInterval(interval);
+  }, [selectedDate, wheelProgress]);
+
+  const selectedDay = useMemo(
+    () => dayData.find((d) => d.dateKey === selectedDate) ?? dayData[dayData.length - 1],
+    [dayData, selectedDate],
   );
 
-  const weeks = useMemo(() => buildWeekData(summaries), [summaries]);
-  const activeMoods = useMemo(() => getActiveMoods(weeks), [weeks]);
-  const dataWeekCount = useMemo(() => countWeeksWithData(weeks), [weeks]);
+  const selectedIndex = useMemo(
+    () => dayData.findIndex((d) => d.dateKey === selectedDate),
+    [dayData, selectedDate],
+  );
 
-  const handleLayout = (event: LayoutChangeEvent) => {
-    setContainerWidth(event.nativeEvent.layout.width);
-  };
+  const activeMoods = useMemo(
+    () => getActiveMoodsForDay(selectedDay),
+    [selectedDay],
+  );
 
-  if (dataWeekCount < MIN_WEEKS_FOR_TREND || activeMoods.length === 0) {
+  const navigateDay = useCallback(
+    (direction: -1 | 1) => {
+      const newIndex = selectedIndex + direction;
+      if (newIndex >= 0 && newIndex < dayData.length) {
+        setSelectedDate(dayData[newIndex].dateKey);
+      }
+    },
+    [selectedIndex, dayData],
+  );
+
+  const translateX = useSharedValue(0);
+
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-SWIPE_THRESHOLD / 2, SWIPE_THRESHOLD / 2])
+    .onUpdate((e) => {
+      translateX.value = e.translationX * 0.3;
+    })
+    .onEnd((e) => {
+      translateX.value = withSpring(0, easing.spring);
+
+      const swipedLeft =
+        e.translationX < -SWIPE_THRESHOLD || e.velocityX < -SWIPE_VELOCITY_THRESHOLD;
+      const swipedRight =
+        e.translationX > SWIPE_THRESHOLD || e.velocityX > SWIPE_VELOCITY_THRESHOLD;
+
+      if (swipedLeft) {
+        navigateDay(1);
+      } else if (swipedRight) {
+        navigateDay(-1);
+      }
+    })
+    .runOnJS(true);
+
+  const wheelAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const centerOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    centerOpacity.value = 0;
+    centerOpacity.value = withTiming(1, {
+      duration: duration.slow,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [selectedDate, centerOpacity]);
+
+  const centerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: centerOpacity.value,
+  }));
+
+  const hasAnyData = useMemo(
+    () => dayData.some((d) => d.hasData),
+    [dayData],
+  );
+
+  if (!hasAnyData) {
     return null;
   }
 
-  if (weeks.length < 2) {
-    return null;
-  }
-
-  const canvasWidth = containerWidth > 0 ? containerWidth : 300;
-  const drawableWidth = canvasWidth - CHART_PADDING_LEFT - CHART_PADDING_RIGHT;
-  const drawableHeight = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
-  const stepX = drawableWidth / (weeks.length - 1);
+  const entryCount = selectedDay.total;
 
   return (
     <Card>
-      <View style={styles.container} onLayout={handleLayout}>
-        <AppText variant="h3" color={colors.textPrimary}>
-          {t("insights.moodTrends")}
-        </AppText>
+      <View style={styles.container}>
+        <View style={styles.dateStrip}>
+          {dayData.map((day) => (
+            <DatePill
+              key={day.dateKey}
+              day={day}
+              isSelected={day.dateKey === selectedDate}
+              isToday={day.dateKey === todayKey}
+              onSelect={setSelectedDate}
+              textPrimary={colors.textPrimary}
+              textTertiary={colors.textTertiary}
+              glassBorder={colors.glassBorder}
+            />
+          ))}
+        </View>
 
-        {containerWidth > 0 ? (
-          <>
-            <Canvas style={[styles.canvas, { width: canvasWidth }]}>
-              {activeMoods.map((mood) => {
-                const color = getMoodAccentColor(mood);
-                const points = computeChartPoints(
-                  weeks, mood, drawableWidth, drawableHeight, stepX,
-                );
-
-                return points.flatMap((point, i) => {
-                  const elements: React.JSX.Element[] = [];
-
-                  if (point.hasData) {
-                    elements.push(
-                      <Circle
-                        key={`${mood}-dot-${i}`}
-                        cx={point.x}
-                        cy={point.y}
-                        r={DOT_RADIUS}
-                        color={color}
-                      />,
-                    );
-                  }
-
-                  if (i < points.length - 1) {
-                    const next = points[i + 1];
-
-                    if (point.hasData && next.hasData) {
-                      elements.push(
-                        <SkiaLine
-                          key={`${mood}-line-${i}`}
-                          p1={vec(point.x, point.y)}
-                          p2={vec(next.x, next.y)}
-                          color={withAlpha(color, LINE_OPACITY)}
-                          strokeWidth={LINE_WIDTH}
-                        />,
-                      );
-                    }
-                  }
-
-                  return elements;
-                });
-              })}
-            </Canvas>
-
-            <View style={styles.xAxis}>
-              {weeks.map((week, i) => (
-                <AppText
-                  key={i}
-                  variant="caption"
-                  color={
-                    week.hasData
-                      ? colors.textTertiary
-                      : withAlpha(colors.textTertiary, 0.5)
-                  }
-                  style={styles.xLabel}
-                >
-                  {week.label}
-                </AppText>
-              ))}
-            </View>
-
+        <View style={styles.wheelRow}>
+          {activeMoods.length > 0 ? (
             <View style={styles.legend}>
               {activeMoods.map((mood) => (
                 <View key={mood} style={styles.legendItem}>
@@ -290,8 +471,35 @@ export function MoodTrendChart({ insights }: MoodTrendChartProps) {
                 </View>
               ))}
             </View>
-          </>
-        ) : null}
+          ) : null}
+
+          <GestureDetector gesture={swipeGesture}>
+            <Animated.View style={[styles.wheelContainer, wheelAnimatedStyle]}>
+              <MoodWheel
+                day={selectedDay}
+                emptyColor={colors.textTertiary}
+                progress={renderProgress}
+              />
+
+              <Animated.View style={[styles.wheelCenter, centerAnimatedStyle]}>
+                {selectedDay.hasData ? (
+                  <>
+                    <AppText variant="h2" color={colors.textPrimary}>
+                      {entryCount}
+                    </AppText>
+                    <AppText variant="caption" color={colors.textTertiary}>
+                      {entryCount === 1 ? "entry" : "entries"}
+                    </AppText>
+                  </>
+                ) : (
+                  <AppText variant="caption" color={withAlpha(colors.textTertiary, 0.6)}>
+                    {t("insights.noEntries")}
+                  </AppText>
+                )}
+              </Animated.View>
+            </Animated.View>
+          </GestureDetector>
+        </View>
       </View>
     </Card>
   );
@@ -299,23 +507,50 @@ export function MoodTrendChart({ insights }: MoodTrendChartProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  canvas: {
-    height: CHART_HEIGHT,
-    alignSelf: "center",
-  },
-  xAxis: {
+  dateStrip: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: CHART_PADDING_LEFT,
   },
-  xLabel: {
-    textAlign: "center",
+  datePillWrapper: {
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+  },
+  datePill: {
+    width: DATE_PILL_SIZE,
+    height: DATE_PILL_SIZE,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  datePillText: {
+    fontWeight: "600",
+  },
+  wheelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.lg,
+  },
+  wheelContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: WHEEL_SIZE,
+    height: WHEEL_SIZE,
+  },
+  wheelCanvas: {
+    width: WHEEL_SIZE,
+    height: WHEEL_SIZE,
+  },
+  wheelCenter: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
   },
   legend: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: spacing.sm,
   },
   legendItem: {

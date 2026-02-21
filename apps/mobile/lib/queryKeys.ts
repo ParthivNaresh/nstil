@@ -15,6 +15,8 @@ export const queryKeys = {
     calendars: () => [...queryKeys.entries.all, "calendar"] as const,
     calendar: (year: number, month: number) =>
       [...queryKeys.entries.calendars(), { year, month }] as const,
+    moodTrends: (days: number = 7) =>
+      [...queryKeys.entries.all, "moodTrends", { days }] as const,
   },
   media: {
     all: ["media"] as const,

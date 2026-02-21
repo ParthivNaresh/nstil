@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 from supabase import AsyncClient
 
-from nstil.models.calendar import CalendarDay, CalendarParams
+from nstil.models.calendar import CalendarDay, CalendarParams, DailyMoodCount, MoodTrendParams
 from nstil.models.journal import JournalEntryCreate, JournalEntryRow, JournalEntryUpdate
 from nstil.models.pagination import CursorParams, SearchParams
 
@@ -146,6 +146,20 @@ class JournalService:
         result = await self._client.rpc("get_calendar_data", rpc_params).execute()
         data: list[dict[str, Any]] = result.data  # type: ignore[assignment]
         return [CalendarDay.model_validate(row) for row in data]
+
+    async def get_mood_trends(
+        self, user_id: UUID, params: MoodTrendParams
+    ) -> list[DailyMoodCount]:
+        rpc_params: dict[str, str | int] = {
+            "p_user_id": str(user_id),
+            "p_days": params.days,
+            "p_timezone": params.timezone,
+        }
+        result = await self._client.rpc(
+            "get_daily_mood_distribution", rpc_params
+        ).execute()
+        data: list[dict[str, Any]] = result.data  # type: ignore[assignment]
+        return [DailyMoodCount.model_validate(row) for row in data]
 
     async def soft_delete(self, user_id: UUID, entry_id: UUID) -> bool:
         now = datetime.now(UTC).isoformat()

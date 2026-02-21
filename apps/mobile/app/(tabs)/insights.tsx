@@ -18,6 +18,7 @@ import {
   useGenerateNarrativeSummary,
   useHeaderHeight,
   useInsightsList,
+  useMoodTrends,
   useTabBarHeight,
   useTheme,
   useUpdateInsight,
@@ -34,8 +35,6 @@ import type { AIInsight } from "@/types";
 
 import { styles } from "@/styles/screens/insightsStyles";
 
-const CURRENT_YEAR = new Date().getFullYear();
-
 export default function InsightsScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -48,7 +47,8 @@ export default function InsightsScreen() {
   const { mutate: generate } = useGenerateInsights();
   const { data: insightsResponse, isLoading: insightsLoading } = useInsightsList();
   const { mutate: updateInsight } = useUpdateInsight();
-  const { days: yearDays, isLoading: yearLoading } = useYearCalendar(CURRENT_YEAR);
+  const { data: moodTrends } = useMoodTrends();
+  const { days: yearDays, isLoading: yearLoading } = useYearCalendar();
 
   useEffect(() => {
     if (!hasGenerated.current) {
@@ -130,7 +130,10 @@ export default function InsightsScreen() {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     generate();
-    await queryClient.invalidateQueries({ queryKey: queryKeys.insights.all });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.insights.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.entries.moodTrends() }),
+    ]);
     setRefreshing(false);
   }, [generate]);
 
@@ -203,6 +206,8 @@ export default function InsightsScreen() {
               />
             ) : null}
 
+            <MoodTrendChart items={moodTrends?.items ?? []} />
+
             {weeklySummaryData ? (
               <WeeklySummaryCard data={weeklySummaryData} />
             ) : null}
@@ -210,8 +215,6 @@ export default function InsightsScreen() {
             {anomalyInsight && anomalyData ? (
               <MoodAnomalyCard insight={anomalyInsight} data={anomalyData} />
             ) : null}
-
-            <MoodTrendChart insights={insights} />
 
             {!yearLoading && yearDays.length > 0 ? (
               <YearInPixels days={yearDays} onDayPress={handleDayPress} />

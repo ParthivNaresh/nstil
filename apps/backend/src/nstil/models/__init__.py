@@ -67,7 +67,14 @@ from nstil.models.ai_task import (
     TaskType,
 )
 from nstil.models.auth import UserPayload
-from nstil.models.calendar import CalendarDay, CalendarParams, CalendarResponse
+from nstil.models.calendar import (
+    CalendarDay,
+    CalendarParams,
+    CalendarResponse,
+    DailyMoodCount,
+    MoodTrendParams,
+    MoodTrendResponse,
+)
 from nstil.models.embedding import (
     EntryEmbeddingCreate,
     EntryEmbeddingResponse,
@@ -147,6 +154,7 @@ __all__ = [
     "CalendarParams",
     "CalendarResponse",
     "CursorParams",
+    "DailyMoodCount",
     "EntryEmbeddingCreate",
     "EntryEmbeddingResponse",
     "EntryEmbeddingRow",
@@ -173,6 +181,8 @@ __all__ = [
     "MessageRole",
     "MoodCategory",
     "MoodSpecific",
+    "MoodTrendParams",
+    "MoodTrendResponse",
     "NotificationPreferencesResponse",
     "NotificationPreferencesRow",
     "NotificationPreferencesUpdate",

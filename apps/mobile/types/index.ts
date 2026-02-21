@@ -38,7 +38,7 @@ export type {
   ValidationError,
   VerifyEmailRouteParams,
 } from "./auth";
-export type { CalendarDay, CalendarResponse } from "./calendar";
+export type { CalendarDay, CalendarResponse, DailyMoodCount, MoodTrendResponse } from "./calendar";
 export type {
   EntryType,
   JournalEntry,

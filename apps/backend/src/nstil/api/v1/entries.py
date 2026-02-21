@@ -13,6 +13,8 @@ from nstil.models import (
     JournalEntryListResponse,
     JournalEntryResponse,
     JournalEntryUpdate,
+    MoodTrendParams,
+    MoodTrendResponse,
     SearchParams,
     UserPayload,
 )
@@ -100,6 +102,18 @@ async def get_calendar(
         total_entries=total,
         streak=streak,
     )
+
+
+@router.get("/mood-trends", response_model=MoodTrendResponse)
+async def get_mood_trends(
+    user: Annotated[UserPayload, Depends(get_current_user)],
+    service: Annotated[CachedJournalService, Depends(get_journal_service)],
+    days: Annotated[int, Query(ge=1, le=90)] = 7,
+    timezone: Annotated[str, Query(max_length=50)] = "UTC",
+) -> MoodTrendResponse:
+    params = MoodTrendParams(days=days, timezone=timezone)
+    items = await service.get_mood_trends(UUID(user.sub), params)
+    return MoodTrendResponse(items=items, days=days)
 
 
 @router.get("/search", response_model=JournalEntryListResponse)

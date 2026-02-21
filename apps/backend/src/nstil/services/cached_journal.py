@@ -1,7 +1,7 @@
 from datetime import date
 from uuid import UUID
 
-from nstil.models.calendar import CalendarDay, CalendarParams
+from nstil.models.calendar import CalendarDay, CalendarParams, DailyMoodCount, MoodTrendParams
 from nstil.models.journal import JournalEntryCreate, JournalEntryRow, JournalEntryUpdate
 from nstil.models.pagination import CursorParams, SearchParams
 from nstil.services.cache.entry_cache import EntryCacheService
@@ -95,6 +95,11 @@ class CachedJournalService:
         days = await self._db.get_calendar(user_id, params)
         await self._cache.set_calendar(user_id, params.year, params.month, days, params.timezone)
         return days
+
+    async def get_mood_trends(
+        self, user_id: UUID, params: MoodTrendParams
+    ) -> list[DailyMoodCount]:
+        return await self._db.get_mood_trends(user_id, params)
 
     async def soft_delete(self, user_id: UUID, entry_id: UUID) -> bool:
         deleted = await self._db.soft_delete(user_id, entry_id)

@@ -9,6 +9,24 @@ class CalendarParams(BaseModel):
     timezone: str = Field(default="UTC", max_length=50)
 
 
+class MoodTrendParams(BaseModel):
+    days: int = Field(default=7, ge=1, le=90)
+    timezone: str = Field(default="UTC", max_length=50)
+
+
+class DailyMoodCount(BaseModel):
+    date: str
+    mood_category: str
+    entry_count: int
+
+    model_config = {"extra": "ignore"}
+
+
+class MoodTrendResponse(BaseModel):
+    items: list[DailyMoodCount]
+    days: int
+
+
 class CalendarDay(BaseModel):
     date: str
     mood_category: str | None

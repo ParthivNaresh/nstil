@@ -6,7 +6,7 @@ import { getCalendar } from "@/services/api/calendar";
 import type { CalendarDay, CalendarResponse } from "@/types";
 
 const STALE_TIME_MS = 10 * 60 * 1000;
-const MONTHS_IN_YEAR = 12;
+const TRAILING_MONTHS = 13;
 
 function getUserTimezone(): string {
   try {
@@ -16,21 +16,38 @@ function getUserTimezone(): string {
   }
 }
 
+interface MonthParam {
+  readonly year: number;
+  readonly month: number;
+}
+
 interface UseYearCalendarResult {
   readonly days: CalendarDay[];
   readonly isLoading: boolean;
 }
 
-export function useYearCalendar(year: number): UseYearCalendarResult {
+function buildTrailingMonthParams(): MonthParam[] {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  const params: MonthParam[] = [];
+  for (let i = TRAILING_MONTHS - 1; i >= 0; i--) {
+    let m = currentMonth - i;
+    let y = currentYear;
+    while (m <= 0) {
+      m += 12;
+      y -= 1;
+    }
+    params.push({ year: y, month: m });
+  }
+  return params;
+}
+
+export function useYearCalendar(): UseYearCalendarResult {
   const timezone = getUserTimezone();
 
-  const monthParams = useMemo(
-    () => Array.from({ length: MONTHS_IN_YEAR }, (_, i) => ({
-      year,
-      month: i + 1,
-    })),
-    [year],
-  );
+  const monthParams = useMemo(() => buildTrailingMonthParams(), []);
 
   const queries = useQueries({
     queries: monthParams.map((p) => ({

@@ -25,6 +25,11 @@ PAST_WEEKS_TO_BACKFILL = 3
 BACKFILL_DAYS_BACK = 28
 
 
+def _sunday_week_start(reference: date) -> date:
+    days_since_sunday = (reference.weekday() + 1) % 7
+    return reference - timedelta(days=days_since_sunday)
+
+
 def _find_weeks_with_entries(
     calendar_days: list[CalendarDay],
     current_week_start: date,
@@ -161,7 +166,7 @@ class InsightEngine:
         user_id: UUID,
     ) -> list[AIInsightRow]:
         today = datetime.now(UTC).date()
-        current_week_start = today - timedelta(days=today.weekday())
+        current_week_start = _sunday_week_start(today)
         calendar_days = await self._fetch_calendar_days(user_id, today, months_back=2)
         weeks_with_entries = _find_weeks_with_entries(
             calendar_days, current_week_start, PAST_WEEKS_TO_BACKFILL
@@ -186,7 +191,7 @@ class InsightEngine:
     ) -> AIInsightRow | None:
         today = datetime.now(UTC).date()
         if week_start is None:
-            week_start = today - timedelta(days=today.weekday())
+            week_start = _sunday_week_start(today)
 
         days_from_start = (today - week_start).days
         days_back = max(days_from_start + 7, 14)
@@ -245,7 +250,7 @@ class InsightEngine:
     ) -> AIInsightRow | None:
         today = datetime.now(UTC).date()
         if week_start is None:
-            week_start = today - timedelta(days=today.weekday())
+            week_start = _sunday_week_start(today)
         week_end = week_start + timedelta(days=6)
 
         existing = await self._insights.list_by_period(
@@ -276,7 +281,7 @@ class InsightEngine:
 
     async def _cleanup_empty_summaries(self, user_id: UUID) -> None:
         today = datetime.now(UTC).date()
-        current_week_start = today - timedelta(days=today.weekday())
+        current_week_start = _sunday_week_start(today)
 
         params = CursorParams(limit=50)
         rows, _ = await self._insights.list_insights(

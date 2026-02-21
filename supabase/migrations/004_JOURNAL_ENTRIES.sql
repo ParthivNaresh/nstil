@@ -226,3 +226,32 @@ as $$
     left join daily_mood dm on dc.day = dm.day
     order by dc.day;
 $$;
+
+
+create or replace function public.get_daily_mood_distribution(
+    p_user_id uuid,
+    p_days int default 7,
+    p_timezone text default 'UTC'
+)
+returns table (
+    date text,
+    mood_category text,
+    entry_count bigint
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+    select
+        to_char(e.created_at at time zone p_timezone, 'YYYY-MM-DD') as date,
+        e.mood_category,
+        count(*) as entry_count
+    from public.journal_entries e
+    where e.user_id = p_user_id
+      and e.deleted_at is null
+      and e.mood_category is not null
+      and e.created_at >= (now() at time zone p_timezone - make_interval(days => p_days))::date::timestamptz
+    group by 1, e.mood_category
+    order by 1
+$$;

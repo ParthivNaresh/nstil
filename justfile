@@ -2,6 +2,9 @@
 
 # ── High-level commands ──────────────────────────────────
 
+create:
+    cd apps/backend && uv run python ../../scripts/create_test_user.py
+
 doctor:
     ./scripts/doctor.sh
 
