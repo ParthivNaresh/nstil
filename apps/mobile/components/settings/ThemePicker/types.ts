@@ -9,6 +9,7 @@ export interface ThemeModeOption {
 export interface ThemePickerProps {
   readonly currentMode: ThemeMode;
   readonly onSelect: (mode: ThemeMode) => void;
+  readonly showLabel?: boolean;
 }
 
 export interface ThemeModeCardProps {

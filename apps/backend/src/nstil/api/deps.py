@@ -24,10 +24,12 @@ from nstil.services.cached_ai_context import CachedAIContextService
 from nstil.services.cached_ai_profile import CachedAIProfileService
 from nstil.services.cached_journal import CachedJournalService
 from nstil.services.cached_notification import CachedNotificationService
+from nstil.services.cached_profile import CachedProfileService
 from nstil.services.cached_space import CachedSpaceService
 from nstil.services.journal import JournalService
 from nstil.services.media import MediaService
 from nstil.services.notification import NotificationService
+from nstil.services.profile import ProfileService
 from nstil.services.space import JournalSpaceService
 
 bearer_scheme = HTTPBearer()
@@ -108,6 +110,13 @@ def get_notification_service(
     ai_cache: Annotated[AICacheService, Depends(get_ai_cache_service)],
 ) -> CachedNotificationService:
     return CachedNotificationService(NotificationService(supabase), ai_cache)
+
+
+def get_profile_service(
+    supabase: Annotated[AsyncClient, Depends(get_supabase)],
+    ai_cache: Annotated[AICacheService, Depends(get_ai_cache_service)],
+) -> CachedProfileService:
+    return CachedProfileService(ProfileService(supabase), ai_cache)
 
 
 def get_ai_session_service(

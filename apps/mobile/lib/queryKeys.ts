@@ -56,6 +56,9 @@ export const queryKeys = {
       [...queryKeys.insights.lists(), { type, status }] as const,
     generated: () => [...queryKeys.insights.all, "generated"] as const,
   },
+  profile: {
+    all: ["profile"] as const,
+  },
   aiProfile: {
     all: ["aiProfile"] as const,
   },

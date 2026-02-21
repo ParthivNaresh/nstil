@@ -3,11 +3,12 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { HomeCheckInSection, StreakBanner } from "@/components/home";
+import { Greeting, HomeCheckInSection, StreakBanner } from "@/components/home";
 import { Header } from "@/components/ui";
 import {
   useCalendarRange,
   useHeaderHeight,
+  useProfile,
   useTabBarHeight,
   useTheme,
 } from "@/hooks";
@@ -24,6 +25,7 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
 
+  const { data: profile } = useProfile();
   const { streak } = useCalendarRange();
 
   const handleRefresh = useCallback(async () => {
@@ -31,6 +33,7 @@ export default function HomeScreen() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.prompts.generated() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.entries.calendars() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.all }),
     ]);
     setRefreshing(false);
   }, [queryClient]);
@@ -57,6 +60,7 @@ export default function HomeScreen() {
           />
         }
       >
+        <Greeting displayName={profile?.display_name ?? null} />
         {streak > 0 ? <StreakBanner streak={streak} /> : null}
         <HomeCheckInSection />
       </ScrollView>

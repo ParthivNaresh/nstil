@@ -52,7 +52,7 @@ export function useSignInForm(): SignInFormReturn {
     setIsLoading(true);
     try {
       await signIn(email.value.trim(), password.value);
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch (error: unknown) {
       setFormError(mapAuthError(error, t));
     } finally {

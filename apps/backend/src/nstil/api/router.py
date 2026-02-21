@@ -9,6 +9,7 @@ from nstil.api.v1 import (
     insights,
     journals,
     media,
+    profile,
 )
 
 api_router = APIRouter(prefix="/api")
@@ -20,6 +21,7 @@ v1_router.include_router(journals.router)
 v1_router.include_router(media.router)
 v1_router.include_router(check_in.router)
 v1_router.include_router(insights.router)
+v1_router.include_router(profile.router)
 v1_router.include_router(ai_profile.router)
 v1_router.include_router(ai_context.router)
 

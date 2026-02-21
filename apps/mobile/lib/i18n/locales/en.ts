@@ -22,6 +22,14 @@ const en = {
     fallbackPrompt: "How are you feeling right now?",
     quickCheckIn: "Quick Check-in",
     streakCount: "{{count}}-day streak",
+    greeting: {
+      morning: "Good morning",
+      afternoon: "Good afternoon",
+      evening: "Good evening",
+      morningName: "Good morning, {{name}}",
+      afternoonName: "Good afternoon, {{name}}",
+      eveningName: "Good evening, {{name}}",
+    },
   },
   settings: {
     appearance: "Appearance",
@@ -171,6 +179,32 @@ const en = {
     yearInPixels: "Year in Pixels",
     confidenceLabel: "{{value}}% shift from average",
     period: "{{start}} – {{end}}",
+  },
+  onboarding: {
+    welcome: {
+      title: "Welcome to NStil",
+      subtitle: "Your personal reflection companion",
+      nameLabel: "What should we call you?",
+      namePlaceholder: "Your name",
+      continue: "Continue",
+      skip: "Skip",
+    },
+    style: {
+      title: "Set your vibe",
+      subtitle: "Choose how your AI companion communicates with you",
+      continue: "Continue",
+    },
+    theme: {
+      title: "Choose your look",
+      subtitle: "You can always change this later in settings",
+      continue: "Continue",
+    },
+    notifications: {
+      title: "Stay on track",
+      subtitle: "Get gentle reminders to check in with yourself",
+      enable: "Enable Notifications",
+      skip: "Maybe Later",
+    },
   },
   auth: {
     welcome: {

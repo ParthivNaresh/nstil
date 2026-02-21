@@ -64,6 +64,7 @@ export type {
   ReminderFrequency,
   ReminderTime,
 } from "./notification";
+export type { Profile, ProfileUpdate } from "./profile";
 export type {
   JournalSpace,
   JournalSpaceCreate,

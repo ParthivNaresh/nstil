@@ -15,6 +15,7 @@ from nstil.models.ai_task import AIAgentTaskRow
 from nstil.models.journal import JournalEntryRow
 from nstil.models.media import EntryMediaRow
 from nstil.models.notification import NotificationPreferencesRow, ReminderTime
+from nstil.models.profile import ProfileRow
 from nstil.models.space import JournalSpaceRow
 
 DEFAULT_SECRET = "test-secret"
@@ -379,6 +380,26 @@ def make_ai_feedback_row(
         reason=reason,
         metadata={},
         created_at=created_at or now,
+    )
+
+
+def make_profile_row(
+    *,
+    user_id: str = DEFAULT_USER_ID,
+    display_name: str | None = None,
+    avatar_url: str | None = None,
+    onboarding_completed_at: datetime | None = None,
+    created_at: datetime | None = None,
+    updated_at: datetime | None = None,
+) -> ProfileRow:
+    now = datetime.now(UTC)
+    return ProfileRow(
+        id=uuid.UUID(user_id),
+        display_name=display_name,
+        avatar_url=avatar_url,
+        onboarding_completed_at=onboarding_completed_at,
+        created_at=created_at or now,
+        updated_at=updated_at or now,
     )
 
 

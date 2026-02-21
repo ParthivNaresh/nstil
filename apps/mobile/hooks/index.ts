@@ -50,6 +50,11 @@ export {
   useNotificationPreferences,
   useUpdateNotificationPreferences,
 } from "./useNotificationPreferences";
+export {
+  useCompleteOnboarding,
+  useProfile,
+  useUpdateProfile,
+} from "./useProfile";
 export { useNotificationSync } from "./useNotificationSync";
 export { useResetPassword } from "./useResetPassword";
 export { useSignInForm } from "./useSignInForm";

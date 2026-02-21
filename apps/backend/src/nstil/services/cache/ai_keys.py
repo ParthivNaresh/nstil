@@ -17,3 +17,7 @@ def ai_profile_key(user_id: UUID) -> str:
 
 def notification_prefs_key(user_id: UUID) -> str:
     return f"{KEY_PREFIX}:user:{user_id}:notification:prefs"
+
+
+def user_profile_key(user_id: UUID) -> str:
+    return f"{KEY_PREFIX}:user:{user_id}:profile"

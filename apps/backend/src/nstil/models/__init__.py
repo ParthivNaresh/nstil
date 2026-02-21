@@ -106,6 +106,7 @@ from nstil.models.notification import (
     ReminderTime,
 )
 from nstil.models.pagination import CursorParams, SearchParams
+from nstil.models.profile import ProfileResponse, ProfileRow, ProfileUpdate
 from nstil.models.space import (
     JournalSpaceCreate,
     JournalSpaceListResponse,
@@ -186,6 +187,9 @@ __all__ = [
     "NotificationPreferencesResponse",
     "NotificationPreferencesRow",
     "NotificationPreferencesUpdate",
+    "ProfileResponse",
+    "ProfileRow",
+    "ProfileUpdate",
     "PromptSource",
     "PromptStatus",
     "PromptStyle",

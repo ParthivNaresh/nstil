@@ -185,39 +185,39 @@ Full user-facing AI experience consuming 20 backend endpoints. Check-in flow wit
 
 Post-signup onboarding flow and a home screen that feels alive. The onboarding captures the minimum data needed for personalization while keeping friction low. The home screen becomes the emotional center of the app — a daily snapshot that motivates the user to journal.
 
-### Subphase 6A — Backend: Profile Service & Onboarding State
+### Subphase 6A — Backend: Profile Service & Onboarding State ✅
 
-Wire up the existing `profiles` table (currently unused) with a backend service, cache layer, and API endpoints. Track onboarding completion so the app knows whether to show the onboarding flow or the main tabs.
+Wired up the existing `profiles` table with backend service, cache layer, and API endpoints. `handle_new_user()` trigger creates profile row on signup — this subphase built the application layer to read and update it. `onboarding_completed_at` column added to `profiles` migration (NULL = not completed). `ProfileRow`, `ProfileUpdate`, `ProfileResponse` models. `ProfileService` with get/update/complete_onboarding. `CachedProfileService` with Redis TTL-based invalidation. 3 API endpoints (`GET /api/v1/profile`, `PATCH /api/v1/profile`, `POST /api/v1/profile/onboarding-complete`). DI factory. 32 new tests (13 model, 7 service, 12 API route). 615 total backend tests.
 
-- [ ] **Profile model** — Pydantic models for `ProfileRow`, `ProfileCreate`, `ProfileUpdate`, `ProfileResponse`
-- [ ] **Profile service** — `ProfileService` with `get`, `create`, `update`, `upsert`. Reads/writes `profiles` table
-- [ ] **Cached profile service** — Redis cache with TTL-based invalidation, same pattern as other cached services
-- [ ] **Profile API endpoints** — `GET /api/v1/profile`, `PATCH /api/v1/profile` (auto-creates on first access via upsert)
-- [ ] **Onboarding state** — `onboarding_completed_at` column on `profiles` table. `PATCH /api/v1/profile/onboarding-complete` endpoint
-- [ ] **Tests** — Model, service, and API route tests
+### Subphase 6B — Mobile: Onboarding Flow ✅
 
-### Subphase 6B — Mobile: Onboarding Flow
+4-step onboarding flow that appears once after email verification. One-time experience — if the user kills the app or navigates away before completion, it restarts from step 1. Only marked complete when all steps are finished. No local step persistence.
 
-3-screen onboarding flow that appears once after email verification. Minimal, fast, skippable. Persists completion state so it never shows again.
-
-- [ ] **Onboarding route group** — `app/(onboarding)/` with `_layout.tsx`, step screens, and progress indicator
-- [ ] **Step 1: Name** — "What should we call you?" Single text input for display name. Optional (skip button). Writes to `profiles.display_name`
-- [ ] **Step 2: Prompt style** — "Set your vibe" Quick picker (Gentle / Direct / Analytical / Motivational). Writes to `user_ai_profiles.prompt_style`. Reuses existing Skia gradient pill components
-- [ ] **Step 3: Notifications** — "Stay on track" Notification permission request. Reuses existing notification permission UI from settings
-- [ ] **Completion** — Calls `PATCH /api/v1/profile/onboarding-complete`, navigates to `/(tabs)`
-- [ ] **Root redirect logic** — `app/index.tsx` checks `profile.onboarding_completed_at`: if null → `/(onboarding)`, else → `/(tabs)`
-- [ ] **Profile hook** — `useProfile` query hook for fetching/caching profile data
-- [ ] **Auth store integration** — Profile data available globally after sign-in
+**Completed:**
+- `types/profile.ts` — `Profile`, `ProfileUpdate` interfaces
+- `services/api/profile.ts` — `getProfile()`, `updateProfile()`, `completeOnboarding()`
+- `hooks/useProfile.ts` — `useProfile()` (with `enabled` flag), `useUpdateProfile()` (optimistic), `useCompleteOnboarding()`
+- `queryKeys.ts` — `profile` key
+- `app/index.tsx` — Root redirect: fetches profile after auth, routes to `/(onboarding)` if `onboarding_completed_at` null, else `/(tabs)`
+- `app/(onboarding)/_layout.tsx` — Stack navigator, no header, fade transitions
+- `components/onboarding/StepIndicator.tsx` — Animated progress dots (active pill expands, Reanimated)
+- `components/onboarding/OnboardingStep.tsx` — Shared step layout (indicator, title, subtitle, content, footer)
+- Step 1 (Welcome/Name) — flat text input, Continue writes display_name, Skip proceeds without
+- Step 2 (Prompt Style) — reuses `PromptStylePicker` with `showLabel={false}`, writes to AI profile
+- Step 3 (Theme) — reuses `ThemePicker` with `showLabel={false}`, instant preview via `themeStore`
+- Step 4 (Notifications) — Bell icon, Enable requests permission, both paths call `POST /api/v1/profile/onboarding-complete` then `router.replace("/(tabs)")`
+- `showLabel` prop added to `PromptStylePicker` and `ThemePicker` (backward compatible, defaults `true`)
+- i18n: `onboarding` namespace with all step strings
 
 ### Subphase 6C — Home Screen Enhancements
 
 Transform the home screen from a single check-in card into a daily dashboard.
 
-- [ ] **Time-of-day greeting** — "Good morning, Parthiv" / "Good afternoon" / "Good evening". Uses `profiles.display_name`, gracefully degrades to no name
+- [x] **Time-of-day greeting** — "Good morning, Parthiv" / "Good afternoon" / "Good evening". Uses `profiles.display_name`, gracefully degrades to no name. `greetingUtils.ts` utility, `Greeting` component, current date below greeting. Profile query cached from root index fetch
 - [ ] **Streak banner** ✅ — Moved from Insights tab, uses calendar data directly
 - [ ] **Today's mood summary** — Compact card showing today's entries and moods, or "No entries yet" with quick-log CTA
 - [ ] **Recent entries** — Last 2–3 entries (title, mood orb, relative time). Tap navigates to detail
-- [ ] **Weekly mood dots** — 7 small dots (Mon–Sun) colored by dominant mood per day, empty for no-entry days
+- [ ] **Weekly mood dots** — 7 small dots (Sun–Sat) colored by dominant mood per day, empty for no-entry days
 
 ---
 

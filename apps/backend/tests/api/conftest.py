@@ -15,6 +15,7 @@ from nstil.api.deps import (
     get_journal_service,
     get_media_service,
     get_notification_service,
+    get_profile_service,
     get_prompt_engine,
     get_redis,
     get_settings,
@@ -31,6 +32,7 @@ from nstil.services.cached_ai_context import CachedAIContextService
 from nstil.services.cached_ai_profile import CachedAIProfileService
 from nstil.services.cached_journal import CachedJournalService
 from nstil.services.cached_notification import CachedNotificationService
+from nstil.services.cached_profile import CachedProfileService
 from nstil.services.cached_space import CachedSpaceService
 from nstil.services.media import MediaService
 
@@ -108,6 +110,11 @@ def mock_prompt_engine() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_profile_service() -> AsyncMock:
+    return AsyncMock(spec=CachedProfileService)
+
+
+@pytest.fixture
 def client(
     settings: Settings,
     mock_redis: AsyncMock,
@@ -123,6 +130,7 @@ def client(
     mock_ai_context_service: AsyncMock,
     mock_ai_prompt_service: AsyncMock,
     mock_prompt_engine: AsyncMock,
+    mock_profile_service: AsyncMock,
 ) -> Iterator[TestClient]:
     from nstil.main import create_app
 
@@ -142,6 +150,7 @@ def client(
     app.dependency_overrides[get_ai_context_service] = lambda: mock_ai_context_service
     app.dependency_overrides[get_ai_prompt_service] = lambda: mock_ai_prompt_service
     app.dependency_overrides[get_prompt_engine] = lambda: mock_prompt_engine
+    app.dependency_overrides[get_profile_service] = lambda: mock_profile_service
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

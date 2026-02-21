@@ -18,6 +18,7 @@ import type { PromptStyle } from "@/types";
 interface PromptStylePickerProps {
   readonly value: PromptStyle;
   readonly onChange: (style: PromptStyle) => void;
+  readonly showLabel?: boolean;
 }
 
 const STYLES: readonly PromptStyle[] = [
@@ -91,15 +92,17 @@ function StylePill({ style, label, isSelected, onSelect }: StylePillProps) {
   );
 }
 
-export function PromptStylePicker({ value, onChange }: PromptStylePickerProps) {
+export function PromptStylePicker({ value, onChange, showLabel = true }: PromptStylePickerProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
 
   return (
     <View style={styles.container}>
-      <AppText variant="label" color={colors.textSecondary}>
-        {t("settings.aiProfile.promptStyle")}
-      </AppText>
+      {showLabel ? (
+        <AppText variant="label" color={colors.textSecondary}>
+          {t("settings.aiProfile.promptStyle")}
+        </AppText>
+      ) : null}
       <View style={styles.row}>
         {STYLES.map((s) => (
           <StylePill
