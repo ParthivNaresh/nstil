@@ -30,6 +30,11 @@ const en = {
       afternoonName: "Good afternoon, {{name}}",
       eveningName: "Good evening, {{name}}",
     },
+    moodSnapshot: {
+      prompt: "How are you feeling?",
+      logged: "Logged",
+      logAgain: "Tap to log again",
+    },
   },
   settings: {
     appearance: "Appearance",

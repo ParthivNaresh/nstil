@@ -211,11 +211,73 @@ Wired up the existing `profiles` table with backend service, cache layer, and AP
 
 ### Subphase 6C — Home Screen Enhancements
 
-Transform the home screen from a single check-in card into a daily dashboard.
+Transform the home screen from a single check-in card into a daily dashboard with Mood Snapshots as a new primary interaction loop.
 
 - [x] **Time-of-day greeting** — "Good morning, Parthiv" / "Good afternoon" / "Good evening". Uses `profiles.display_name`, gracefully degrades to no name. `greetingUtils.ts` utility, `Greeting` component, current date below greeting. Profile query cached from root index fetch
-- [ ] **Streak banner** ✅ — Moved from Insights tab, uses calendar data directly
-- [ ] **Today's mood summary** — Compact card showing today's entries and moods, or "No entries yet" with quick-log CTA
+- [x] **Streak banner** — Already on home screen, uses calendar data directly
+
+#### Mood Snapshots
+
+One-tap mood logging directly from the home screen. No title, no body, no navigation — just tap a mood and it's saved. Creates a new `mood_snapshot` entry type that feeds into the calendar, mood trends, AI context, and weekly summaries automatically. The goal is to increase daily touchpoints from 1 (journal entry) to many, capturing emotional moments throughout the day that the user would never write a full entry for.
+
+**Entry point:** An inline mood strip on the home screen (between greeting and check-in card). 5 mood category pills always visible. Tap a category → sub-emotions slide in below → tap a sub-emotion → done. Or tap the category again to confirm just the category. 2 taps max, 2 seconds.
+
+**Step 1: Backend — `mood_snapshot` entry type ✅**
+- [x] Added `MOOD_SNAPSHOT = "mood_snapshot"` to `EntryType` enum in `models/journal.py`
+- [x] Created `BODYLESS_ENTRY_TYPES` frozenset (`CHECK_IN`, `MOOD_SNAPSHOT`) — replaces hardcoded `!= EntryType.CHECK_IN` check
+- [x] Updated `JournalEntryCreate` body validation: exempt `BODYLESS_ENTRY_TYPES` from body requirement
+- [x] Added `mood_snapshot` validation: require `mood_category` when `entry_type` is `mood_snapshot`
+- [x] Updated SQL CHECK constraint in `004_JOURNAL_ENTRIES.sql` to include `'mood_snapshot'`
+- [x] Exported `BODYLESS_ENTRY_TYPES` from `models/__init__.py`
+- [x] 8 new model tests (create with category, with specific, without mood rejected, empty body accepted, body accepted, invalid pair rejected, bodyless set membership, response from row)
+
+**Step 2: Backend — AI context awareness ✅**
+- [x] Renamed `_has_check_in_today()` → `_has_engaged_today()` in `prompt_engine.py` — now checks `_ENGAGEMENT_ENTRY_TYPES` frozenset (`check_in`, `mood_snapshot`)
+- [x] Verified `insight_computations.py` handles `mood_snapshot` correctly — `Counter(e.entry_type)` is type-agnostic
+- [x] 6 new engagement tests + 2 weekly summary tests with mood snapshots
+- [x] No changes needed to calendar RPCs — they already aggregate all entries with moods regardless of type
+
+**Step 3: Mobile — types & hook ✅**
+- [x] Added `"mood_snapshot"` to `EntryType` union in `types/journal.ts`
+- [x] Added `BODYLESS_ENTRY_TYPES` as `ReadonlySet<EntryType>` — mirrors backend frozenset, exported from `types/index.ts`
+- [x] Made `body` optional in `JournalEntryCreate` (`readonly body?: string`)
+- [x] Created `hooks/useMoodSnapshot.ts` — `useMoodSnapshot()` returns `{ logMood, isLogging, lastSnapshot }`. Auto-selects first journal, creates `mood_snapshot` entry, tracks last log for cooldown UI
+- [x] Added `shouldGenerateReflection()` guard in `useEntries.ts` — `useCreateEntry` and `useUpdateEntry` skip reflection for bodyless entry types
+- [x] Exported `useMoodSnapshot` from `hooks/index.ts`
+- [x] `EntryTypeSelector` confirmed unchanged — `mood_snapshot` not in picker
+
+**Step 4: Mobile — `MoodSnapshotStrip` component ✅**
+- [x] `components/home/MoodSnapshotStrip.tsx` — Inline mood strip with 5 category pills (reuses `MoodItem` and `MoodSpecificItem` directly)
+- [x] Three-state machine: `idle` → `selecting` → `success` → `idle`
+- [x] Two-phase interaction: tap category → sub-emotions slide in with staggered `FadeInDown` → tap sub-emotion → logged
+- [x] Category-only confirm: tap selected category again to log without sub-emotion
+- [x] Haptic feedback: `notificationAsync(Success)` on specific select, `impactAsync(Light)` on category (via `MoodItem`)
+- [x] Success state: checkmark icon + mood label + relative time ("Anxious · 2h ago"), auto-returns to idle after 2s
+- [x] Cooldown: after logging, shows last snapshot with "Tap to log again" hint. Tap resets to idle
+- [x] Exported from `components/home/index.ts`
+
+**Step 5: Mobile — Home screen integration ✅**
+- [x] `MoodSnapshotStrip` added to home screen between `Greeting` and `StreakBanner`
+- [x] Pull-to-refresh invalidates entries lists (mood snapshots refresh)
+- [x] i18n keys: `home.moodSnapshot.prompt`, `home.moodSnapshot.logged`, `home.moodSnapshot.logAgain`
+
+**Step 6: Mobile — History/Calendar display ✅**
+- [x] `MoodSnapshotPill` component — compact inline pill (gradient dot + mood label + relative time) with `Pressable` for navigation
+- [x] History screen `renderItem` branches on `entry_type === "mood_snapshot"` → renders `MoodSnapshotPill` instead of `AnimatedEntryCard`
+- [x] Calendar day detail shows snapshots alongside full entries (same `useDayEntries` query, branched rendering)
+- [x] `MoodSnapshotDetail` component — read-only detail view with large gradient orb, mood label, category, date, location
+- [x] Entry detail screen branches: mood snapshots → `MoodSnapshotScreen` (read-only, delete only, no edit form/pin/save)
+- [x] Exported from `components/journal/index.ts`
+
+**Design decisions:**
+- **Inline, not modal** — The mood strip is always visible on the home screen. No FAB, no bottom sheet, no navigation. Zero friction.
+- **Reuse `journal_entries` table** — A mood snapshot is just an entry with `entry_type: "mood_snapshot"`, a mood, and no body. All existing queries, insights, calendar, and AI context include it automatically.
+- **Not in entry type picker** — The 4 writing types (Journal, Reflection, Gratitude, Freewrite) stay as-is. Mood snapshots are created exclusively from the home screen strip.
+- **Cooldown, not rate limit** — After logging, the strip shows the last snapshot instead of pills. The user can tap to log again anytime. No hard limit, but the visual state change reduces accidental double-taps.
+- **Default journal** — Mood snapshots auto-assign to the user's first journal (same as check-in entries). No journal picker needed for a 2-second interaction.
+
+#### Remaining Home Screen Items
+- [ ] **Today's mood summary** — Compact card showing moods logged today (from both entries and snapshots)
 - [ ] **Recent entries** — Last 2–3 entries (title, mood orb, relative time). Tap navigates to detail
 - [ ] **Weekly mood dots** — 7 small dots (Sun–Sat) colored by dominant mood per day, empty for no-entry days
 

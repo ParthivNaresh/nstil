@@ -20,6 +20,16 @@ class CachedAIProfileService:
             await self._cache.set_profile(user_id, row)
         return row
 
+    async def get_or_create(self, user_id: UUID) -> UserAIProfileRow | None:
+        cached = await self._cache.get_profile(user_id)
+        if cached is not None:
+            return cached
+
+        row = await self._db.get_or_create(user_id)
+        if row is not None:
+            await self._cache.set_profile(user_id, row)
+        return row
+
     async def update(self, user_id: UUID, data: UserAIProfileUpdate) -> UserAIProfileRow | None:
         row = await self._db.update(user_id, data)
         if row is not None:

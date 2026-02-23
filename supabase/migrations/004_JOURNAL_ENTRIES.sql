@@ -21,7 +21,7 @@ create table public.journal_entries (
     deleted_at      timestamptz,
 
     constraint journal_entries_entry_type_check
-        check (entry_type in ('journal', 'reflection', 'gratitude', 'freewrite', 'check_in')),
+        check (entry_type in ('journal', 'reflection', 'gratitude', 'freewrite', 'check_in', 'mood_snapshot')),
 
     constraint journal_entries_mood_category_valid
         check (mood_category in ('happy', 'calm', 'sad', 'anxious', 'angry')),

@@ -39,6 +39,9 @@ export type {
   VerifyEmailRouteParams,
 } from "./auth";
 export type { CalendarDay, CalendarResponse, DailyMoodCount, MoodTrendResponse } from "./calendar";
+export {
+  BODYLESS_ENTRY_TYPES,
+} from "./journal";
 export type {
   EntryType,
   JournalEntry,

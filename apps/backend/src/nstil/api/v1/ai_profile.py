@@ -26,7 +26,7 @@ async def get_ai_profile(
     user: Annotated[UserPayload, Depends(get_current_user)],
     service: Annotated[CachedAIProfileService, Depends(get_ai_profile_service)],
 ) -> UserAIProfileResponse:
-    row = await service.get(UUID(user.sub))
+    row = await service.get_or_create(UUID(user.sub))
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -55,7 +55,7 @@ async def get_notification_preferences(
     user: Annotated[UserPayload, Depends(get_current_user)],
     service: Annotated[CachedNotificationService, Depends(get_notification_service)],
 ) -> NotificationPreferencesResponse:
-    row = await service.get(UUID(user.sub))
+    row = await service.get_or_create(UUID(user.sub))
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

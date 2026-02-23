@@ -26,6 +26,8 @@ _VALID_MOOD_CATEGORIES: frozenset[str] = frozenset(m.value for m in MoodCategory
 
 _DIFFICULT_MOODS: frozenset[str] = frozenset({"sad", "anxious", "angry"})
 
+_ENGAGEMENT_ENTRY_TYPES: frozenset[str] = frozenset({"check_in", "mood_snapshot"})
+
 
 def _get_dominant_mood(
     context: AIContextResponse,
@@ -35,10 +37,10 @@ def _get_dominant_mood(
     return context.mood_distribution[0].mood_category
 
 
-def _has_check_in_today(context: AIContextResponse) -> bool:
+def _has_engaged_today(context: AIContextResponse) -> bool:
     now = datetime.now(UTC)
     for entry in context.recent_entries:
-        if entry.entry_type == "check_in" and entry.created_at.date() == now.date():
+        if entry.entry_type in _ENGAGEMENT_ENTRY_TYPES and entry.created_at.date() == now.date():
             return True
     return False
 
@@ -188,7 +190,7 @@ class PromptEngine:
         if days_inactive is not None and days_inactive >= INACTIVITY_THRESHOLD_DAYS:
             return PromptType.NUDGE.value
 
-        if not _has_check_in_today(context):
+        if not _has_engaged_today(context):
             return PromptType.CHECK_IN.value
 
         difficult_count = _count_difficult_moods(context)

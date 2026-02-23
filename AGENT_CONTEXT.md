@@ -183,6 +183,21 @@ All AI inference runs on-device via Apple Foundation Models (iOS 26+). No cloud 
 - **TypeScript AI layer** (`lib/ai/`): foundationModels (timeout, errors), promptTemplates (per-task system prompts), promptContext (context to natural language), promptGenerator (type determination), reflectionEngine (entry reflections), summaryEngine (weekly narratives), notificationTextEngine (notification text), personalizedNotifications (shared scheduling utility)
 - **Fallback**: when Foundation Models unavailable, falls back to curated PromptBank on backend. UI is source-agnostic
 
+### Auth guard (critical — do not change this pattern)
+
+The auth guard lives in `app/_layout.tsx` (root layout), NOT in `app/index.tsx`. It uses `useSegments()` + `useAuthStore` to reactively navigate:
+
+- **Authenticated user in `(auth)` group** → `router.replace("/(tabs)")`
+- **Unauthenticated user outside `(auth)` group** → `router.replace("/(auth)")`
+
+`app/index.tsx` handles cold-start routing only (initial load, onboarding check, profile fetch). It uses declarative `<Redirect>` which commits a permanent navigation state — once it fires, `router.replace("/")` from inside a group will NOT re-mount the root index. This is an Expo Router behavior.
+
+**Rules:**
+- Never call `router.replace("/")` from inside `(auth)` screens — it resolves to the group's index, not `app/index.tsx`
+- Sign-in/sign-up forms should NOT navigate after auth — the layout effect handles it reactively
+- `signIn()` in `authStore` must update the Zustand store synchronously (not rely on `onAuthStateChange`)
+- iOS Simulator Keychain persists across app deletions — `just dev` and `just db-reset` reset it automatically
+
 ### Key patterns
 
 - **No files in `app/` except route components**

@@ -128,6 +128,22 @@ cd "$REPO_ROOT"
 supabase start > /dev/null 2>&1 || true
 echo "  Supabase started"
 
+step "Resetting iOS Simulator keychain"
+BOOTED_DEVICE_ID=$(xcrun simctl list devices booted -j 2>/dev/null | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for runtime, devices in data.get('devices', {}).items():
+    for d in devices:
+        if d.get('state') == 'Booted':
+            print(d['udid'])
+            sys.exit(0)
+" 2>/dev/null || true)
+if [[ -n "$BOOTED_DEVICE_ID" ]]; then
+  xcrun simctl keychain "$BOOTED_DEVICE_ID" reset 2>/dev/null && echo "  Keychain reset for $BOOTED_DEVICE_ID" || echo "  No booted simulator to reset"
+else
+  echo "  No booted simulator found — skipping"
+fi
+
 step "Waiting for Supabase Auth to be healthy"
 for i in $(seq 1 15); do
   status=$(curl -m 2 -s -o /dev/null -w "%{http_code}" http://127.0.0.1:54321/auth/v1/health 2>/dev/null || echo "000")

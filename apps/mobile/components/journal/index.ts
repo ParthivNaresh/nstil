@@ -3,7 +3,7 @@ export type { CalendarProps } from "./Calendar";
 
 export { DayActionBar } from "./DayActionBar";
 
-export { AnimatedEntryCard, EntryCard, EntryCardSkeleton } from "./EntryCard";
+export { AnimatedEntryCard, EntryCard, EntryCardSkeleton, MoodSnapshotPill } from "./EntryCard";
 export type { EntryCardProps, EntryCardSkeletonProps } from "./EntryCard";
 
 export { EntryDatePicker } from "./EntryDatePicker";
@@ -17,6 +17,8 @@ export type { ImageAttachmentStripProps } from "./ImageAttachmentStrip";
 
 export { LocationPicker } from "./LocationPicker";
 export type { LocationPickerProps } from "./LocationPicker";
+
+export { MoodSnapshotDetail } from "./MoodSnapshotDetail";
 
 export { ReflectionCard } from "./ReflectionCard";
 export type { ReflectionCardProps } from "./ReflectionCard";

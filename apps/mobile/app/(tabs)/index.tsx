@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { Greeting, HomeCheckInSection, StreakBanner } from "@/components/home";
+import { Greeting, HomeCheckInSection, MoodSnapshotStrip, StreakBanner } from "@/components/home";
 import { Header } from "@/components/ui";
 import {
   useCalendarRange,
@@ -33,6 +33,7 @@ export default function HomeScreen() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.prompts.generated() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.entries.calendars() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.entries.lists() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.profile.all }),
     ]);
     setRefreshing(false);
@@ -61,6 +62,7 @@ export default function HomeScreen() {
         }
       >
         <Greeting displayName={profile?.display_name ?? null} />
+        <MoodSnapshotStrip />
         {streak > 0 ? <StreakBanner streak={streak} /> : null}
         <HomeCheckInSection />
       </ScrollView>

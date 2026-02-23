@@ -126,12 +126,22 @@ db-reset:
     echo "→ Waiting for Supabase to stabilize..."
     for i in {1..15}; do
         if supabase status > /dev/null 2>&1 && curl -sf http://127.0.0.1:54321/rest/v1/ -o /dev/null 2>&1; then
-            echo "→ Database reset complete"
-            exit 0
+            break
         fi
         sleep 2
     done
-    echo "→ Database reset complete (containers may still be warming up)"
+    BOOTED_ID=$(xcrun simctl list devices booted -j 2>/dev/null | python3 -c "
+    import json, sys
+    data = json.load(sys.stdin)
+    for runtime, devices in data.get('devices', {}).items():
+        for d in devices:
+            if d.get('state') == 'Booted':
+                print(d['udid']); sys.exit(0)
+    " 2>/dev/null || true)
+    if [[ -n "${BOOTED_ID:-}" ]]; then
+        xcrun simctl keychain "$BOOTED_ID" reset 2>/dev/null && echo "→ Simulator keychain reset" || true
+    fi
+    echo "→ Database reset complete"
 
 db-migration name:
     supabase migration new {{name}}

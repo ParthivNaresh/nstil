@@ -83,6 +83,7 @@ from nstil.models.embedding import (
     SemanticSearchResult,
 )
 from nstil.models.journal import (
+    BODYLESS_ENTRY_TYPES,
     EntryType,
     JournalEntryCreate,
     JournalEntryListResponse,
@@ -116,6 +117,7 @@ from nstil.models.space import (
 )
 
 __all__ = [
+    "BODYLESS_ENTRY_TYPES",
     "AIAgentTaskCreate",
     "AIAgentTaskListResponse",
     "AIAgentTaskResponse",

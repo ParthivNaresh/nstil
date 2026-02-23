@@ -1,9 +1,13 @@
 from typing import Any
 from uuid import UUID
 
+from postgrest.exceptions import APIError
 from supabase import AsyncClient
 
 from nstil.models.ai_profile import UserAIProfileRow, UserAIProfileUpdate
+from nstil.observability import get_logger
+
+logger = get_logger("nstil.services.ai.profile")
 
 TABLE = "user_ai_profiles"
 
@@ -19,6 +23,27 @@ class AIProfileService:
         if not result.data:
             return None
         return UserAIProfileRow.model_validate(result.data[0])
+
+    async def get_or_create(self, user_id: UUID) -> UserAIProfileRow | None:
+        existing = await self.get(user_id)
+        if existing is not None:
+            return existing
+
+        try:
+            result = await (
+                self._client.table(TABLE)
+                .insert({"user_id": str(user_id)})
+                .execute()
+            )
+            return UserAIProfileRow.model_validate(result.data[0])
+        except APIError as exc:
+            if "23503" in str(exc):
+                logger.warning(
+                    "ai_profile.get_or_create.fk_violation",
+                    user_id=str(user_id),
+                )
+                return None
+            raise
 
     async def update(self, user_id: UUID, data: UserAIProfileUpdate) -> UserAIProfileRow | None:
         update_data: dict[str, Any] = data.to_update_dict()

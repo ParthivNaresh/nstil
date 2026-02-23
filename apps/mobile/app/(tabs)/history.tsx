@@ -10,6 +10,7 @@ import {
   Calendar,
   DayActionBar,
   EntryCardSkeleton,
+  MoodSnapshotPill,
 } from "@/components/journal";
 import {
   EmptyState,
@@ -98,9 +99,12 @@ export default function HistoryScreen() {
   }, [router]);
 
   const renderItem = useCallback(
-    ({ item, index }: { item: JournalEntry; index: number }) => (
-      <AnimatedEntryCard entry={item} onPress={handleEntryPress} index={index} />
-    ),
+    ({ item, index }: { item: JournalEntry; index: number }) => {
+      if (item.entry_type === "mood_snapshot") {
+        return <MoodSnapshotPill entry={item} onPress={handleEntryPress} />;
+      }
+      return <AnimatedEntryCard entry={item} onPress={handleEntryPress} index={index} />;
+    },
     [handleEntryPress],
   );
 

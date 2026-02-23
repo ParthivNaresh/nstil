@@ -84,11 +84,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signIn: async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) throw error;
+    set({
+      session: data.session,
+      isEmailVerified: checkEmailVerified(data.session),
+    });
   },
 
   signUp: async (email, password) => {

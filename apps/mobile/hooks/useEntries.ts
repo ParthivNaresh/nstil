@@ -8,11 +8,13 @@ import {
   updateEntry,
 } from "@/services/api/entries";
 import type {
+  EntryType,
   JournalEntry,
   JournalEntryCreate,
   JournalEntryUpdate,
   PaginatedResponse,
 } from "@/types";
+import { BODYLESS_ENTRY_TYPES } from "@/types";
 import {
   useInfiniteQuery,
   useMutation,
@@ -23,6 +25,10 @@ import {
 import { useGenerateReflection } from "./useEntryReflection";
 
 const DEFAULT_PAGE_SIZE = 20;
+
+function shouldGenerateReflection(entryType: EntryType): boolean {
+  return !BODYLESS_ENTRY_TYPES.has(entryType);
+}
 
 function useInvalidateEntryQueries() {
   const queryClient = useQueryClient();
@@ -71,7 +77,9 @@ export function useCreateEntry() {
     mutationFn: createEntry,
     onSuccess: (createdEntry) => {
       invalidate();
-      generateReflection.mutate(createdEntry);
+      if (shouldGenerateReflection(createdEntry.entry_type)) {
+        generateReflection.mutate(createdEntry);
+      }
     },
   });
 }
@@ -93,7 +101,9 @@ export function useUpdateEntry() {
         updatedEntry,
       );
       invalidate();
-      generateReflection.mutate(updatedEntry);
+      if (shouldGenerateReflection(updatedEntry.entry_type)) {
+        generateReflection.mutate(updatedEntry);
+      }
     },
   });
 }
