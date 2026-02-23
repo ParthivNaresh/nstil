@@ -257,7 +257,7 @@ if port_open 127.0.0.1 54322; then
   if [[ -z "$SCHEMA_CHECK" ]]; then
     fail "journal_entries table does not exist" "just db-reset"
   else
-    EXPECTED_COLUMNS=("id" "user_id" "title" "body" "mood_score" "tags" "location" "entry_type" "embedding" "metadata" "created_at" "updated_at" "deleted_at")
+    EXPECTED_COLUMNS=("id" "user_id" "journal_id" "title" "body" "mood_category" "mood_specific" "tags" "location" "latitude" "longitude" "entry_type" "is_pinned" "embedding" "embedding_model" "search_vector" "metadata" "created_at" "updated_at" "deleted_at")
     MISSING_COLS=()
     for col in "${EXPECTED_COLUMNS[@]}"; do
       if ! echo "$SCHEMA_CHECK" | grep -qw "$col"; then

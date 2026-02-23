@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from datetime import time as dt_time
 
-from jose import jwt  # type: ignore[import-untyped]
+import jwt
 
 from nstil.models.ai_feedback import AIFeedbackRow
 from nstil.models.ai_insight import AIInsightRow

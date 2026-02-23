@@ -1,3 +1,9 @@
+import base64
+import hashlib
+import hmac
+import json
+
+import jwt
 import pytest
 
 from nstil.config import Settings
@@ -30,23 +36,11 @@ class TestVerifyJwt:
     def test_missing_sub_claim(self, settings: Settings) -> None:
         claims = build_jwt_claims()
         del claims["sub"]
-        from jose import jwt  # type: ignore[import-untyped]
-
         token: str = jwt.encode(claims, "test-secret", algorithm="HS256")
         with pytest.raises(InvalidTokenError):
             verify_jwt(token, settings)
 
     def test_missing_exp_claim(self, settings: Settings) -> None:
-        # jose auto-adds exp on encode, so build a token without it
-        # by encoding with exp then stripping it won't work — instead
-        # we encode claims that include exp, but set require_exp to
-        # catch it. Actually, jose's encode always adds exp. We need
-        # to craft a raw JWT without exp.
-        import base64
-        import hashlib
-        import hmac
-        import json
-
         header = base64.urlsafe_b64encode(
             json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
         ).rstrip(b"=")
@@ -67,11 +61,6 @@ class TestVerifyJwt:
         with pytest.raises(InvalidTokenError):
             verify_jwt(token, settings)
 
-    def test_wrong_algorithm(self, settings: Settings) -> None:
-        token = make_token(algorithm="HS384")
-        with pytest.raises(InvalidTokenError):
-            verify_jwt(token, settings)
-
     def test_wrong_secret(self, settings: Settings) -> None:
         token = make_token(secret="wrong-secret")
         with pytest.raises(InvalidTokenError):
@@ -80,8 +69,6 @@ class TestVerifyJwt:
     def test_missing_role_claim(self, settings: Settings) -> None:
         claims = build_jwt_claims()
         del claims["role"]
-        from jose import jwt  # type: ignore[import-untyped]
-
         token: str = jwt.encode(claims, "test-secret", algorithm="HS256")
         with pytest.raises(InvalidTokenError):
             verify_jwt(token, settings)

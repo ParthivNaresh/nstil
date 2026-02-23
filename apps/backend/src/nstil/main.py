@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from nstil.api.deps import get_settings
 from nstil.api.middleware import CacheControlMiddleware
 from nstil.api.router import api_router
+from nstil.core.app_state import AppState
 from nstil.core.jwks import jwks_store
 from nstil.observability import RequestLoggingMiddleware, configure_logging, get_logger
 from nstil.services.redis import close_redis_pool, create_redis_pool
@@ -18,18 +19,19 @@ logger = get_logger("nstil.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
-    app.state.redis = await create_redis_pool(settings.redis_url)
-    app.state.supabase = await create_supabase_client(
+    redis = await create_redis_pool(settings.redis_url, settings.redis_max_connections)
+    supabase = await create_supabase_client(
         settings.supabase_url,
         settings.supabase_service_key.get_secret_value(),
     )
+    app.state.app = AppState(redis=redis, supabase=supabase)
     try:
         await jwks_store.load(settings.supabase_url)
     except Exception:
         logger.warning("jwks.load_failed", supabase_url=settings.supabase_url)
     logger.info("app.startup", redis_url=settings.redis_url)
     yield
-    await close_redis_pool(app.state.redis)
+    await close_redis_pool(app.state.app.redis)
     logger.info("app.shutdown")
 
 

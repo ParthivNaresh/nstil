@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import httpx
 import structlog
-from jose import jwk  # type: ignore[import-untyped]
-from jose.backends.base import Key  # type: ignore[import-untyped]
+from jwt import PyJWK
 
 logger = structlog.get_logger(__name__)
 
 
 class JWKSKeyStore:
-    _keys: dict[str, Key]
+    _keys: dict[str, PyJWK]
 
     def __init__(self) -> None:
         self._keys = {}
@@ -24,13 +23,12 @@ class JWKSKeyStore:
         self._keys = {}
         for key_data in jwks_data.get("keys", []):
             kid = str(key_data.get("kid", ""))
-            alg = str(key_data.get("alg", ""))
-            if kid and alg:
-                self._keys[kid] = jwk.construct(key_data, algorithm=alg)
+            if kid:
+                self._keys[kid] = PyJWK.from_dict(key_data)
 
         logger.info("jwks.loaded", key_count=len(self._keys))
 
-    def get_key(self, kid: str) -> Key | None:
+    def get_key(self, kid: str) -> PyJWK | None:
         return self._keys.get(kid)
 
     @property

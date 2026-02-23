@@ -1,5 +1,8 @@
+import jwt
 import structlog
-from jose import ExpiredSignatureError, JWTError, jwt  # type: ignore[import-untyped]
+from jwt import ExpiredSignatureError
+from jwt import InvalidTokenError as JWTInvalidTokenError
+from jwt.types import Options
 from pydantic import ValidationError
 
 from nstil.config import Settings
@@ -9,12 +12,13 @@ from nstil.models import UserPayload
 
 logger = structlog.get_logger(__name__)
 
-_DECODE_OPTIONS: dict[str, object] = {
-    "require_sub": True,
-    "require_exp": True,
-    "require_aud": True,
-    "leeway": 30,
+_DECODE_OPTIONS: Options = {
+    "require": ["sub", "exp", "aud"],
+    "verify_exp": True,
+    "verify_aud": True,
 }
+
+_LEEWAY = 30
 
 _AUDIENCE = "authenticated"
 
@@ -44,6 +48,7 @@ def _decode_with_jwks(token: str) -> dict[str, object] | None:
         key,
         algorithms=[alg],
         audience=_AUDIENCE,
+        leeway=_LEEWAY,
         options=_DECODE_OPTIONS,
     )
     return payload
@@ -55,6 +60,7 @@ def _decode_with_secret(token: str, settings: Settings) -> dict[str, object]:
         settings.supabase_jwt_secret.get_secret_value(),
         algorithms=["HS256"],
         audience=_AUDIENCE,
+        leeway=_LEEWAY,
         options=_DECODE_OPTIONS,
     )
     return payload
@@ -63,7 +69,7 @@ def _decode_with_secret(token: str, settings: Settings) -> dict[str, object]:
 def verify_jwt(token: str, settings: Settings) -> UserPayload:
     try:
         header = _get_unverified_header(token)
-    except JWTError as exc:
+    except jwt.exceptions.DecodeError as exc:
         logger.warning("jwt.malformed_header", error=str(exc))
         raise InvalidTokenError("Invalid token") from exc
 
@@ -74,7 +80,7 @@ def verify_jwt(token: str, settings: Settings) -> UserPayload:
     except ExpiredSignatureError as exc:
         logger.info("jwt.expired", alg=header.get("alg"), kid=header.get("kid"))
         raise TokenExpiredError("Token has expired") from exc
-    except JWTError as exc:
+    except JWTInvalidTokenError as exc:
         logger.warning(
             "jwt.verification_failed",
             reason=str(exc),

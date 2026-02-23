@@ -70,7 +70,7 @@ Source lives in `src/nstil/` (hatchling src layout).
 | Directory | Purpose |
 |-----------|---------|
 | `api/` | FastAPI routes — `deps.py` (DI with 10 AI factories), `middleware.py`, `router.py`, `v1/` (endpoints) |
-| `core/` | Domain logic — `security.py` (JWT), `exceptions.py` |
+| `core/` | Domain logic — `security.py` (JWT via PyJWT), `jwks.py` (JWKS key store), `app_state.py` (typed app state), `exceptions.py` |
 | `models/` | Pydantic models — journal, mood, calendar, media, space, AI (profile, session, message, prompt, insight, feedback, task, embedding, context) |
 | `services/` | Service layer — journal, media, redis, notification, cache services |
 | `services/ai/` | AI services — session, prompt, insight, feedback, task, profile, context, embedding, prompt_engine, check_in, insight_engine, insight_computations |
@@ -130,7 +130,7 @@ cd apps/mobile && npx tsc --noEmit && npx eslint .
 
 - **App factory** (`main.py`): `create_app()` with async lifespan for Redis pool
 - **DI**: all external resources via `Depends()` — `get_settings()`, `get_redis()`, `get_current_user()`, plus 10 AI service factories
-- **Auth**: Bearer JWT -> `verify_jwt` (HS256) -> `UserPayload`. `TokenExpiredError` / `InvalidTokenError`
+- **Auth**: Bearer JWT -> `verify_jwt` (ES256 via JWKS, HS256 fallback) -> `UserPayload`. `TokenExpiredError` / `InvalidTokenError`
 - **Models**: Pydantic models per domain — `Row`, `Create`, `Update` (with `to_update_dict()`), `Response` (with `from_row()`) pattern
 - **Services**: `JournalService` (Supabase queries), `CachedJournalService` (Redis cache-first), `MediaService` (storage + signed URLs). AI services follow same pattern
 - **Cache**: Redis with pattern-based invalidation. TTLs: 5min lists, 60s search/AI context, 5min calendar, 10min AI profile/notification prefs
@@ -148,7 +148,7 @@ cd apps/mobile && npx tsc --noEmit && npx eslint .
 7. `007_AI_INTELLIGENCE_LAYER` — ai_sessions, ai_messages, ai_prompts, ai_insights, ai_feedback, ai_agent_tasks, entry_embeddings
 8. `008_TRIGGERS_AND_FUNCTIONS` — handle_new_user() trigger
 
-### Tests: 583 passing
+### Tests: 627 passing
 
 Covers models, API endpoints, cache layer, validators, AI services, check-in flow, insights, prompts.
 
@@ -215,7 +215,7 @@ The auth guard lives in `app/_layout.tsx` (root layout), NOT in `app/index.tsx`.
 
 ### Backend (`apps/backend/.env`)
 
-`SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (SecretStr), `SUPABASE_JWT_SECRET` (SecretStr), `REDIS_URL`, `CORS_ORIGINS`, `DEBUG`, `LOG_LEVEL`, `LOG_FORMAT`
+`SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (SecretStr), `SUPABASE_JWT_SECRET` (SecretStr), `REDIS_URL`, `REDIS_MAX_CONNECTIONS` (default 50), `CORS_ORIGINS`, `DEBUG`, `LOG_LEVEL`, `LOG_FORMAT`
 
 ### Mobile (`apps/mobile/.env`)
 
@@ -263,7 +263,7 @@ cd apps/backend && uv run ruff check src tests && uv run mypy src && uv run pyte
 cd apps/mobile && npx tsc --noEmit && npx eslint .
 ```
 
-Backend: 583 tests across models, API, cache, validators, AI services.
+Backend: 627 tests across models, API, cache, validators, AI services.
 
 ---
 

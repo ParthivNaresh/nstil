@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import AsyncClient
 
 from nstil.config import Settings
+from nstil.core.app_state import AppState
 from nstil.core.exceptions import InvalidTokenError, TokenExpiredError
 from nstil.core.security import verify_jwt
 from nstil.models import UserPayload
@@ -40,14 +41,17 @@ def get_settings() -> Settings:
     return Settings()
 
 
+def _get_app_state(request: Request) -> AppState:
+    state: AppState = request.app.state.app
+    return state
+
+
 def get_redis(request: Request) -> aioredis.Redis:
-    pool: aioredis.Redis = request.app.state.redis
-    return pool
+    return _get_app_state(request).redis
 
 
 def get_supabase(request: Request) -> AsyncClient:
-    client: AsyncClient = request.app.state.supabase
-    return client
+    return _get_app_state(request).supabase
 
 
 def get_cache_service(

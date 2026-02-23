@@ -7,7 +7,7 @@ The backend is a FastAPI application in `apps/backend/src/nstil/` using the hatc
 | Directory | Purpose |
 |-----------|---------|
 | `api/` | FastAPI routes — `deps.py` (DI with 10 AI factories), `middleware.py`, `router.py`, `v1/` (endpoints) |
-| `core/` | Domain logic — `security.py` (JWT), `exceptions.py` |
+| `core/` | Domain logic — `security.py` (JWT via PyJWT), `jwks.py` (JWKS key store), `app_state.py` (typed app state), `exceptions.py` |
 | `models/` | Pydantic models — journal, mood, calendar, media, space, AI models |
 | `services/` | Service layer — journal, media, redis, notification, cache services |
 | `services/ai/` | AI services — session, prompt, insight, feedback, task, profile, context, embedding, orchestrators |
@@ -63,7 +63,7 @@ Bearer JWT → `verify_jwt` (HS256/ES256) → `UserPayload`. Raises `TokenExpire
 
 ## Testing
 
-583 tests covering models, API endpoints, cache layer, validators, AI services, check-in flow, insights, and prompts.
+627 tests covering models, API endpoints, cache layer, validators, AI services, check-in flow, insights, and prompts.
 
 ```sh
 just backend-check    # lint + typecheck + test

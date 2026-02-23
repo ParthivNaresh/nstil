@@ -6,7 +6,7 @@ This page provides onboarding context for any contributor (human or AI) working 
 
 ### Backend (`apps/backend/.env`)
 
-`SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (SecretStr), `SUPABASE_JWT_SECRET` (SecretStr), `REDIS_URL`, `CORS_ORIGINS`, `DEBUG`, `LOG_LEVEL`, `LOG_FORMAT`
+`SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (SecretStr), `SUPABASE_JWT_SECRET` (SecretStr), `REDIS_URL`, `REDIS_MAX_CONNECTIONS` (default 50), `CORS_ORIGINS`, `DEBUG`, `LOG_LEVEL`, `LOG_FORMAT`
 
 ### Mobile (`apps/mobile/.env`)
 
@@ -24,7 +24,7 @@ Always run before considering work complete:
     just backend-check
     ```
 
-    This runs ruff lint, mypy strict, and 583 pytest tests.
+    This runs ruff lint, mypy strict, and 627 pytest tests.
 
 === "Mobile"
 
@@ -42,5 +42,5 @@ Always run before considering work complete:
 | 2 — Design System | ✅ | 18 UI components, design tokens, glassmorphism theme |
 | 3 — Journal CRUD | ✅ | Create/read/update/delete entries, cursor pagination, Redis caching |
 | 4 — Core Features | 🔄 | Theme, search, calendar, media, location, mood, journals (rich text + management remaining) |
-| 5 — AI Layer | ✅ | Backend AI (583 tests), notifications, on-device AI (iOS), AI screens |
+| 5 — AI Layer | ✅ | Backend AI (627 tests), notifications, on-device AI (iOS), AI screens |
 | 6 — Production | ❌ | CI/CD, deployment, monitoring, app store submission |

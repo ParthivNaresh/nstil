@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     supabase_service_key: SecretStr = SecretStr("")
     supabase_jwt_secret: SecretStr = SecretStr("")
     redis_url: str = "redis://localhost:6379"
+    redis_max_connections: int = 50
     cors_origins: list[str] = ["http://localhost:8081"]
     debug: bool = False
     log_level: str = "INFO"
