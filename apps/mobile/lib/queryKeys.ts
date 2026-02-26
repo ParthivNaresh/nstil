@@ -13,8 +13,8 @@ export const queryKeys = {
     dayEntry: (date: string, journalId?: string) =>
       [...queryKeys.entries.dayEntries(), { date, journalId }] as const,
     calendars: () => [...queryKeys.entries.all, "calendar"] as const,
-    calendar: (year: number, month: number) =>
-      [...queryKeys.entries.calendars(), { year, month }] as const,
+    calendar: (year: number, month: number, journalId?: string) =>
+      [...queryKeys.entries.calendars(), { year, month, journalId }] as const,
     moodTrends: (days: number = 7) =>
       [...queryKeys.entries.all, "moodTrends", { days }] as const,
   },

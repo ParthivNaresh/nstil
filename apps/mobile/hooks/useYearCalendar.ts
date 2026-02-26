@@ -52,7 +52,7 @@ export function useYearCalendar(): UseYearCalendarResult {
   const queries = useQueries({
     queries: monthParams.map((p) => ({
       queryKey: queryKeys.entries.calendar(p.year, p.month),
-      queryFn: () => getCalendar(p.year, p.month, timezone),
+      queryFn: () => getCalendar({ year: p.year, month: p.month, timezone }),
       staleTime: STALE_TIME_MS,
     })),
   });

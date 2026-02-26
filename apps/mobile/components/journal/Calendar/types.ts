@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { CalendarDay } from "@/types";
 
 export interface CalendarProps {
@@ -6,4 +8,5 @@ export interface CalendarProps {
   readonly totalEntries: number;
   readonly selectedDate?: string;
   readonly onDayPress?: (dateString: string) => void;
+  readonly headerAction?: ReactNode;
 }

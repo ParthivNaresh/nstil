@@ -137,11 +137,12 @@ class JournalService:
         return rows, has_more
 
     async def get_calendar(self, user_id: UUID, params: CalendarParams) -> list[CalendarDay]:
-        rpc_params: dict[str, str | int] = {
+        rpc_params: dict[str, str | int | None] = {
             "p_user_id": str(user_id),
             "p_year": params.year,
             "p_month": params.month,
             "p_timezone": params.timezone,
+            "p_journal_id": str(params.journal_id) if params.journal_id else None,
         }
         result = await self._client.rpc("get_calendar_data", rpc_params).execute()
         data: list[dict[str, Any]] = result.data  # type: ignore[assignment]

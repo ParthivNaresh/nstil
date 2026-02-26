@@ -19,7 +19,7 @@ def _auth_headers(sub: str = DEFAULT_USER_ID) -> dict[str, str]:
 class TestGetProfile:
     def test_success(self, client: TestClient, mock_ai_profile_service: AsyncMock) -> None:
         row = make_ai_profile_row(prompt_style="direct", topics_to_avoid=["work"])
-        mock_ai_profile_service.get.return_value = row
+        mock_ai_profile_service.get_or_create.return_value = row
 
         response = client.get(f"{AI_URL}/profile", headers=_auth_headers())
 
@@ -30,7 +30,7 @@ class TestGetProfile:
         assert data["ai_enabled"] is True
 
     def test_not_found(self, client: TestClient, mock_ai_profile_service: AsyncMock) -> None:
-        mock_ai_profile_service.get.return_value = None
+        mock_ai_profile_service.get_or_create.return_value = None
 
         response = client.get(f"{AI_URL}/profile", headers=_auth_headers())
 
@@ -64,7 +64,7 @@ class TestUpdateProfile:
 class TestGetNotifications:
     def test_success(self, client: TestClient, mock_notification_service: AsyncMock) -> None:
         row = make_notification_prefs_row(frequency="twice_daily")
-        mock_notification_service.get.return_value = row
+        mock_notification_service.get_or_create.return_value = row
 
         response = client.get(f"{AI_URL}/notifications", headers=_auth_headers())
 
@@ -74,7 +74,7 @@ class TestGetNotifications:
         assert data["reminders_enabled"] is True
 
     def test_not_found(self, client: TestClient, mock_notification_service: AsyncMock) -> None:
-        mock_notification_service.get.return_value = None
+        mock_notification_service.get_or_create.return_value = None
 
         response = client.get(f"{AI_URL}/notifications", headers=_auth_headers())
 

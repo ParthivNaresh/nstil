@@ -86,14 +86,17 @@ class CachedJournalService:
         return rows, has_more
 
     async def get_calendar(self, user_id: UUID, params: CalendarParams) -> list[CalendarDay]:
+        journal_id_str = str(params.journal_id) if params.journal_id else None
         cached = await self._cache.get_calendar(
-            user_id, params.year, params.month, params.timezone
+            user_id, params.year, params.month, params.timezone, journal_id_str
         )
         if cached is not None:
             return cached
 
         days = await self._db.get_calendar(user_id, params)
-        await self._cache.set_calendar(user_id, params.year, params.month, days, params.timezone)
+        await self._cache.set_calendar(
+            user_id, params.year, params.month, days, params.timezone, journal_id_str
+        )
         return days
 
     async def get_mood_trends(

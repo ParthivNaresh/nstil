@@ -89,8 +89,9 @@ async def get_calendar(
     year: Annotated[int, Query(ge=2020, le=2100)],
     month: Annotated[int, Query(ge=1, le=12)],
     timezone: Annotated[str, Query(max_length=50)] = "UTC",
+    journal_id: Annotated[UUID | None, Query()] = None,
 ) -> CalendarResponse:
-    params = CalendarParams(year=year, month=month, timezone=timezone)
+    params = CalendarParams(year=year, month=month, timezone=timezone, journal_id=journal_id)
     days = await service.get_calendar(UUID(user.sub), params)
     total = sum(d.entry_count for d in days)
     today = datetime.now(UTC).date()

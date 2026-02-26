@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
     log_format: str = "console"
+    rate_limit_enabled: bool = True
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

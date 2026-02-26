@@ -68,7 +68,8 @@ export function MoodSnapshotStrip() {
   );
 
   const handleSuccessTap = useCallback(() => {
-    setState("idle");
+    setState("selecting");
+    setSelectedCategory(null);
   }, []);
 
   if (state === "success" || (state === "idle" && lastSnapshot)) {

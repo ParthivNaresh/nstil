@@ -32,6 +32,9 @@ SINGLE_TAG_PROBABILITY = 0.20
 MIN_BODY_WORDS = 5
 MAX_BODY_WORDS = 300
 
+EXTRA_JOURNALS_MIN = 2
+EXTRA_JOURNALS_MAX = 6
+
 ENTRY_TYPES: list[str] = ["journal", "reflection", "gratitude", "freewrite"]
 ENTRY_TYPE_WEIGHTS: list[float] = [0.50, 0.20, 0.20, 0.10]
 
@@ -147,6 +150,19 @@ SENTENCES: list[str] = [
     "Feeling connected and present in the moment.",
 ]
 
+JOURNAL_TEMPLATES: list[dict[str, str]] = [
+    {"name": "Work & Career", "description": "Professional growth and daily work reflections", "color": "#6A89CC"},
+    {"name": "Health & Fitness", "description": "Workouts, nutrition, and wellness tracking", "color": "#34D399"},
+    {"name": "Gratitude", "description": "Things I'm thankful for", "color": "#F6B93B"},
+    {"name": "Creative Writing", "description": "Stories, poems, and creative ideas", "color": "#9B59B6"},
+    {"name": "Travel Log", "description": "Adventures and places I've been", "color": "#38ADA9"},
+    {"name": "Relationships", "description": "Thoughts on friendships and family", "color": "#EB7A68"},
+    {"name": "Goals & Dreams", "description": "Tracking progress toward my aspirations", "color": "#E55039"},
+    {"name": "Mindfulness", "description": "Meditation notes and present-moment awareness", "color": "#5EC4C0"},
+    {"name": "Reading Notes", "description": "Book highlights and takeaways", "color": "#8DA4DB"},
+    {"name": "Late Night Thoughts", "description": "When the mind won't quiet down", "color": "#F8C96B"},
+]
+
 
 @dataclass(frozen=True)
 class EnvConfig:
@@ -156,17 +172,24 @@ class EnvConfig:
 
 
 @dataclass(frozen=True)
+class JournalInfo:
+    id: str
+    name: str
+
+
+@dataclass(frozen=True)
 class CreatedUser:
     email: str
     user_id: str
     access_token: str
-    journal_id: str
+    journals: list[JournalInfo]
 
 
 @dataclass(frozen=True)
 class CreationStats:
     email: str
     user_id: str
+    journal_count: int
     total_entries: int
     days_with_entries: int
     total_days: int
@@ -267,7 +290,7 @@ def sign_in(client: httpx.Client, config: EnvConfig, email: str) -> str:
     return token
 
 
-def fetch_journal_id(client: httpx.Client, config: EnvConfig, token: str) -> str:
+def fetch_default_journal(client: httpx.Client, config: EnvConfig, token: str) -> JournalInfo:
     response = client.get(
         f"{config.backend_url}/api/v1/journals",
         headers={"Authorization": f"Bearer {token}"},
@@ -278,9 +301,34 @@ def fetch_journal_id(client: httpx.Client, config: EnvConfig, token: str) -> str
     if not items:
         print("ERROR: No journals found for user")
         sys.exit(1)
-    journal_id: str = items[0]["id"]
-    print(f"  ✓ Found journal: {items[0]['name']} ({journal_id})")
-    return journal_id
+    journal = items[0]
+    journal_info = JournalInfo(id=journal["id"], name=journal["name"])
+    print(f"  ✓ Found default journal: {journal_info.name} ({journal_info.id})")
+    return journal_info
+
+
+def create_extra_journals(
+    client: httpx.Client,
+    config: EnvConfig,
+    token: str,
+) -> list[JournalInfo]:
+    extra_count = random.randint(EXTRA_JOURNALS_MIN, EXTRA_JOURNALS_MAX)
+    templates = random.sample(JOURNAL_TEMPLATES, extra_count)
+    created: list[JournalInfo] = []
+
+    for template in templates:
+        response = client.post(
+            f"{config.backend_url}/api/v1/journals",
+            headers={"Authorization": f"Bearer {token}"},
+            json=template,
+        )
+        response.raise_for_status()
+        data: dict[str, Any] = response.json()
+        journal_info = JournalInfo(id=data["id"], name=data["name"])
+        created.append(journal_info)
+
+    print(f"  ✓ Created {len(created)} additional journals: {', '.join(j.name for j in created)}")
+    return created
 
 
 def create_user(client: httpx.Client, config: EnvConfig) -> CreatedUser:
@@ -288,12 +336,17 @@ def create_user(client: httpx.Client, config: EnvConfig) -> CreatedUser:
     email, user_id = signup_user(client, config)
     confirm_email(client, config, user_id)
     token = sign_in(client, config, email)
-    journal_id = fetch_journal_id(client, config, token)
+
+    print("\n→ Setting up journals")
+    default_journal = fetch_default_journal(client, config, token)
+    extra_journals = create_extra_journals(client, config, token)
+    all_journals = [default_journal, *extra_journals]
+
     return CreatedUser(
         email=email,
         user_id=user_id,
         access_token=token,
-        journal_id=journal_id,
+        journals=all_journals,
     )
 
 
@@ -349,9 +402,12 @@ def build_entry_payload(
     is_today = entry_date.date() == now.date()
 
     if is_today:
-        max_hour = max(now.hour - 1, 6)
-        hour = random.randint(6, max_hour)
-        minute = random.randint(0, 59) if hour < now.hour else random.randint(0, max(now.minute - 1, 0))
+        if now.hour < 1:
+            hour = 0
+            minute = 0
+        else:
+            hour = random.randint(0, now.hour - 1)
+            minute = random.randint(0, 59)
     else:
         hour = random.randint(6, 23)
         minute = random.randint(0, 59)
@@ -379,6 +435,16 @@ def build_entry_payload(
     return payload
 
 
+def build_journal_weights(journal_count: int) -> list[float]:
+    raw = [random.uniform(0.3, 1.0) for _ in range(journal_count)]
+    total = sum(raw)
+    return [w / total for w in raw]
+
+
+def pick_journal(journals: list[JournalInfo], weights: list[float]) -> JournalInfo:
+    return random.choices(journals, weights=weights, k=1)[0]
+
+
 def create_entries(
     client: httpx.Client,
     config: EnvConfig,
@@ -388,9 +454,11 @@ def create_entries(
     today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     start_date = today - timedelta(days=LOOKBACK_DAYS)
 
+    journal_weights = build_journal_weights(len(user.journals))
     total_entries = 0
     days_with_entries = 0
     total_days = LOOKBACK_DAYS + 1
+    entries_per_journal: dict[str, int] = {j.id: 0 for j in user.journals}
 
     for day_offset in range(total_days):
         current_date = start_date + timedelta(days=day_offset)
@@ -402,7 +470,8 @@ def create_entries(
         entry_count = pick_weighted(ENTRIES_PER_DAY_WEIGHTS)
 
         for _ in range(entry_count):
-            payload = build_entry_payload(user.journal_id, current_date)
+            journal = pick_journal(user.journals, journal_weights)
+            payload = build_entry_payload(journal.id, current_date)
             response = client.post(
                 f"{config.backend_url}/api/v1/entries",
                 headers={"Authorization": f"Bearer {user.access_token}"},
@@ -410,8 +479,12 @@ def create_entries(
             )
             response.raise_for_status()
             total_entries += 1
+            entries_per_journal[journal.id] += 1
 
     print(f"  ✓ Created {total_entries} entries across {days_with_entries} days")
+    for journal in user.journals:
+        count = entries_per_journal[journal.id]
+        print(f"    • {journal.name}: {count} entries")
 
     return total_entries, days_with_entries
 
@@ -423,6 +496,7 @@ def print_summary(stats: CreationStats) -> None:
     print(f"  Email:          {stats.email}")
     print(f"  Password:       {PASSWORD}")
     print(f"  User ID:        {stats.user_id}")
+    print(f"  Journals:       {stats.journal_count}")
     print(f"  Total entries:  {stats.total_entries}")
     print(f"  Days w/ entries: {stats.days_with_entries}/{stats.total_days}")
     print(f"  Time elapsed:   {stats.elapsed_seconds:.1f}s")
@@ -448,6 +522,7 @@ def main() -> None:
         CreationStats(
             email=user.email,
             user_id=user.user_id,
+            journal_count=len(user.journals),
             total_entries=total_entries,
             days_with_entries=days_with_entries,
             total_days=total_days,

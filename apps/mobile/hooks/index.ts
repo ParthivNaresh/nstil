@@ -39,6 +39,7 @@ export {
   useEntryMedia,
   useUploadMedia,
 } from "./useMedia";
+export { useCreateJournalForm } from "./useCreateJournalForm";
 export {
   useCreateJournal,
   useDeleteJournal,

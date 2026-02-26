@@ -61,8 +61,8 @@ export default function EntryScreen() {
         <View style={styles.emptyContainer}>
           <EmptyState
             icon={FileQuestion}
-            title={t("journal.detail.notFound")}
-            subtitle={t("journal.detail.notFoundSubtitle")}
+            title={t("journal.entryDetail.notFound")}
+            subtitle={t("journal.entryDetail.notFoundSubtitle")}
           />
         </View>
       </View>
@@ -118,12 +118,12 @@ function EntryFormScreen({ entryId, existingMediaItems }: EntryFormScreenProps) 
 
   const handleDelete = useCallback(() => {
     Alert.alert(
-      t("journal.detail.deleteTitle"),
-      t("journal.detail.deleteMessage"),
+      t("journal.entryDetail.deleteTitle"),
+      t("journal.entryDetail.deleteMessage"),
       [
-        { text: t("journal.detail.deleteCancel"), style: "cancel" },
+        { text: t("journal.entryDetail.deleteCancel"), style: "cancel" },
         {
-          text: t("journal.detail.deleteConfirm"),
+          text: t("journal.entryDetail.deleteConfirm"),
           style: "destructive",
           onPress: () => {
             deleteMutation.mutate(entryId, {
@@ -151,7 +151,7 @@ function EntryFormScreen({ entryId, existingMediaItems }: EntryFormScreenProps) 
       ) : null}
       <Pressable
         onPress={handleDelete}
-        accessibilityLabel={t("journal.detail.delete")}
+        accessibilityLabel={t("journal.entryDetail.delete")}
       >
         <Icon icon={Trash2} size="sm" color={colors.textTertiary} />
       </Pressable>
@@ -254,12 +254,12 @@ function MoodSnapshotScreen({ entryId }: MoodSnapshotScreenProps) {
 
   const handleDelete = useCallback(() => {
     Alert.alert(
-      t("journal.detail.deleteTitle"),
-      t("journal.detail.deleteMessage"),
+      t("journal.entryDetail.deleteTitle"),
+      t("journal.entryDetail.deleteMessage"),
       [
-        { text: t("journal.detail.deleteCancel"), style: "cancel" },
+        { text: t("journal.entryDetail.deleteCancel"), style: "cancel" },
         {
-          text: t("journal.detail.deleteConfirm"),
+          text: t("journal.entryDetail.deleteConfirm"),
           style: "destructive",
           onPress: () => {
             deleteMutation.mutate(entryId, {
@@ -274,7 +274,7 @@ function MoodSnapshotScreen({ entryId }: MoodSnapshotScreenProps) {
   const deleteAction = (
     <Pressable
       onPress={handleDelete}
-      accessibilityLabel={t("journal.detail.delete")}
+      accessibilityLabel={t("journal.entryDetail.delete")}
     >
       <Icon icon={Trash2} size="sm" color={colors.textTertiary} />
     </Pressable>

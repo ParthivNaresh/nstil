@@ -169,7 +169,8 @@ create or replace function public.get_calendar_data(
     p_user_id uuid,
     p_year int,
     p_month int,
-    p_timezone text default 'UTC'
+    p_timezone text default 'UTC',
+    p_journal_id uuid default null
 )
 returns table (
     date text,
@@ -190,6 +191,7 @@ as $$
           and e.deleted_at is null
           and extract(year from e.created_at at time zone p_timezone) = p_year
           and extract(month from e.created_at at time zone p_timezone) = p_month
+          and (p_journal_id is null or e.journal_id = p_journal_id)
     ),
     daily_counts as (
         select day, count(*) as cnt
@@ -211,6 +213,7 @@ as $$
           and e.mood_category is not null
           and extract(year from e.created_at at time zone p_timezone) = p_year
           and extract(month from e.created_at at time zone p_timezone) = p_month
+          and (p_journal_id is null or e.journal_id = p_journal_id)
     ),
     daily_mood as (
         select day, mood_category, mood_specific

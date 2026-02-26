@@ -3,11 +3,12 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { Greeting, HomeCheckInSection, MoodSnapshotStrip, StreakBanner } from "@/components/home";
+import { Greeting, HomeCheckInSection, JournalListCard, MoodSnapshotStrip, StreakBanner } from "@/components/home";
 import { Header } from "@/components/ui";
 import {
   useCalendarRange,
   useHeaderHeight,
+  useJournals,
   useProfile,
   useTabBarHeight,
   useTheme,
@@ -27,6 +28,7 @@ export default function HomeScreen() {
 
   const { data: profile } = useProfile();
   const { streak } = useCalendarRange();
+  const { data: journals = [] } = useJournals();
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -64,6 +66,13 @@ export default function HomeScreen() {
         <Greeting displayName={profile?.display_name ?? null} />
         <MoodSnapshotStrip />
         {streak > 0 ? <StreakBanner streak={streak} /> : null}
+        {journals.length > 0 ? (
+          <JournalListCard
+            journals={journals}
+            label={t("home.myJournals")}
+            actionLabel={t("home.viewAll")}
+          />
+        ) : null}
         <HomeCheckInSection />
       </ScrollView>
     </View>

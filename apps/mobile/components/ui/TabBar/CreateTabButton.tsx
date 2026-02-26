@@ -6,12 +6,14 @@ import {
 } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
 import { Plus } from "lucide-react-native";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -23,14 +25,24 @@ const ICON_SIZE = 24;
 const PRESS_SCALE = 0.9;
 const GLOW_SIZE = BUTTON_SIZE + 12;
 const BORDER_WIDTH = 1.5;
+const ROTATION_DEG = 45;
 
 interface CreateTabButtonProps {
   readonly onPress: () => void;
+  readonly isMenuOpen?: boolean;
 }
 
-export function CreateTabButton({ onPress }: CreateTabButtonProps) {
+export function CreateTabButton({ onPress, isMenuOpen = false }: CreateTabButtonProps) {
   const { colors } = useTheme();
   const scale = useSharedValue(1);
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    rotation.value = withTiming(isMenuOpen ? ROTATION_DEG : 0, {
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [isMenuOpen, rotation]);
 
   const handlePressIn = useCallback(() => {
     scale.value = withSpring(PRESS_SCALE, easing.spring);
@@ -46,7 +58,10 @@ export function CreateTabButton({ onPress }: CreateTabButtonProps) {
   }, [onPress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [
+      { scale: scale.value },
+      { rotate: `${rotation.value}deg` },
+    ],
   }));
 
   const glowCenter = GLOW_SIZE / 2;

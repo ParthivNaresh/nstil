@@ -189,7 +189,7 @@ done
 
 if $DEVICE_MODE; then
   step "Opening Metro + iOS Device in new iTerm tab"
-  open_iterm_tab "cd $REPO_ROOT/apps/mobile && npx expo run:ios --device"
+  open_iterm_tab "cd $REPO_ROOT/apps/mobile && npx expo run:ios --device 2>&1 | grep -v 'HALC_ProxyObjectMap'"
 
   echo -e "\n${GREEN}${BOLD}All services started (device mode)!${RESET}"
   echo -e "  Backend:  http://${LAN_IP}:8000"
@@ -201,7 +201,7 @@ if $DEVICE_MODE; then
   echo -e "  ${YELLOW}Run 'just dev' to switch back to simulator mode.${RESET}"
 else
   step "Opening Metro + iOS Simulator in new iTerm tab"
-  open_iterm_tab "cd $REPO_ROOT/apps/mobile && EXPO_PACKAGER_PROXY_URL=http://localhost:8081 npx expo run:ios"
+  open_iterm_tab "cd $REPO_ROOT/apps/mobile && EXPO_PACKAGER_PROXY_URL=http://localhost:8081 npx expo run:ios 2>&1 | grep -v 'HALC_ProxyObjectMap'"
 
   echo -e "\n${GREEN}${BOLD}All services started!${RESET}"
   echo "  Backend:  http://localhost:8000"

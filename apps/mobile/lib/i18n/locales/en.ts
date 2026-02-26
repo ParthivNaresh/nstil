@@ -14,6 +14,10 @@ const en = {
     insights: "Insights",
     settings: "Settings",
   },
+  createMenu: {
+    newEntry: "Entry",
+    newJournal: "Journal",
+  },
   home: {
     title: "NStil",
     authenticated: "Authenticated",
@@ -30,6 +34,8 @@ const en = {
       afternoonName: "Good afternoon, {{name}}",
       eveningName: "Good evening, {{name}}",
     },
+    myJournals: "My Journals",
+    viewAll: "View All",
     moodSnapshot: {
       prompt: "How are you feeling?",
       logged: "Logged",
@@ -139,7 +145,7 @@ const en = {
       gratitude: "Gratitude",
       freewrite: "Freewrite",
     },
-    detail: {
+    entryDetail: {
       delete: "Delete Entry",
       deleteTitle: "Delete Entry",
       deleteMessage: "Are you sure you want to delete this entry? This cannot be undone.",
@@ -147,6 +153,26 @@ const en = {
       deleteCancel: "Cancel",
       notFound: "Entry not found",
       notFoundSubtitle: "This entry may have been deleted",
+    },
+    create: {
+      title: "New Journal",
+      save: "Create",
+      namePlaceholder: "Journal name",
+      color: "Color",
+      description: "Description",
+      descriptionPlaceholder: "What's this journal for?",
+      nameRequired: "Journal name is required",
+    },
+    list: {
+      title: "My Journals",
+      empty: "No journals yet",
+      emptySubtitle: "Create a journal to organize your entries",
+      entryCount_one: "{{count}} entry",
+      entryCount_other: "{{count}} entries",
+    },
+    detail: {
+      empty: "No entries yet",
+      emptySubtitle: "Start writing in this journal",
     },
     validation: {
       bodyRequired: "Entry body cannot be empty",

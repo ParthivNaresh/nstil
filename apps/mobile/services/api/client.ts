@@ -5,6 +5,7 @@ import { ApiError, NoSessionError } from "./errors";
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const NO_CONTENT = 204;
+const RATE_LIMITED = 429;
 
 function getAccessToken(): string {
   const session = useAuthStore.getState().session;
@@ -14,10 +15,21 @@ function getAccessToken(): string {
   return session.access_token;
 }
 
+function parseRetryAfter(response: Response): number | null {
+  const header = response.headers.get("retry-after");
+  if (header === null) {
+    return null;
+  }
+  const seconds = parseInt(header, 10);
+  return isNaN(seconds) ? null : seconds;
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    const error = new ApiError(response.status, body);
+    const retryAfter =
+      response.status === RATE_LIMITED ? parseRetryAfter(response) : null;
+    const error = new ApiError(response.status, body, retryAfter);
 
     if (error.isUnauthorized) {
       void useAuthStore.getState().signOut();

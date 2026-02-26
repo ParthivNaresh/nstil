@@ -41,7 +41,7 @@ interface UseCalendarRangeResult {
   readonly isLoading: boolean;
 }
 
-export function useCalendarRange(): UseCalendarRangeResult {
+export function useCalendarRange(journalId?: string): UseCalendarRangeResult {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -53,8 +53,8 @@ export function useCalendarRange(): UseCalendarRangeResult {
 
   const queries = useQueries({
     queries: monthParams.map((p) => ({
-      queryKey: queryKeys.entries.calendar(p.year, p.month),
-      queryFn: () => getCalendar(p.year, p.month, timezone),
+      queryKey: queryKeys.entries.calendar(p.year, p.month, journalId),
+      queryFn: () => getCalendar({ year: p.year, month: p.month, timezone, journalId }),
       staleTime: STALE_TIME,
     })),
   });

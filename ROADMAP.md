@@ -96,8 +96,9 @@ Separate spaces for different areas of life.
 - Entry list and search filter by journal
 
 **Remaining:**
-- [ ] **4G-10** — Journal management screen (settings → manage journals, add/edit/delete)
-- [ ] **4G-11** — Journal indicator on entry cards and detail screen
+- [ ] **4G-10** — Create Journal screen (name + color picker + optional description, modal presentation)
+- [ ] **4G-11** — Journal management screen (settings → manage journals, edit/delete/reorder)
+- [ ] **4G-12** — Journal indicator on entry cards and detail screen
 
 ### Subphase 4H — Enhanced Mood System ✅
 
@@ -276,6 +277,21 @@ One-tap mood logging directly from the home screen. No title, no body, no naviga
 - **Cooldown, not rate limit** — After logging, the strip shows the last snapshot instead of pills. The user can tap to log again anytime. No hard limit, but the visual state change reduces accidental double-taps.
 - **Default journal** — Mood snapshots auto-assign to the user's first journal (same as check-in entries). No journal picker needed for a 2-second interaction.
 
+#### Radial Create Menu ✅
+
+Replaced the direct-navigate + button with a radial arc menu that opens two creation paths: "Journal" (new journal space) and "Entry" (new journal entry). The + button previously navigated straight to `/entry/create` — now it opens a glassmorphic semicircular menu above the tab bar.
+
+- [x] **`CreateMenu` component** — Skia-drawn annular sector (semicircle from 180°→360°) with glassmorphism layering: glass fill → accent gradient overlay → blurred glow stroke → crisp glass border. Radial divider line splits the arc into two segments
+- [x] **Radial sweep animation** — Pre-computed 61-frame SVG path lookup table (`arcPath.ts`). `useDerivedValue` worklet indexes into frames based on progress. Arc sweeps open radially (not linearly) in 280ms with `Easing.out(cubic)`, closes in 200ms. Items fade in staggered as the sweep passes their angular position
+- [x] **`CreateTabButton` update** — + icon spring-rotates 45° into × when menu is open. `isMenuOpen` prop
+- [x] **`CreateMenuItem` component** — Pressable items positioned along the arc midline radius at evenly spaced angles. Haptic feedback on tap
+- [x] **Backdrop dismiss** — Full-screen backdrop with `onPress` dismiss. Menu container uses `pointerEvents="box-none"` so taps on empty space pass through to backdrop
+- [x] **i18n** — `createMenu.newEntry`, `createMenu.newJournal` translation keys
+- [x] **"Entry" wired** — Navigates to `/entry/create` (existing flow)
+- [x] **"Journal" placeholder** — Closes menu, ready to wire to Create Journal screen (4G-10)
+
+**File structure:** `components/ui/TabBar/CreateMenu/` — `CreateMenu.tsx`, `CreateMenuItem.tsx`, `arcPath.ts`, `styles.ts`, `types.ts`, `index.ts`
+
 #### Remaining Home Screen Items
 - [ ] **Today's mood summary** — Compact card showing moods logged today (from both entries and snapshots)
 - [ ] **Recent entries** — Last 2–3 entries (title, mood orb, relative time). Tap navigates to detail
@@ -289,7 +305,7 @@ CI/CD pipelines, production Supabase project, monitoring, error tracking, app st
 
 - [ ] Production SMTP — real email delivery (SendGrid, Postmark, or SES), custom templates
 - [ ] Token revocation — Redis-based token blacklist for immediate invalidation on sign-out
-- [ ] API gateway rate limiting
+- [x] API rate limiting — Sliding window rate limiter via Redis sorted sets + atomic Lua script. Pure ASGI middleware (not BaseHTTPMiddleware). 3-tier hierarchy: IP (120/min) → User (60/min) → Route-specific (write: 30/min, search: 20/min, AI: 10/min, media upload: 10/min). Fail-open on Redis unavailability. Singleton `RateLimitService` on `AppState`. Lightweight JWT `sub` extraction for user keying. `X-RateLimit-*` response headers on all requests. Mobile: `ApiError.isRateLimited` getter, `Retry-After` header parsing, 429-aware query retry with backoff. 48 new backend tests, 690 total
 - [ ] CORS production configuration
 - [x] CI/CD pipelines — GitHub Actions: lint workflow (backend format-check + lint + typecheck, mobile typecheck + lint, docs build), test workflow (pytest with coverage → SonarCloud). All jobs use `just` commands
 - [ ] Error tracking — Sentry integration for backend and mobile

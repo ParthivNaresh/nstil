@@ -150,9 +150,14 @@ class EntryCacheService(BaseCacheService):
             )
 
     async def get_calendar(
-        self, user_id: UUID, year: int, month: int, timezone: str = "UTC"
+        self,
+        user_id: UUID,
+        year: int,
+        month: int,
+        timezone: str = "UTC",
+        journal_id: str | None = None,
     ) -> list[CalendarDay] | None:
-        data = await self._get(calendar_key(user_id, year, month, timezone))
+        data = await self._get(calendar_key(user_id, year, month, timezone, journal_id))
         if data is None:
             return None
         try:
@@ -169,10 +174,13 @@ class EntryCacheService(BaseCacheService):
         month: int,
         days: list[CalendarDay],
         timezone: str = "UTC",
+        journal_id: str | None = None,
     ) -> None:
         payload = json.dumps([day.model_dump(mode="json") for day in days])
         await self._set(
-            calendar_key(user_id, year, month, timezone), payload, CALENDAR_TTL_SECONDS
+            calendar_key(user_id, year, month, timezone, journal_id),
+            payload,
+            CALENDAR_TTL_SECONDS,
         )
 
     async def invalidate_user_calendars(self, user_id: UUID) -> None:

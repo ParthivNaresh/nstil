@@ -1,3 +1,6 @@
+export { CreateJournalForm } from "./CreateJournal";
+export type { CreateJournalFormProps } from "./CreateJournal";
+
 export { Calendar } from "./Calendar";
 export type { CalendarProps } from "./Calendar";
 
@@ -25,6 +28,12 @@ export type { ReflectionCardProps } from "./ReflectionCard";
 
 export { JournalFilterBar } from "./JournalFilterBar";
 export type { JournalFilterBarProps } from "./JournalFilterBar";
+
+export { JournalFilterSheet } from "./JournalFilterSheet";
+export type { JournalFilterSheetProps } from "./JournalFilterSheet";
+
+export { JournalCard } from "./JournalCard";
+export type { JournalCardProps } from "./JournalCard";
 
 export { JournalPicker } from "./JournalPicker";
 export type { JournalPickerProps } from "./JournalPicker";
