@@ -4,6 +4,7 @@ import { create } from "zustand";
 
 import { queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
+import { signOutFromBackend } from "@/services/api/auth";
 import type { DeepLinkType } from "@/types";
 
 let authSubscription: Subscription | null = null;
@@ -101,6 +102,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signOut: async () => {
+    const token = useAuthStore.getState().session?.access_token;
+    if (token) {
+      await signOutFromBackend(token);
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     clearClientCaches();

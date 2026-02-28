@@ -10,3 +10,4 @@ class UserPayload(BaseModel):
     exp: int
     iss: str | None = None
     aud: str
+    session_id: str | None = None

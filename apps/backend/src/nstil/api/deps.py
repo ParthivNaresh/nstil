@@ -32,6 +32,7 @@ from nstil.services.media import MediaService
 from nstil.services.notification import NotificationService
 from nstil.services.profile import ProfileService
 from nstil.services.space import JournalSpaceService
+from nstil.services.token_blacklist import TokenBlacklistService
 
 bearer_scheme = HTTPBearer()
 
@@ -176,12 +177,17 @@ def get_insight_engine(
     return InsightEngine(insight_service, context_service, journal_service)
 
 
-def get_current_user(
+def get_token_blacklist(request: Request) -> TokenBlacklistService | None:
+    return _get_app_state(request).token_blacklist
+
+
+async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
     settings: Annotated[Settings, Depends(get_settings)],
+    blacklist: Annotated[TokenBlacklistService | None, Depends(get_token_blacklist)],
 ) -> UserPayload:
     try:
-        return verify_jwt(credentials.credentials, settings)
+        user = verify_jwt(credentials.credentials, settings)
     except TokenExpiredError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -192,3 +198,15 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
         ) from exc
+
+    if (
+        blacklist is not None
+        and user.session_id is not None
+        and await blacklist.is_revoked(user.session_id)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+        )
+
+    return user

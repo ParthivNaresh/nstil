@@ -4,3 +4,7 @@ class TokenExpiredError(Exception):
 
 class InvalidTokenError(Exception):
     pass
+
+
+class TokenRevokedError(Exception):
+    pass

@@ -21,6 +21,7 @@ from nstil.models.space import JournalSpaceRow
 DEFAULT_SECRET = "test-secret"
 DEFAULT_ALGORITHM = "HS256"
 DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
+DEFAULT_SESSION_ID = "00000000-0000-0000-0000-000000000099"
 DEFAULT_JOURNAL_ID = "00000000-0000-0000-0000-000000000010"
 
 
@@ -32,6 +33,7 @@ def build_jwt_claims(**overrides: object) -> dict[str, object]:
         "aud": "authenticated",
         "exp": int(time.time()) + 3600,
         "iss": "http://localhost:54321/auth/v1",
+        "session_id": DEFAULT_SESSION_ID,
     }
     defaults.update(overrides)
     return defaults

@@ -208,6 +208,7 @@ EXPO_PUBLIC_API_URL=http://localhost:8000
 
 ### 🔒 Security Considerations (as implemented)
 - **JWT verification:** `apps/backend/src/nstil/core/security.py` verifies audience and expiry, prefers ES* via JWKS (`core/jwks.py`) and falls back to HS256 secret.
+- **Token revocation:** `TokenBlacklistService` (`services/token_blacklist.py`) blacklists `session_id` in Redis with TTL matching token expiry. Checked in `get_current_user` (`api/deps.py`). `POST /api/v1/auth/sign-out` revokes the session. Fail-open if Redis is unavailable. Mobile calls backend sign-out before `supabase.auth.signOut()`.
 - **Sensitive responses:** `CacheControlMiddleware` sets `Cache-Control: no-store, private` for non-public endpoints.
 - **Rate limiting:** `RateLimitMiddleware` can be disabled via `RATE_LIMIT_ENABLED` (`config.py`). It is **fail-open** if Redis is unavailable (`services/rate_limit.py`).
 

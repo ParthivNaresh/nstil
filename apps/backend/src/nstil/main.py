@@ -14,6 +14,7 @@ from nstil.observability import RequestLoggingMiddleware, configure_logging, get
 from nstil.services.rate_limit import RateLimitService
 from nstil.services.redis import close_redis_pool, create_redis_pool
 from nstil.services.supabase import create_supabase_client
+from nstil.services.token_blacklist import TokenBlacklistService
 
 logger = get_logger("nstil.main")
 
@@ -27,7 +28,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.supabase_service_key.get_secret_value(),
     )
     rate_limiter = RateLimitService(redis) if settings.rate_limit_enabled else None
-    app.state.app = AppState(redis=redis, supabase=supabase, rate_limiter=rate_limiter)
+    token_blacklist = TokenBlacklistService(redis)
+    app.state.app = AppState(
+        redis=redis,
+        supabase=supabase,
+        rate_limiter=rate_limiter,
+        token_blacklist=token_blacklist,
+    )
     try:
         await jwks_store.load(settings.supabase_url)
     except Exception:

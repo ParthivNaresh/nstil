@@ -21,6 +21,7 @@ from nstil.api.deps import (
     get_settings,
     get_space_service,
     get_supabase,
+    get_token_blacklist,
 )
 from nstil.config import Settings
 from nstil.services.ai.check_in import CheckInOrchestrator
@@ -35,6 +36,7 @@ from nstil.services.cached_notification import CachedNotificationService
 from nstil.services.cached_profile import CachedProfileService
 from nstil.services.cached_space import CachedSpaceService
 from nstil.services.media import MediaService
+from nstil.services.token_blacklist import TokenBlacklistService
 
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
 os.environ.setdefault("SUPABASE_JWT_SECRET", "test-jwt-secret")
@@ -116,6 +118,13 @@ def mock_profile_service() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_token_blacklist() -> AsyncMock:
+    mock = AsyncMock(spec=TokenBlacklistService)
+    mock.is_revoked.return_value = False
+    return mock
+
+
+@pytest.fixture
 def client(
     settings: Settings,
     mock_redis: AsyncMock,
@@ -132,6 +141,7 @@ def client(
     mock_ai_prompt_service: AsyncMock,
     mock_prompt_engine: AsyncMock,
     mock_profile_service: AsyncMock,
+    mock_token_blacklist: AsyncMock,
 ) -> Iterator[TestClient]:
     from nstil.main import create_app
 
@@ -152,6 +162,7 @@ def client(
     app.dependency_overrides[get_ai_prompt_service] = lambda: mock_ai_prompt_service
     app.dependency_overrides[get_prompt_engine] = lambda: mock_prompt_engine
     app.dependency_overrides[get_profile_service] = lambda: mock_profile_service
+    app.dependency_overrides[get_token_blacklist] = lambda: mock_token_blacklist
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
