@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 
 from nstil.api.deps import get_current_user, get_journal_service, get_media_service
+from nstil.api.upload import UploadTooLargeError, read_upload_with_limit
 from nstil.models import UserPayload
 from nstil.models.media import (
     ALLOWED_CONTENT_TYPES,
@@ -74,13 +75,14 @@ async def upload_media(
             f"Allowed: {', '.join(sorted(ALLOWED_CONTENT_TYPES))}",
         )
 
-    file_bytes = await file.read()
     max_size = max_file_size_for_content_type(content_type)
-    if len(file_bytes) > max_size:
+    try:
+        file_bytes = await read_upload_with_limit(file, max_size)
+    except UploadTooLargeError as exc:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"File exceeds maximum size of {max_size // (1024 * 1024)}MB",
-        )
+        ) from exc
 
     file_name = file.filename or "untitled"
 
@@ -108,7 +110,7 @@ async def upload_media(
         ) from exc
     except FileTooLargeError as exc:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=str(exc),
         ) from exc
 

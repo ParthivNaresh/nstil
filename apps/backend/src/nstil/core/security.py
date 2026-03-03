@@ -28,7 +28,7 @@ def _get_unverified_header(token: str) -> dict[str, str]:
     return header
 
 
-def _decode_with_jwks(token: str) -> dict[str, object] | None:
+async def _decode_with_jwks(token: str) -> dict[str, object] | None:
     if not jwks_store.is_loaded:
         return None
 
@@ -39,7 +39,7 @@ def _decode_with_jwks(token: str) -> dict[str, object] | None:
     if not kid or alg not in ("ES256", "ES384", "ES512"):
         return None
 
-    key = jwks_store.get_key(kid)
+    key = await jwks_store.get_key_or_reload(kid)
     if key is None:
         return None
 
@@ -66,7 +66,7 @@ def _decode_with_secret(token: str, settings: Settings) -> dict[str, object]:
     return payload
 
 
-def verify_jwt(token: str, settings: Settings) -> UserPayload:
+async def verify_jwt(token: str, settings: Settings) -> UserPayload:
     try:
         header = _get_unverified_header(token)
     except jwt.exceptions.DecodeError as exc:
@@ -74,7 +74,7 @@ def verify_jwt(token: str, settings: Settings) -> UserPayload:
         raise InvalidTokenError("Invalid token") from exc
 
     try:
-        payload = _decode_with_jwks(token)
+        payload = await _decode_with_jwks(token)
         if payload is None:
             payload = _decode_with_secret(token, settings)
     except ExpiredSignatureError as exc:

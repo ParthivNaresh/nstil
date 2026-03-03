@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
+from nstil.models.media import MAX_IMAGE_FILE_SIZE_BYTES
 from nstil.services.media import (
     AudioDurationExceededError,
     MediaLimitExceededError,
@@ -215,6 +216,26 @@ class TestUploadMedia:
     def test_upload_requires_auth(self, client: TestClient) -> None:
         response = client.post(MEDIA_URL, files={"file": _jpeg_file()})
         assert response.status_code in (401, 403)
+
+    def test_upload_oversized_image_returns_413(
+        self,
+        client: TestClient,
+        mock_media_service: AsyncMock,
+        mock_journal_service: AsyncMock,
+    ) -> None:
+        entry_row = make_entry_row(entry_id=ENTRY_ID)
+        mock_journal_service.get_by_id.return_value = entry_row
+
+        oversized = MAX_IMAGE_FILE_SIZE_BYTES + 1024
+        response = client.post(
+            MEDIA_URL,
+            files={"file": _jpeg_file(size=oversized)},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 413
+        assert "maximum size" in response.json()["detail"].lower()
+        mock_media_service.upload.assert_not_called()
 
 
 class TestListMedia:

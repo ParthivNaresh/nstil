@@ -313,3 +313,69 @@ CI/CD pipelines, production Supabase project, monitoring, error tracking, app st
 - [ ] Performance budgets — bundle size limits, API response time targets
 - [ ] App store submission — iOS App Store and Google Play Store
 - [ ] Network resilience — offline detection, retry logic, offline indicator in UI
+
+### JWKS Auto-Refresh — Critical Auth Resilience
+
+**Problem:** The JWKS key store (`core/jwks.py`) loads signing keys from Supabase exactly once at startup via `jwks_store.load()` in `main.py`'s lifespan. There is no periodic refresh and no cache-miss retry. When Supabase rotates its JWT signing keys (routine during upgrades, restarts, or configuration changes), the backend will hold stale keys. New ES256-signed JWTs will carry a `kid` not present in the store, causing `_decode_with_jwks()` to return `None`. The HS256 fallback then attempts to verify an ES256-signed token with the HS256 secret, which fails with `InvalidSignatureError` — resulting in 401 for every authenticated request until the backend is restarted.
+
+**Impact:** Complete authentication outage for all users after any Supabase key rotation event. No user action can resolve it — requires backend restart.
+
+**Root cause trace:**
+1. `jwks_store` is a module-level singleton (`core/jwks.py:38`)
+2. `load()` called once in `lifespan()` (`main.py:38`)
+3. `_decode_with_jwks()` (`security.py:41`) — `get_key(kid)` returns `None` for unknown `kid` → returns `None`
+4. `verify_jwt()` (`security.py:76–77`) — `None` result triggers `_decode_with_secret()` HS256 fallback
+5. HS256 decode of an ES256-signed token → `InvalidSignatureError` → `InvalidTokenError` → HTTP 401
+
+**Fix — two complementary strategies (both required):**
+
+**Strategy A: Cache-miss reload (immediate recovery)**
+
+When `_decode_with_jwks()` encounters a `kid` not in the store, attempt a single JWKS reload before giving up. This provides instant recovery on the first request after key rotation, with no background task needed.
+
+- [ ] **`JWKSKeyStore` — add async `reload_if_missing(kid, supabase_url)` method** — If `get_key(kid)` returns `None` and a reload hasn't been attempted within a cooldown window (e.g., 30s), call `load()` and retry `get_key(kid)`. Use an `asyncio.Lock` to prevent thundering herd (concurrent requests all triggering reloads). Store `_last_reload_attempt: float` to enforce the cooldown. Return the key or `None` if still not found after reload.
+- [ ] **`JWKSKeyStore` — store `_supabase_url` from initial `load()` call** — The reload method needs the URL but shouldn't require it as a parameter on every call. Store it as instance state during the first `load()`.
+- [ ] **`security.py` — convert `_decode_with_jwks()` to async** — Currently synchronous. Must become `async` to call `reload_if_missing()`. This means `verify_jwt()` also becomes `async`.
+- [ ] **`api/deps.py` — update `get_current_user()`** — Already `async`, so calling `await verify_jwt()` is a minimal change.
+- [ ] **Update all test call sites** — `tests/core/test_security.py` calls `verify_jwt()` synchronously. All calls must become `await verify_jwt()`.
+
+**Strategy B: Background periodic refresh (proactive freshness)**
+
+A background `asyncio.Task` that refreshes the JWKS store on a fixed interval (e.g., every 5 minutes). This ensures the store stays warm even if no cache-miss occurs, and handles the case where Supabase adds new keys before the old ones expire.
+
+- [ ] **`JWKSKeyStore` — add `start_background_refresh(supabase_url, interval_seconds)` and `stop_background_refresh()`** — Spawns an `asyncio.Task` that loops: `await asyncio.sleep(interval)` → `await load()` (with try/except to log and continue on failure). Stores the task handle for cancellation.
+- [ ] **`config.py` — add `jwks_refresh_interval_seconds: int = 300`** — Configurable refresh interval, default 5 minutes.
+- [ ] **`main.py` lifespan — start background refresh after initial load, cancel on shutdown** — `await jwks_store.load(...)` then `jwks_store.start_background_refresh(...)` in startup. `jwks_store.stop_background_refresh()` before `close_redis_pool()` in shutdown.
+
+**Tests:**
+
+- [ ] **`tests/core/test_jwks.py`** — New test file:
+  - `test_load_populates_keys` — Mock httpx response with JWKS JSON, verify `get_key()` returns the key
+  - `test_load_clears_old_keys` — Load once, load again with different keys, verify old keys gone
+  - `test_get_key_unknown_kid_returns_none` — After load, request unknown `kid`
+  - `test_is_loaded_false_initially` — Before any `load()` call
+  - `test_is_loaded_true_after_load` — After successful `load()`
+  - `test_load_failure_preserves_existing_keys` — Load successfully, then load with failing HTTP, verify old keys still present
+  - `test_reload_if_missing_fetches_new_key` — Load with key A, request key B (miss), mock reload returns key B, verify found
+  - `test_reload_if_missing_respects_cooldown` — Two rapid misses, verify only one HTTP call
+  - `test_reload_if_missing_concurrent_requests_single_fetch` — Multiple concurrent `reload_if_missing()` calls, verify single HTTP request via lock
+  - `test_background_refresh_calls_load_periodically` — Start with short interval, verify `load()` called multiple times
+  - `test_background_refresh_survives_load_failure` — Inject failure, verify task continues and next iteration succeeds
+  - `test_stop_background_refresh_cancels_task` — Start then stop, verify task is cancelled
+- [ ] **`tests/core/test_security.py`** — Add key rotation scenarios:
+  - `test_unknown_kid_triggers_reload_and_succeeds` — ES256 token with new `kid`, mock reload returns matching key
+  - `test_unknown_kid_reload_fails_falls_back_to_hs256` — ES256 token with new `kid`, reload fails, HS256 fallback attempted
+  - `test_verify_jwt_is_async` — Verify the function is a coroutine
+
+**Files touched:**
+
+| File | Change |
+|------|--------|
+| `core/jwks.py` | Add `_supabase_url`, `_last_reload_attempt`, `_reload_lock`, `reload_if_missing()`, `start_background_refresh()`, `stop_background_refresh()`. Update `load()` to store URL. |
+| `core/security.py` | Make `_decode_with_jwks()` and `verify_jwt()` async. Call `await jwks_store.reload_if_missing()` on cache miss. |
+| `config.py` | Add `jwks_refresh_interval_seconds: int = 300` |
+| `main.py` | Start background refresh in lifespan startup, stop in shutdown. |
+| `api/deps.py` | `await verify_jwt()` (already in async context, minimal change) |
+| `tests/core/test_jwks.py` | New file — 12+ tests for reload, cooldown, concurrency, background refresh |
+| `tests/core/test_security.py` | Update existing tests to `await`, add key rotation tests |
+| `AGENT_CONTEXT.md` | Update JWKS description to reflect auto-refresh behavior |

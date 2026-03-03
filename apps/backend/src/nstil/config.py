@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "console"
     rate_limit_enabled: bool = True
+    jwks_refresh_interval_seconds: int = 300
+    max_request_body_bytes: int = 30 * 1024 * 1024
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

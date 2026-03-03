@@ -13,34 +13,34 @@ from tests.factories import build_jwt_claims, make_token
 
 
 class TestVerifyJwt:
-    def test_valid_token(self, settings: Settings) -> None:
+    async def test_valid_token(self, settings: Settings) -> None:
         token = make_token()
-        payload = verify_jwt(token, settings)
+        payload = await verify_jwt(token, settings)
         assert payload.role == "authenticated"
         assert payload.aud == "authenticated"
         assert payload.email == "test@example.com"
 
-    def test_expired_token(self, settings: Settings) -> None:
+    async def test_expired_token(self, settings: Settings) -> None:
         token = make_token(exp=0)
         with pytest.raises(TokenExpiredError):
-            verify_jwt(token, settings)
+            await verify_jwt(token, settings)
 
-    def test_malformed_token(self, settings: Settings) -> None:
+    async def test_malformed_token(self, settings: Settings) -> None:
         with pytest.raises(InvalidTokenError):
-            verify_jwt("not-a-jwt", settings)
+            await verify_jwt("not-a-jwt", settings)
 
-    def test_empty_string(self, settings: Settings) -> None:
+    async def test_empty_string(self, settings: Settings) -> None:
         with pytest.raises(InvalidTokenError):
-            verify_jwt("", settings)
+            await verify_jwt("", settings)
 
-    def test_missing_sub_claim(self, settings: Settings) -> None:
+    async def test_missing_sub_claim(self, settings: Settings) -> None:
         claims = build_jwt_claims()
         del claims["sub"]
         token: str = jwt.encode(claims, "test-secret", algorithm="HS256")
         with pytest.raises(InvalidTokenError):
-            verify_jwt(token, settings)
+            await verify_jwt(token, settings)
 
-    def test_missing_exp_claim(self, settings: Settings) -> None:
+    async def test_missing_exp_claim(self, settings: Settings) -> None:
         header = base64.urlsafe_b64encode(
             json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
         ).rstrip(b"=")
@@ -54,21 +54,26 @@ class TestVerifyJwt:
         token = (signing_input + b"." + sig).decode()
 
         with pytest.raises(InvalidTokenError):
-            verify_jwt(token, settings)
+            await verify_jwt(token, settings)
 
-    def test_wrong_audience(self, settings: Settings) -> None:
+    async def test_wrong_audience(self, settings: Settings) -> None:
         token = make_token(aud="wrong-audience")
         with pytest.raises(InvalidTokenError):
-            verify_jwt(token, settings)
+            await verify_jwt(token, settings)
 
-    def test_wrong_secret(self, settings: Settings) -> None:
+    async def test_wrong_secret(self, settings: Settings) -> None:
         token = make_token(secret="wrong-secret")
         with pytest.raises(InvalidTokenError):
-            verify_jwt(token, settings)
+            await verify_jwt(token, settings)
 
-    def test_missing_role_claim(self, settings: Settings) -> None:
+    async def test_missing_role_claim(self, settings: Settings) -> None:
         claims = build_jwt_claims()
         del claims["role"]
         token: str = jwt.encode(claims, "test-secret", algorithm="HS256")
         with pytest.raises(InvalidTokenError):
-            verify_jwt(token, settings)
+            await verify_jwt(token, settings)
+
+    async def test_verify_jwt_is_coroutine(self) -> None:
+        import asyncio
+
+        assert asyncio.iscoroutinefunction(verify_jwt)

@@ -187,7 +187,7 @@ async def get_current_user(
     blacklist: Annotated[TokenBlacklistService | None, Depends(get_token_blacklist)],
 ) -> UserPayload:
     try:
-        user = verify_jwt(credentials.credentials, settings)
+        user = await verify_jwt(credentials.credentials, settings)
     except TokenExpiredError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
