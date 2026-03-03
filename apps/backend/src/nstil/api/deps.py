@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import AsyncClient
 
 from nstil.config import Settings
+from nstil.core.app_state import AppState
 from nstil.core.exceptions import InvalidTokenError, TokenExpiredError
 from nstil.core.security import verify_jwt
 from nstil.models import UserPayload
@@ -24,11 +25,14 @@ from nstil.services.cached_ai_context import CachedAIContextService
 from nstil.services.cached_ai_profile import CachedAIProfileService
 from nstil.services.cached_journal import CachedJournalService
 from nstil.services.cached_notification import CachedNotificationService
+from nstil.services.cached_profile import CachedProfileService
 from nstil.services.cached_space import CachedSpaceService
 from nstil.services.journal import JournalService
 from nstil.services.media import MediaService
 from nstil.services.notification import NotificationService
+from nstil.services.profile import ProfileService
 from nstil.services.space import JournalSpaceService
+from nstil.services.token_blacklist import TokenBlacklistService
 
 bearer_scheme = HTTPBearer()
 
@@ -38,14 +42,17 @@ def get_settings() -> Settings:
     return Settings()
 
 
+def _get_app_state(request: Request) -> AppState:
+    state: AppState = request.app.state.app
+    return state
+
+
 def get_redis(request: Request) -> aioredis.Redis:
-    pool: aioredis.Redis = request.app.state.redis
-    return pool
+    return _get_app_state(request).redis
 
 
 def get_supabase(request: Request) -> AsyncClient:
-    client: AsyncClient = request.app.state.supabase
-    return client
+    return _get_app_state(request).supabase
 
 
 def get_cache_service(
@@ -110,6 +117,13 @@ def get_notification_service(
     return CachedNotificationService(NotificationService(supabase), ai_cache)
 
 
+def get_profile_service(
+    supabase: Annotated[AsyncClient, Depends(get_supabase)],
+    ai_cache: Annotated[AICacheService, Depends(get_ai_cache_service)],
+) -> CachedProfileService:
+    return CachedProfileService(ProfileService(supabase), ai_cache)
+
+
 def get_ai_session_service(
     supabase: Annotated[AsyncClient, Depends(get_supabase)],
 ) -> AISessionService:
@@ -163,12 +177,17 @@ def get_insight_engine(
     return InsightEngine(insight_service, context_service, journal_service)
 
 
-def get_current_user(
+def get_token_blacklist(request: Request) -> TokenBlacklistService | None:
+    return _get_app_state(request).token_blacklist
+
+
+async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
     settings: Annotated[Settings, Depends(get_settings)],
+    blacklist: Annotated[TokenBlacklistService | None, Depends(get_token_blacklist)],
 ) -> UserPayload:
     try:
-        return verify_jwt(credentials.credentials, settings)
+        user = await verify_jwt(credentials.credentials, settings)
     except TokenExpiredError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -179,3 +198,15 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
         ) from exc
+
+    if (
+        blacklist is not None
+        and user.session_id is not None
+        and await blacklist.is_revoked(user.session_id)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+        )
+
+    return user

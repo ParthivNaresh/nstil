@@ -18,6 +18,7 @@ from nstil.services.ai.insight_computations import (
     find_entry_milestone,
     find_streak_milestone,
 )
+from nstil.services.ai.prompt_engine import _has_engaged_today
 
 
 def _day(d: date, count: int = 1) -> CalendarDay:
@@ -331,6 +332,60 @@ class TestDetectMoodAnomaly:
         start = date.today() - timedelta(days=7)
         end = date.today()
         assert detect_mood_anomaly(ctx, start, end) is None
+
+
+class TestHasEngagedToday:
+    def test_no_entries_returns_false(self) -> None:
+        ctx = _context(entries=[])
+        assert _has_engaged_today(ctx) is False
+
+    def test_journal_entry_today_returns_false(self) -> None:
+        ctx = _context(entries=[_entry(days_ago=0, entry_type="journal")])
+        assert _has_engaged_today(ctx) is False
+
+    def test_check_in_today_returns_true(self) -> None:
+        ctx = _context(entries=[_entry(days_ago=0, entry_type="check_in")])
+        assert _has_engaged_today(ctx) is True
+
+    def test_mood_snapshot_today_returns_true(self) -> None:
+        ctx = _context(entries=[_entry(days_ago=0, entry_type="mood_snapshot")])
+        assert _has_engaged_today(ctx) is True
+
+    def test_check_in_yesterday_returns_false(self) -> None:
+        ctx = _context(entries=[_entry(days_ago=1, entry_type="check_in")])
+        assert _has_engaged_today(ctx) is False
+
+    def test_mood_snapshot_yesterday_returns_false(self) -> None:
+        ctx = _context(entries=[_entry(days_ago=1, entry_type="mood_snapshot")])
+        assert _has_engaged_today(ctx) is False
+
+
+class TestWeeklySummaryWithMoodSnapshots:
+    def test_mood_snapshots_counted_in_entry_types(self) -> None:
+        entries = [
+            _entry(days_ago=1, mood="happy", entry_type="journal"),
+            _entry(days_ago=1, mood="anxious", entry_type="mood_snapshot", body=""),
+            _entry(days_ago=2, mood="calm", entry_type="mood_snapshot", body=""),
+        ]
+        ctx = _context(entries=entries)
+        start = date.today() - timedelta(days=7)
+        end = date.today()
+        result = compute_weekly_summary(ctx, start, end)
+        assert result.metadata["entry_count"] == 3
+        assert result.metadata["entry_types"]["mood_snapshot"] == 2
+        assert result.metadata["entry_types"]["journal"] == 1
+
+    def test_mood_snapshots_contribute_to_mood_distribution(self) -> None:
+        entries = [
+            _entry(days_ago=1, mood="anxious", entry_type="mood_snapshot", body=""),
+            _entry(days_ago=2, mood="anxious", entry_type="mood_snapshot", body=""),
+            _entry(days_ago=3, mood="happy", entry_type="journal"),
+        ]
+        ctx = _context(entries=entries)
+        start = date.today() - timedelta(days=7)
+        end = date.today()
+        result = compute_weekly_summary(ctx, start, end)
+        assert result.metadata["dominant_mood"] == "anxious"
 
 
 class TestFormatWeeklyContent:

@@ -7,10 +7,14 @@ class Settings(BaseSettings):
     supabase_service_key: SecretStr = SecretStr("")
     supabase_jwt_secret: SecretStr = SecretStr("")
     redis_url: str = "redis://localhost:6379"
+    redis_max_connections: int = 50
     cors_origins: list[str] = ["http://localhost:8081"]
     debug: bool = False
     log_level: str = "INFO"
     log_format: str = "console"
+    rate_limit_enabled: bool = True
+    jwks_refresh_interval_seconds: int = 300
+    max_request_body_bytes: int = 30 * 1024 * 1024
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

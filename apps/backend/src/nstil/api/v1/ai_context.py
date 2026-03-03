@@ -34,10 +34,12 @@ class GeneratePromptRequest(BaseModel):
     entry_id: UUID | None = Field(default=None)
 
 
-_CLIENT_ALLOWED_SOURCES: frozenset[PromptSource] = frozenset({
-    PromptSource.ON_DEVICE_LLM,
-    PromptSource.CLOUD_LLM,
-})
+_CLIENT_ALLOWED_SOURCES: frozenset[PromptSource] = frozenset(
+    {
+        PromptSource.ON_DEVICE_LLM,
+        PromptSource.CLOUD_LLM,
+    }
+)
 
 
 class CreatePromptRequest(BaseModel):
@@ -90,9 +92,7 @@ async def list_prompts(
         status=prompt_status,
     )
     items = [AIPromptResponse.from_row(row) for row in rows]
-    next_cursor = (
-        rows[-1].created_at.isoformat() if has_more and rows else None
-    )
+    next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
     return AIPromptListResponse(
         items=items,
         next_cursor=next_cursor,

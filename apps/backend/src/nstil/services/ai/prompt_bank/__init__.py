@@ -42,7 +42,6 @@ _build_indexes()
 
 
 class PromptBank:
-
     @staticmethod
     def get_by_id(prompt_id: str) -> CuratedPrompt | None:
         return _BY_ID.get(prompt_id)
@@ -56,10 +55,7 @@ class PromptBank:
         if mood_category is None:
             return list(prompts)
         mood = mood_category
-        return [
-            p for p in prompts
-            if mood in p.mood_categories or "neutral" in p.mood_categories
-        ]
+        return [p for p in prompts if mood in p.mood_categories or "neutral" in p.mood_categories]
 
     @staticmethod
     def get_filtered(
@@ -81,17 +77,11 @@ class PromptBank:
             candidates = [p for p in candidates if p.id not in exclude_ids]
 
         if exclude_topics:
-            candidates = [
-                p for p in candidates
-                if not p.tags & exclude_topics
-            ]
+            candidates = [p for p in candidates if not p.tags & exclude_topics]
 
         if max_intensity is not None:
             threshold = _intensity_order[max_intensity]
-            candidates = [
-                p for p in candidates
-                if _intensity_order[p.intensity] <= threshold
-            ]
+            candidates = [p for p in candidates if _intensity_order[p.intensity] <= threshold]
 
         return candidates
 

@@ -67,7 +67,14 @@ from nstil.models.ai_task import (
     TaskType,
 )
 from nstil.models.auth import UserPayload
-from nstil.models.calendar import CalendarDay, CalendarParams, CalendarResponse
+from nstil.models.calendar import (
+    CalendarDay,
+    CalendarParams,
+    CalendarResponse,
+    DailyMoodCount,
+    MoodTrendParams,
+    MoodTrendResponse,
+)
 from nstil.models.embedding import (
     EntryEmbeddingCreate,
     EntryEmbeddingResponse,
@@ -76,6 +83,7 @@ from nstil.models.embedding import (
     SemanticSearchResult,
 )
 from nstil.models.journal import (
+    BODYLESS_ENTRY_TYPES,
     EntryType,
     JournalEntryCreate,
     JournalEntryListResponse,
@@ -99,6 +107,7 @@ from nstil.models.notification import (
     ReminderTime,
 )
 from nstil.models.pagination import CursorParams, SearchParams
+from nstil.models.profile import ProfileResponse, ProfileRow, ProfileUpdate
 from nstil.models.space import (
     JournalSpaceCreate,
     JournalSpaceListResponse,
@@ -108,6 +117,7 @@ from nstil.models.space import (
 )
 
 __all__ = [
+    "BODYLESS_ENTRY_TYPES",
     "AIAgentTaskCreate",
     "AIAgentTaskListResponse",
     "AIAgentTaskResponse",
@@ -147,6 +157,7 @@ __all__ = [
     "CalendarParams",
     "CalendarResponse",
     "CursorParams",
+    "DailyMoodCount",
     "EntryEmbeddingCreate",
     "EntryEmbeddingResponse",
     "EntryEmbeddingRow",
@@ -173,9 +184,14 @@ __all__ = [
     "MessageRole",
     "MoodCategory",
     "MoodSpecific",
+    "MoodTrendParams",
+    "MoodTrendResponse",
     "NotificationPreferencesResponse",
     "NotificationPreferencesRow",
     "NotificationPreferencesUpdate",
+    "ProfileResponse",
+    "ProfileRow",
+    "ProfileUpdate",
     "PromptSource",
     "PromptStatus",
     "PromptStyle",

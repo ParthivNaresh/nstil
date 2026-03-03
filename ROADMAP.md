@@ -96,8 +96,9 @@ Separate spaces for different areas of life.
 - Entry list and search filter by journal
 
 **Remaining:**
-- [ ] **4G-10** — Journal management screen (settings → manage journals, add/edit/delete)
-- [ ] **4G-11** — Journal indicator on entry cards and detail screen
+- [ ] **4G-10** — Create Journal screen (name + color picker + optional description, modal presentation)
+- [ ] **4G-11** — Journal management screen (settings → manage journals, edit/delete/reorder)
+- [ ] **4G-12** — Journal indicator on entry cards and detail screen
 
 ### Subphase 4H — Enhanced Mood System ✅
 
@@ -113,209 +114,268 @@ Multiple images per entry (max 10, 10MB each). `entry_media` table with RLS + st
 
 ### Subphase 4K — Voice Memos ✅
 
-Record and attach audio to journal entries.
-
-- [x] **Database migration** — `009_ADD_AUDIO_SUPPORT.sql`. Audio content types (`audio/m4a`, `audio/aac`, `audio/wav`, `audio/mpeg`, `audio/mp4`) added to `entry_media` CHECK constraint. `010_ADD_WAVEFORM.sql` — `waveform jsonb` column on `entry_media` for persisted amplitude data
-- [x] **Backend** — `EntryMediaRow.waveform` and `EntryMediaResponse.waveform` (`list[float] | None`). `upload_media` accepts `waveform` as JSON string Form field, parsed via `_parse_waveform()`
-- [x] **Mobile recording** — `VoiceRecorderInline` (mic icon trigger) + `VoiceRecorderActive` (full recording UI). `expo-av` recording with real-time metering. `WaveformStatic` component renders live amplitude bars during recording. Auto-stop at max duration (5 min). Haptic feedback on start/stop/discard. `Date.now()` fallback for `durationMillis: 0` on iOS Simulator
-- [x] **Mobile playback** — `VoicePlayer` with play/pause, duration display, animated `Waveform` component. Skia-rendered bars with `useDerivedValue` + `withTiming` smooth progress animation via `Group clip`. Real waveform data from recording (no placeholder bars)
-- [x] **Waveform persistence** — Amplitudes captured during recording (`allAmplitudesRef`), downsampled via `downsampleAmplitudes()` in `audioUtils.ts`, stored as `LocalAudio.waveform`. Uploaded as JSON, persisted in `entry_media.waveform`. Playback uses stored waveform data
-- [x] **Audio utilities** — `lib/audioUtils.ts`: `configureAudioSession`, `createRecording`, `resetAudioSession`, `requestMicrophonePermission`, `normalizeMetering`, `formatDuration`, `downsampleAmplitudes`
-- [x] **Entry form integration** — `VoiceMemoSection` for active recording + playback. `useEntryForm` manages `localAudio`, `existingAudio`, `isRecordingAudio` state. Upload via `uploadAudio()` with waveform data
-- [x] **Tests** — Backend: ruff ✅, mypy ✅, 313 tests ✅. Mobile: tsc ✅, eslint ✅
+Record and attach audio to journal entries. `expo-av` recording with real-time metering, Skia waveform visualization (live during recording, animated playback with `Group clip`), waveform persistence via `entry_media.waveform` JSONB column. Auto-stop at 5 min, haptic feedback. 313 tests.
 
 ### Subphase 4L — Location Tagging ✅
 
-Structured geolocation with interactive place search and map-based pin drop.
-
-- [x] `latitude`/`longitude` columns with CHECK constraints and pair validation
-- [x] `LocationSearchSheet` floating modal with Nominatim search (400ms debounce), "Use Current Location" GPS fetch, two-step selection
-- [x] `LocationMap` (iOS only) — Apple Maps with tap-to-drop-pin, reverse geocoding
-- [x] Auto-detect location on new entries (silent — no prompt if permission not granted)
-- [x] Detail screen: tappable location opens Apple Maps / Google Maps
-- [x] 297 tests. `expo-location` + `react-native-maps` installed
+Structured geolocation with interactive place search and map-based pin drop. `latitude`/`longitude` columns with CHECK constraints. `LocationSearchSheet` with Nominatim search, GPS fetch, Apple Maps tap-to-drop-pin. Auto-detect on new entries. Detail screen tappable location opens native maps. 297 tests.
 
 ---
 
-## Phase 5 — AI Intelligence Layer & On-Device AI
+## Phase 5 — AI Intelligence Layer & On-Device AI ✅
 
-The intelligence layer. Backend provides data aggregation, curated prompt selection, and computed insights. On-device LLMs (Apple Foundation Models / Gemini Nano) provide personalized text generation — all inference stays on device.
+The intelligence layer. Backend provides data aggregation, curated prompt selection, and computed insights. On-device LLMs (Apple Foundation Models) provide personalized text generation — all inference stays on device. 583 backend tests.
 
 ### Subphase 5A — Backend AI Architecture ✅
 
-Database schema, models, services, and orchestration layer for the AI intelligence system.
+Full backend AI system: database schema (8 consolidated migrations), 10 model files, 9 data services, cache layer with TTL-based invalidation, 76-prompt curated PromptBank with mood/topic/intensity filtering, and 3 orchestration services (PromptEngine, CheckInOrchestrator, InsightEngine). 20 API endpoints across 4 route files with 10 DI factories. InsightEngine computes streaks, milestones, weekly summaries, and mood anomaly detection.
 
-**Database (migrations consolidated into domain-based files):**
-- [x] `006_USER_PREFERENCES.sql` — `user_ai_profiles` (prompt_style, topics_to_avoid, goals) + `user_notification_preferences` (reminder frequency/time, quiet hours). Auto-created by `handle_new_user()` trigger
-- [x] `007_AI_INTELLIGENCE_LAYER.sql` — `ai_sessions`, `ai_messages`, `ai_prompts`, `ai_insights`, `ai_feedback`, `ai_agent_tasks`, `entry_embeddings` tables. Full RLS, indexes, constraints. `semantic_search()` and `get_ai_context()` RPCs
-- [x] `008_TRIGGERS_AND_FUNCTIONS.sql` — `handle_new_user()` creates profile + default journal + AI profile + notification prefs
-
-**Models (10 new model files):**
-- [x] `ai_profile.py`, `notification.py`, `ai_session.py`, `ai_message.py`, `ai_prompt.py`, `ai_insight.py`, `ai_feedback.py`, `ai_task.py`, `embedding.py`, `ai_context.py`
-- [x] `CHECK_IN` added to `EntryType` enum, body made optional for check-in entries
-
-**Tier 1 Data Services (CRUD + Query, 9 services):**
-- [x] `services/ai/session.py` — AISessionService (sessions + messages, sort_order tracking)
-- [x] `services/ai/prompt.py` — AIPromptService (engagement funnel: mark_delivered/seen/engaged/dismissed/converted)
-- [x] `services/ai/insight.py` — AIInsightService (period queries, supersede chain)
-- [x] `services/ai/feedback.py` — AIFeedbackService (append-only, target-based lookup)
-- [x] `services/ai/task.py` — AITaskService (enqueue, optimistic-locking claim_next)
-- [x] `services/ai/profile.py` — AIProfileService
-- [x] `services/ai/context.py` — AIContextService (get_ai_context RPC wrapper)
-- [x] `services/ai/embedding.py` — EmbeddingService (upsert, semantic_search RPC)
-- [x] `services/notification.py` — NotificationService
-
-**Cache Layer:**
-- [x] `cache/ai_keys.py` — Key generation for AI context, profile, notification prefs
-- [x] `cache/ai_cache.py` — AICacheService (context 60s TTL, profile/prefs 600s TTL)
-- [x] `cached_ai_context.py`, `cached_ai_profile.py`, `cached_notification.py` — Cache-aside wrappers
-
-**Prompt Bank (76 curated prompts):**
-- [x] `services/ai/prompt_bank/types.py` — CuratedPrompt dataclass, PromptIntensity, PromptTag enums
-- [x] 7 data files: check_in (15), reflection (10), nudge (8), affirmation (10), reframe (10), guided (15), goal_check (8)
-- [x] `services/ai/prompt_bank/__init__.py` — PromptBank class with indexed lookup, mood/topic/intensity filtering, dedup-aware random selection
-
-**Tier 2 Orchestration Services:**
-- [x] `services/ai/prompt_engine.py` — PromptEngine: context-aware prompt type determination (check_in/reflection/nudge/affirmation/goal_check/guided), mood-appropriate selection, progressive filter relaxation, engagement context snapshot
-- [x] `services/ai/check_in.py` — CheckInOrchestrator: multi-step check-in flow (start → respond → convert/complete/abandon), flow_state management, resume-on-interrupt, orphaned session recovery, entry promotion to journal
-- [x] `services/ai/insight_engine.py` + `insight_computations.py` — InsightEngine v1: streak/milestone detection, weekly summaries (entry count, mood distribution, top tags, avg length), mood anomaly detection (difficult mood ratio comparison). Pure computation functions separated for testability
-
-**InsightEngine v2 (deferred):**
-- [ ] Mood trends — moving averages, upward/downward trend detection across multiple months
-- [ ] Complex patterns — day-of-week journaling frequency, mood-by-day correlations, gratitude→mood correlations
-- [ ] Monthly summaries — same structure as weekly, requires sufficient user data
-- [x] ~~LLM-generated narrative summaries on top of computed data~~ — **Done in 5C-4.** On-device LLM generates narrative summaries from computed `weekly_summary` metadata. Persisted via `POST /insights` with `source='on_device_llm'`
-
-**Deferred Tier 2 services:**
-- [x] ~~`services/ai/reflection.py`~~ — **No longer needed.** Reflection generation is handled entirely on-device via `lib/ai/reflectionEngine.ts` (5C-3). The mobile generates reflections via Foundation Models and persists them via `POST /ai/prompts`. A backend `ReflectionEngine` class would only be needed if we add cloud-based reflection generation, which contradicts the privacy-first architecture.
-- [ ] `services/ai/task_orchestrator.py` — TaskOrchestrator: ARQ worker dispatcher for background jobs (batch insight generation, embedding computation, scheduled tasks). **Deferred because** it requires infrastructure not yet in place: ARQ worker setup, `get_unembedded_entries` RPC in migrations, and an embedding model provider. The `AITaskService` (enqueue/claim_next with optimistic locking) is already built and ready to be consumed. **Build trigger:** when adding background processing — either for batch embedding generation (requires an embedding model decision), scheduled insight runs across all users, or any async work that shouldn't block API requests. **Dependencies:** ARQ integration in `pyproject.toml`, worker entrypoint, `get_unembedded_entries` RPC added to migrations.
-
-**API Routes (20 endpoints across 4 route files):**
-- [x] `api/v1/check_in.py` — 6 endpoints: `POST /start`, `POST /{id}/respond`, `POST /{id}/convert`, `POST /{id}/complete`, `POST /{id}/abandon`, `GET /active`. Typed request models (`StartCheckInRequest`, `RespondCheckInRequest`, `ConvertCheckInRequest`), unified `CheckInResponse` wrapper
-- [x] `api/v1/insights.py` — 4 endpoints: `GET /insights` (paginated, filterable by type/status/source), `POST /insights` (client-generated, source-restricted to `on_device_llm`/`cloud_llm`), `POST /insights/generate`, `PATCH /insights/{id}`
-- [x] `api/v1/ai_profile.py` — 4 endpoints: `GET /ai/profile`, `PATCH /ai/profile`, `GET /ai/notifications`, `PATCH /ai/notifications`
-- [x] `api/v1/ai_context.py` — 6 endpoints: `GET /ai/context` (configurable entry_limit/days_back), `GET /ai/prompts` (paginated), `GET /ai/prompts/entry/{entry_id}` (entry-linked reflection lookup), `POST /ai/prompts` (client-generated, source-restricted), `POST /ai/prompts/generate`, `PATCH /ai/prompts/{id}`
-- [x] `api/deps.py` — 10 dependency injection factories wiring the full AI service graph (cache → data services → cached wrappers → engines → orchestrators)
-
-**Remaining backend work:**
-- [ ] ARQ worker setup + TaskOrchestrator (see deferred services above)
+**Deferred:**
+- [ ] `services/ai/task_orchestrator.py` — ARQ worker dispatcher for background jobs (batch insight generation, embedding computation). Requires ARQ worker setup, `get_unembedded_entries` RPC, embedding model provider decision.
+- [ ] InsightEngine v2 — mood trends (moving averages), complex patterns (day-of-week correlations), monthly summaries.
 
 ### Subphase 5B — Push Notifications & Reminders ✅
 
-Scheduled reflection reminders with configurable cadence, quiet hours, and full lifecycle management.
+Scheduled reflection reminders with configurable cadence, quiet hours, and full lifecycle management. `expo-notifications` with WEEKLY triggers, `isWithinQuietHours()` overnight wrap handling, 15 static fallback messages. Notification preferences screen with Skia gradient pills, compact TimePicker wheels, debounced/immediate update split. AppState foreground sync, sign-in/sign-out lifecycle. Notification tap navigates to `/entry/create?source=notification`.
 
-- [x] **5B-1 — Infrastructure & permission flow** — `expo-notifications` installed, `lib/notifications.ts` (permission request, handler config, `PermissionStatus` enum), `stores/notificationStore.ts` (Zustand: permission tracking, schedule sync, clear), root layout integration (module-scope handler config, notification tap → `/entry/create?source=notification`, cold-launch handling via `getLastResponseAsync`)
-- [x] **5B-2 — Notification scheduling engine** — `scheduleReminders()` (cancel all → iterate reminderTimes × activeDays → skip quiet hours → schedule WEEKLY triggers), `isWithinQuietHours()` (handles overnight wrap), `lib/nudgeContent.ts` (15 rotating notification body strings), `toExpoWeekday()` conversion
-- [x] **5B-3 — API service & types** — `types/notification.ts` (`ReminderTime`, `ReminderFrequency`, `NotificationPreferences`, `NotificationPreferencesUpdate`), `services/api/notifications.ts` (GET/PATCH), `hooks/useNotificationPreferences.ts` (useQuery + useMutation with optimistic update, reschedule on success, rollback on error), `queryKeys` additions
-- [x] **5B-4 — Notification preferences screen** — `app/settings/_layout.tsx` + `app/settings/notifications.tsx` (sub-screen with Header, permission gating, loading skeletons). 6 components in `components/settings/NotificationSettings/`: `NotificationPermissionCard` (undetermined/denied states), `FrequencyPicker` (Skia gradient pills), `DaySelector` (7 circular Skia gradient pills), `ReminderTimeRow` (reuses TimePicker scroll wheels, local state for atomic updates, reserved-height quiet hours warning in red), `QuietHoursSection` (toggle + compact side-by-side TimePickers, local state emitting both start+end atomically), `NotificationSettings` (orchestrator with debounced/immediate update split, local toggle state for flicker-free switches). Settings tab updated with Bell icon navigation card. i18n translations for all notification UI strings
-- [x] **5B-5 — Notification response handling** — Tap notification → navigate to `/entry/create?source=notification` (implemented in 5B-1). `data: { action: "check_in" }` set on all scheduled notifications
-- [x] **5B-6 — Sync & edge cases** — `hooks/useNotificationSync.ts`: AppState foreground listener (re-check permission status, fetch prefs if `updated_at` changed, reschedule or cancel), sign-in detection (fetch + schedule), sign-out detection (cancel all), `lastSyncedAt` ref to avoid redundant reschedules. Sign-out in settings clears scheduled notifications
-- [x] **Backend fix** — `NotificationPreferencesUpdate.to_update_dict()` and model validator refactored to use `model_fields_set` (Pydantic) to distinguish "field omitted" from "field explicitly set to null", enabling quiet hours clearing. `TimePicker` gained `compact` prop for side-by-side quiet hours layout. 574 backend tests ✅
+### Subphase 5C — On-Device AI: Apple Foundation Models (iOS) ✅
 
-### Subphase 5C — On-Device AI: Apple Foundation Models (iOS)
-
-Leverage Apple Foundation Models (3B parameter on-device LLM, iOS 26+) for personalized, private intelligence. All inference on-device. Backend provides structured context via `GET /ai/context`, client feeds to on-device LLM, persists results via existing API endpoints. No cloud fallback — privacy first.
+All four on-device AI features confirmed working on physical device (iOS 26.3 with Apple Intelligence).
 
 **5C-1 — Native Module: Foundation Models Bridge ✅**
 
-Swift native module exposing Apple Foundation Models to React Native via Expo Modules API.
-
-- [x] `modules/nstil-ai/` — Local Expo module with `expo-module.config.json` (iOS-only, registers `NStilAIModule`)
-- [x] `NStilAIModule.swift` — Expo native module with `checkAvailability()` and `generate(instructions, prompt)` async functions. Uses `LanguageModelSession(instructions:)` with `session.respond(to:)`. `#if canImport(FoundationModels)` compile-time guards for Xcode/deployment target compatibility. Custom `NStilAIError` enum with `LocalizedError` conformance
-- [x] `NStilAIAvailability.swift` — wraps `SystemLanguageModel.default.availability` checks. Maps `UnavailableReason` cases (deviceNotEligible, modelNotReady, appleIntelligenceNotEnabled, unsupportedLanguage) to typed `AIAvailabilityResult`. `#if canImport(FoundationModels)` guards throughout
-- [x] `modules/nstil-ai/src/index.ts` — typed wrapper around `requireNativeModule("NStilAI")`. Platform guard (returns `null` on non-iOS). Exports `checkAIAvailability()`, `nativeGenerate()`
-- [x] `lib/ai/foundationModels.ts` — production-grade wrapper with 30s timeout via `withTimeout<T>()`, `FoundationModelError` class with typed error codes (`timeout`, `generation_failed`, `unavailable`), `generateText()`, `generateStructured<T>()` with JSON fence stripping, `isAvailable()`, `getAvailability()`
-- [x] `hooks/useAICapabilities.ts` — `useAICapabilities()` hook returning `AICapabilities { hasOnDeviceAI, isDownloading, status, platform, reason }`. 5-min stale time. Returns static `UNSUPPORTED_CAPABILITIES` on non-iOS. Single source of truth for all AI-conditional UI
-- [x] `services/api/aiContext.ts` — `fetchAIContext()` for `GET /ai/context` with optional `entryLimit`/`daysBack` params
-- [x] `types/ai.ts` — added `AIContextResponse` and all sub-interfaces (`AIContextEntry`, `AIContextMoodDistribution`, `AIContextStats`, `AIContextProfile`, `AIContextPrompt`, `AIContextSession`)
-- [x] `lib/queryKeys.ts` — added `ai.capabilities()`, `ai.context()` keys
-- [x] Barrel exports updated: `types/index.ts`, `hooks/index.ts`
+Swift native module (`modules/nstil-ai/`) exposing Apple Foundation Models to React Native via Expo Modules API. `NStilAIModule.swift` with `checkAvailability()` and `generate(instructions, prompt)`. `#if canImport(FoundationModels)` compile-time guards. TypeScript wrapper with platform guard, 30s timeout, typed `FoundationModelError` class. `useAICapabilities` hook as single source of truth for AI-conditional UI.
 
 **5C-2 — Personalized Prompt Generation ✅**
 
-On-device LLM generation pipeline replacing curated PromptBank when Foundation Models available. Silent fallback to curated backend when unavailable or on error.
-
-- [x] **Backend: `POST /ai/prompts` endpoint** — New endpoint in `api/v1/ai_context.py` for persisting client-generated prompts. `CreatePromptRequest` with `field_validator("source")` restricting to `on_device_llm` | `cloud_llm` only (prevents clients from spoofing `curated` source). Calls `AIPromptService.create()` directly. 574 tests ✅
-- [x] **`lib/ai/promptContext.ts`** — Transforms `AIContextResponse` → concise natural language context string. 4 sections: USER PROFILE (style, topics to avoid, goals), JOURNALING ACTIVITY (stats with "days ago" computation), RECENT MOOD PATTERNS (percentage distribution, top 5), RECENT ENTRIES (truncated summaries with mood/tags, max 5). Reusable across all generation paths
-- [x] **`lib/ai/promptTemplates.ts`** — System prompt templates per task type (check_in, reflection, nudge, affirmation, goal_check, guided, fallback). Shared `BASE_INSTRUCTIONS` enforcing tone (warm not saccharine, no diagnosis, 1-3 sentences, match user style, respect topics to avoid). Each template has `instructions` + `promptSuffix`. `buildInstructions()` combines template + context. `getPromptTemplate()` with fallback for unknown types
-- [x] **`lib/ai/promptGenerator.ts`** — `generateOnDevicePrompt()` orchestrator. `determinePromptType()` mirrors backend `PromptEngine._determine_type()` logic (same thresholds: inactivity 3d → nudge, no check-in today → check_in, difficult moods ≥3 → affirmation, goals without recent check → goal_check, default → guided). Calls `generateText()`, strips quote wrapping, validates non-empty. Returns typed `GeneratedPrompt { content, promptType, source, moodCategory, context }`
-- [x] **`services/api/prompts.ts`** — Added `createPrompt()` for `POST /ai/prompts` with typed `CreatePromptPayload`
-- [x] **`hooks/useHomePrompt.ts`** — `generateHomePrompt()` checks `isAvailable()` → if on-device: `fetchAIContext()` → `generateOnDevicePrompt()` → `createPrompt()`. If unavailable or any failure: silent fallback to `generatePrompt()` (backend curated). UI layer completely unaware of source. `useDismissPrompt`/`useEngagePrompt` unchanged
-- [x] **`lib/ai/index.ts`** — Barrel export for all `lib/ai/` modules
+On-device LLM replaces curated PromptBank when Foundation Models available. `promptContext.ts` transforms `AIContextResponse` into natural language (profile, activity stats, mood patterns, recent entries). `promptTemplates.ts` with per-task system prompts enforcing tone. `promptGenerator.ts` mirrors backend `PromptEngine` logic for prompt type determination. Silent fallback to curated backend on failure. Home screen check-in card shows personalized prompts.
 
 **5C-3 — Entry Reflections ✅**
 
-Post-entry intelligence: personalized reflections generated on-device after saving an entry. Fire-and-forget — entry saves immediately, reflection appears asynchronously.
+Post-entry reflections generated on-device. Fire-and-forget — entry saves immediately, reflection appears asynchronously. `reflectionEngine.ts` builds entry-specific context, generates via Foundation Models. `useEntryReflection` hook with dedup guard. `ReflectionCard` component with 3-line truncated preview, tap-to-open `pageSheet` modal for full text. Positioned between date/location and text body via `reflectionSlot` prop pattern. Dismiss persists via API.
 
-- [x] **Backend: `AIPromptService.get_by_entry_id()`** — Single-item lookup for the most recent non-dismissed prompt linked to an entry. Filters by user_id, entry_id, excludes `status='dismissed'`, ordered `created_at desc`, limit 1. Optional `prompt_type` filter
-- [x] **Backend: `GET /ai/prompts/entry/{entry_id}` endpoint** — Returns the linked reflection for an entry (or `null`). Optional `?type=reflection` query param. 6th endpoint on `ai_context.py`. 574 tests ✅
-- [x] **`lib/ai/reflectionEngine.ts`** — `generateReflection(entry, context)`: builds entry-specific context (title, mood, tags, body truncated at 2000 chars), combines with user-level context from `buildContextString()`, uses `reflection` template from `promptTemplates.ts`, calls `generateText()` via Foundation Models. Returns typed `GeneratedReflection { content, promptType, source, moodCategory, entryId, context }`
-- [x] **`hooks/useEntryReflection.ts`** — Two hooks: `useEntryReflection(entryId)` (query for existing reflection + dismiss mutation with cache invalidation) and `useGenerateReflection()` (fire-and-forget mutation: body length guard ≥20 chars → `isAvailable()` → dedup check via `getEntryReflection()` → `fetchAIContext()` → `generateReflection()` → `createPrompt()` → cache update)
-- [x] **`hooks/useEntries.ts`** — `useCreateEntry` and `useUpdateEntry` trigger `generateReflection.mutate(entry)` in `onSuccess`. Fire-and-forget via `.mutate()` (not `.mutateAsync()`) — failures don't affect entry save. `useTogglePin` unchanged (no reflection trigger)
-- [x] **`services/api/prompts.ts`** — Added `getEntryReflection(entryId, promptType?)` for `GET /ai/prompts/entry/{entryId}`
-- [x] **`components/journal/ReflectionCard/`** — Glass card with Sparkles icon, "AI Reflection" accent label, dismiss X button with `hitSlop`, `FadeIn` Reanimated animation (400ms). Uses `AppText`, `Card`, `Icon` from design system
-- [x] **`app/entry/[id]/index.tsx`** — `useEntryReflection(entryId)` in `EntryFormScreen`. Renders `ReflectionCard` below `EntryForm` when reflection exists, with `marginTop: spacing.lg`
-- [x] **Barrel exports updated** — `lib/ai/index.ts`, `hooks/index.ts`, `components/journal/index.ts`, `lib/queryKeys.ts` (added `prompts.reflections()`, `prompts.reflection(entryId)`)
+**5C-4 — Narrative Summaries & Personalized Notifications ✅**
 
-**5C-4 — Narrative Summaries ✅**
-
-On-device LLM generates natural language summaries on top of computed insight data. Mood-aware notification text replaces static rotation.
-
-- [x] **Backend: `POST /insights` endpoint** — New endpoint in `api/v1/insights.py` for persisting client-generated insights. `CreateInsightRequest` with `field_validator("source")` restricting to `on_device_llm` | `cloud_llm` (same pattern as prompts). `source` query filter added to `GET /insights`. `AIInsightService.list_insights()` updated with `source` param. 583 tests ✅ (9 new insight route tests)
-- [x] **`lib/ai/summaryEngine.ts`** — `generateNarrativeSummary(data)`: takes parsed `WeeklySummaryData` (from computed insight metadata), builds context string with entry count, mood breakdown percentages, top tags, avg length, period dates. Uses `weekly_narrative` template. Returns typed `GeneratedNarrativeSummary { content, insightType, source, title, periodStart, periodEnd, metadata }`
-- [x] **`lib/ai/notificationTextEngine.ts`** — `generateNotificationTexts(context, count)`: takes `AIContextResponse`, uses `notification_text` template, asks LLM for `count` unique short messages (one per line), parses multi-line response, strips list prefixes and quotes, filters to ≤120 chars
-- [x] **`lib/ai/promptTemplates.ts`** — Added `weekly_narrative` template (2-3 sentence flowing prose, weave stats into narrative, acknowledge emotional patterns) and `notification_text` template (under 100 chars, personal, warm, no guilt) to `TEMPLATE_MAP`
-- [x] **`services/api/insights.ts`** — Added `createInsight()` for `POST /insights` with typed `CreateInsightPayload`. Added `source` param to `ListInsightsParams`
-- [x] **`hooks/useNarrativeSummary.ts`** — `useGenerateNarrativeSummary()`: fire-and-forget mutation. Takes computed `weekly_summary` insight → parses metadata → guards on ≥2 entries + valid period dates → `isAvailable()` → generates narrative → persists via `POST /insights` → invalidates insights cache
-- [x] **`components/insights/NarrativeSummary.tsx`** — Glass card with BookOpen icon, insight title as label, dismiss X button with `hitSlop`, `FadeIn` animation (400ms). Uses `AppText`, `Card`, `Icon` from design system
-- [x] **`app/(tabs)/insights.tsx`** — Insight categorization now separates computed `weekly_summary` (source=computed) from LLM narrative (source=on_device_llm). Auto-triggers `generateNarrative()` when computed summary exists but narrative doesn't. `narrativeAttempted` ref prevents duplicate generation. Renders `NarrativeSummary` above `WeeklySummaryCard`
-- [x] **Mood-aware notification text** — `lib/notifications.ts`: `scheduleReminders()` accepts optional `personalizedTexts` array, `pickMessage()` rotates through them with modulo fallback to static `getRandomNudgeMessage()`. `stores/notificationStore.ts`: `syncSchedule()` passes through personalized texts. `hooks/useNotificationSync.ts`: `tryGeneratePersonalizedTexts()` checks `isAvailable()` → fetches context → generates 7 texts → returns array or `undefined` on failure. Called in both `fetchAndSchedule()` and `syncOnForeground()`. Graceful fallback — if LLM unavailable or fails, static messages used
-- [x] **Native module resilience** — `modules/nstil-ai/src/index.ts`: `requireNativeModule("NStilAI")` wrapped in `loadNativeModule()` try/catch. Returns `null` instead of crashing the entire module tree when native module isn't linked (Expo Go, simulator without native build). Fixes cascading "missing default export" errors across all route files
-- [x] **Root layout fix** — `app/_layout.tsx`: removed early-return guard that returned `null` before auth/theme initialization. Now always renders full provider tree (`GestureHandlerRootView` → `SafeAreaProvider` → `QueryClientProvider` → `Stack`). Splash screen covers intermediate state. Fixes `GestureDetector must be used as a descendant of GestureHandlerRootView` error
-- [x] **Dead code cleanup** — Removed unused `getNudgeMessageCount()` from `lib/nudgeContent.ts`
-- [x] **Barrel exports updated** — `lib/ai/index.ts`, `hooks/index.ts`, `components/insights/index.ts`
+On-device LLM generates weekly narrative summaries from computed insight metadata. `summaryEngine.ts` builds context with exact mood counts (not percentages) to reduce hallucination. Strict prompt instructions enforce factual accuracy. `NarrativeSummary` component renders above `WeeklySummaryCard` on Insights tab. Personalized notification text via `notificationTextEngine.ts` replaces static rotation — `personalizedNotifications.ts` shared utility used by both `useNotificationSync` and `useNotificationPreferences` to ensure all scheduling paths attempt LLM generation.
 
 ### Subphase 5C+ — Contextual Intelligence (deferred, post-v1.0)
 
 System-level data integration for proactive, context-aware intelligence. Builds on top of 5C's Foundation Models bridge.
 
-- [ ] **Journaling Suggestions API** — Apple's framework for system-aggregated context (workouts, music, photos, locations). `ContextSignalProvider` abstraction with `fetchSignals(since: Date): Promise<ContextSignal[]>`. Discriminated union types per signal. `signalPromptMapper` converts signals to natural language for LLM context
-- [ ] **HealthKit integration** — Sleep, HRV, resting heart rate, mindful minutes. `HKObserverQuery` background delivery for workout/sleep events → contextual notification triggers
-- [ ] **Contextual notification triggers** — HealthKit background delivery → "How did that workout make you feel?" notifications. Rate limiting (max 3/day, 2hr apart). App Intents for Dynamic Island / Lock Screen suggestions
-- [ ] **Calendar integration** — EventKit for meeting density, upcoming stressors. "You had 8 meetings today — how did that feel?"
+- [ ] **Journaling Suggestions API** — Apple's framework for system-aggregated context (workouts, music, photos, locations)
+- [ ] **HealthKit integration** — Sleep, HRV, resting heart rate, mindful minutes. Background delivery for contextual notification triggers
+- [ ] **Contextual notification triggers** — HealthKit events → "How did that workout make you feel?" Rate limiting (max 3/day, 2hr apart). App Intents for Dynamic Island / Lock Screen suggestions
+- [ ] **Calendar integration** — EventKit for meeting density, upcoming stressors
 
 ### Subphase 5D — On-Device AI: Gemini Nano (Android)
 
 Equivalent intelligence features on Android using Gemini Nano via ML Kit GenAI APIs.
 
-- [ ] **Native module bridge** — Kotlin native module exposing ML Kit GenAI Prompt API to React Native via Expo Modules API. `NStilAIModule.kt`: `isAvailable(): Boolean`, `generate(systemPrompt: String, userPrompt: String): String`. Availability check (AICore service, supported devices). Graceful fallback to curated prompts
-- [ ] **Health Connect integration** — `NStilHealthModule.kt` wrapping Health Connect APIs. Read workouts, sleep, heart rate. Change token-based polling via `WorkManager` for background detection. Maps to same `ContextSignal` TypeScript types as iOS
-- [ ] **Feature parity** — same `OnDevicePromptGenerator`, `promptTemplates`, `signalPromptMapper`, `notificationIntelligence` TypeScript modules as iOS. Platform-specific code is only the native module bridge layer. All prompt construction, context preparation, and persistence logic is shared
-- [ ] **Fallback strategy** — devices without on-device AI support get curated PromptBank selection. No cloud fallback — privacy first. `useAICapabilities` hook returns same interface on both platforms
+- [ ] **Native module bridge** — Kotlin native module exposing ML Kit GenAI Prompt API. Availability check, graceful fallback to curated prompts
+- [ ] **Health Connect integration** — Read workouts, sleep, heart rate. Change token-based polling via `WorkManager`
+- [ ] **Feature parity** — Same TypeScript prompt construction, context preparation, and persistence logic as iOS. Platform-specific code is only the native module bridge layer
+- [ ] **Fallback strategy** — Devices without on-device AI get curated PromptBank selection. No cloud fallback — privacy first
 
 ### Subphase 5E — Mobile AI Screens & Check-in Flow UI ✅
 
-The user-facing AI experience. Consumes the 17 backend endpoints from 5A. Works with curated PromptBank prompts now; on-device LLM (5C/5D) layers personalization on top later.
-
-- [x] **5E-1 — API service layer & types** — `types/ai.ts` (all AI interfaces), `services/api/checkIn.ts` (6 functions), `services/api/prompts.ts` (3 functions), `services/api/insights.ts` (3 functions), `services/api/aiProfile.ts` (2 functions), `queryKeys` additions
-- [x] **5E-2 — Check-in flow UI** — `useCheckIn` hook (state machine with lazy session creation, `stateRef` for stable callbacks), 4 step components (`CheckInLoading`, `CheckInMood`, `CheckInPrompt`, `CheckInOutcome`), `app/check-in.tsx` screen with abandon dialog, auto-complete timer, convert-to-entry navigation. Mood screen shows instantly (session created in background)
-- [x] **5E-3 — Home screen check-in card** — `useHomePrompt` (30-min stale query), `useDismissPrompt` (optimistic removal + background refetch), `useEngagePrompt`, `HomeCheckInSection` orchestrator with skeleton/prompt/fallback states, pull-to-refresh on home screen
-- [x] **5E-4 — Insights dashboard** — `useInsights` hooks (generate mutation + list query + update mutation), `useYearCalendar` (12-month parallel fetch), 7 components (`StreakBanner` with Skia gradient, `WeeklySummaryCard` with `MoodBar`, `MoodAnomalyCard`, `MoodTrendChart` with Skia line chart, `YearInPixels` grid with memoized cells, `InsightCard` with bookmark/dismiss), `insightUtils.ts` for type-safe metadata parsing
-- [x] **5E-5 — AI profile settings** — `useAIProfile`/`useUpdateAIProfile` (optimistic updates), `PromptStylePicker` (Skia gradient pills), `TopicsToAvoid` (tag input with plus button), `GoalsList` (add/remove with plus button), `AIProfileSettings` orchestrator (debounced/immediate update split), `app/settings/ai-profile.tsx` route, settings tab navigation card
+Full user-facing AI experience consuming 20 backend endpoints. Check-in flow with state machine hook (`useCheckIn`), lazy session creation, 4-step UI (loading → mood → prompt → outcome), abandon dialog, auto-complete timer, convert-to-entry. Home screen check-in card with 30-min stale query, optimistic dismiss, pull-to-refresh. Insights dashboard with streak banner, weekly summary, mood anomaly cards, mood trend chart (Skia line), year-in-pixels grid, insight cards with bookmark/dismiss. AI profile settings with prompt style picker, topics to avoid, goals list.
 
 ---
 
-## Phase 6 — Production Deployment & Observability
+## Phase 6 — Onboarding & Home Screen
+
+Post-signup onboarding flow and a home screen that feels alive. The onboarding captures the minimum data needed for personalization while keeping friction low. The home screen becomes the emotional center of the app — a daily snapshot that motivates the user to journal.
+
+### Subphase 6A — Backend: Profile Service & Onboarding State ✅
+
+Wired up the existing `profiles` table with backend service, cache layer, and API endpoints. `handle_new_user()` trigger creates profile row on signup — this subphase built the application layer to read and update it. `onboarding_completed_at` column added to `profiles` migration (NULL = not completed). `ProfileRow`, `ProfileUpdate`, `ProfileResponse` models. `ProfileService` with get/update/complete_onboarding. `CachedProfileService` with Redis TTL-based invalidation. 3 API endpoints (`GET /api/v1/profile`, `PATCH /api/v1/profile`, `POST /api/v1/profile/onboarding-complete`). DI factory. 32 new tests (13 model, 7 service, 12 API route). 615 total backend tests.
+
+### Subphase 6B — Mobile: Onboarding Flow ✅
+
+4-step onboarding flow that appears once after email verification. One-time experience — if the user kills the app or navigates away before completion, it restarts from step 1. Only marked complete when all steps are finished. No local step persistence.
+
+**Completed:**
+- `types/profile.ts` — `Profile`, `ProfileUpdate` interfaces
+- `services/api/profile.ts` — `getProfile()`, `updateProfile()`, `completeOnboarding()`
+- `hooks/useProfile.ts` — `useProfile()` (with `enabled` flag), `useUpdateProfile()` (optimistic), `useCompleteOnboarding()`
+- `queryKeys.ts` — `profile` key
+- `app/index.tsx` — Root redirect: fetches profile after auth, routes to `/(onboarding)` if `onboarding_completed_at` null, else `/(tabs)`
+- `app/(onboarding)/_layout.tsx` — Stack navigator, no header, fade transitions
+- `components/onboarding/StepIndicator.tsx` — Animated progress dots (active pill expands, Reanimated)
+- `components/onboarding/OnboardingStep.tsx` — Shared step layout (indicator, title, subtitle, content, footer)
+- Step 1 (Welcome/Name) — flat text input, Continue writes display_name, Skip proceeds without
+- Step 2 (Prompt Style) — reuses `PromptStylePicker` with `showLabel={false}`, writes to AI profile
+- Step 3 (Theme) — reuses `ThemePicker` with `showLabel={false}`, instant preview via `themeStore`
+- Step 4 (Notifications) — Bell icon, Enable requests permission, both paths call `POST /api/v1/profile/onboarding-complete` then `router.replace("/(tabs)")`
+- `showLabel` prop added to `PromptStylePicker` and `ThemePicker` (backward compatible, defaults `true`)
+- i18n: `onboarding` namespace with all step strings
+
+### Subphase 6C — Home Screen Enhancements
+
+Transform the home screen from a single check-in card into a daily dashboard with Mood Snapshots as a new primary interaction loop.
+
+- [x] **Time-of-day greeting** — "Good morning, Parthiv" / "Good afternoon" / "Good evening". Uses `profiles.display_name`, gracefully degrades to no name. `greetingUtils.ts` utility, `Greeting` component, current date below greeting. Profile query cached from root index fetch
+- [x] **Streak banner** — Already on home screen, uses calendar data directly
+
+#### Mood Snapshots
+
+One-tap mood logging directly from the home screen. No title, no body, no navigation — just tap a mood and it's saved. Creates a new `mood_snapshot` entry type that feeds into the calendar, mood trends, AI context, and weekly summaries automatically. The goal is to increase daily touchpoints from 1 (journal entry) to many, capturing emotional moments throughout the day that the user would never write a full entry for.
+
+**Entry point:** An inline mood strip on the home screen (between greeting and check-in card). 5 mood category pills always visible. Tap a category → sub-emotions slide in below → tap a sub-emotion → done. Or tap the category again to confirm just the category. 2 taps max, 2 seconds.
+
+**Step 1: Backend — `mood_snapshot` entry type ✅**
+- [x] Added `MOOD_SNAPSHOT = "mood_snapshot"` to `EntryType` enum in `models/journal.py`
+- [x] Created `BODYLESS_ENTRY_TYPES` frozenset (`CHECK_IN`, `MOOD_SNAPSHOT`) — replaces hardcoded `!= EntryType.CHECK_IN` check
+- [x] Updated `JournalEntryCreate` body validation: exempt `BODYLESS_ENTRY_TYPES` from body requirement
+- [x] Added `mood_snapshot` validation: require `mood_category` when `entry_type` is `mood_snapshot`
+- [x] Updated SQL CHECK constraint in `004_JOURNAL_ENTRIES.sql` to include `'mood_snapshot'`
+- [x] Exported `BODYLESS_ENTRY_TYPES` from `models/__init__.py`
+- [x] 8 new model tests (create with category, with specific, without mood rejected, empty body accepted, body accepted, invalid pair rejected, bodyless set membership, response from row)
+
+**Step 2: Backend — AI context awareness ✅**
+- [x] Renamed `_has_check_in_today()` → `_has_engaged_today()` in `prompt_engine.py` — now checks `_ENGAGEMENT_ENTRY_TYPES` frozenset (`check_in`, `mood_snapshot`)
+- [x] Verified `insight_computations.py` handles `mood_snapshot` correctly — `Counter(e.entry_type)` is type-agnostic
+- [x] 6 new engagement tests + 2 weekly summary tests with mood snapshots
+- [x] No changes needed to calendar RPCs — they already aggregate all entries with moods regardless of type
+
+**Step 3: Mobile — types & hook ✅**
+- [x] Added `"mood_snapshot"` to `EntryType` union in `types/journal.ts`
+- [x] Added `BODYLESS_ENTRY_TYPES` as `ReadonlySet<EntryType>` — mirrors backend frozenset, exported from `types/index.ts`
+- [x] Made `body` optional in `JournalEntryCreate` (`readonly body?: string`)
+- [x] Created `hooks/useMoodSnapshot.ts` — `useMoodSnapshot()` returns `{ logMood, isLogging, lastSnapshot }`. Auto-selects first journal, creates `mood_snapshot` entry, tracks last log for cooldown UI
+- [x] Added `shouldGenerateReflection()` guard in `useEntries.ts` — `useCreateEntry` and `useUpdateEntry` skip reflection for bodyless entry types
+- [x] Exported `useMoodSnapshot` from `hooks/index.ts`
+- [x] `EntryTypeSelector` confirmed unchanged — `mood_snapshot` not in picker
+
+**Step 4: Mobile — `MoodSnapshotStrip` component ✅**
+- [x] `components/home/MoodSnapshotStrip.tsx` — Inline mood strip with 5 category pills (reuses `MoodItem` and `MoodSpecificItem` directly)
+- [x] Three-state machine: `idle` → `selecting` → `success` → `idle`
+- [x] Two-phase interaction: tap category → sub-emotions slide in with staggered `FadeInDown` → tap sub-emotion → logged
+- [x] Category-only confirm: tap selected category again to log without sub-emotion
+- [x] Haptic feedback: `notificationAsync(Success)` on specific select, `impactAsync(Light)` on category (via `MoodItem`)
+- [x] Success state: checkmark icon + mood label + relative time ("Anxious · 2h ago"), auto-returns to idle after 2s
+- [x] Cooldown: after logging, shows last snapshot with "Tap to log again" hint. Tap resets to idle
+- [x] Exported from `components/home/index.ts`
+
+**Step 5: Mobile — Home screen integration ✅**
+- [x] `MoodSnapshotStrip` added to home screen between `Greeting` and `StreakBanner`
+- [x] Pull-to-refresh invalidates entries lists (mood snapshots refresh)
+- [x] i18n keys: `home.moodSnapshot.prompt`, `home.moodSnapshot.logged`, `home.moodSnapshot.logAgain`
+
+**Step 6: Mobile — History/Calendar display ✅**
+- [x] `MoodSnapshotPill` component — compact inline pill (gradient dot + mood label + relative time) with `Pressable` for navigation
+- [x] History screen `renderItem` branches on `entry_type === "mood_snapshot"` → renders `MoodSnapshotPill` instead of `AnimatedEntryCard`
+- [x] Calendar day detail shows snapshots alongside full entries (same `useDayEntries` query, branched rendering)
+- [x] `MoodSnapshotDetail` component — read-only detail view with large gradient orb, mood label, category, date, location
+- [x] Entry detail screen branches: mood snapshots → `MoodSnapshotScreen` (read-only, delete only, no edit form/pin/save)
+- [x] Exported from `components/journal/index.ts`
+
+**Design decisions:**
+- **Inline, not modal** — The mood strip is always visible on the home screen. No FAB, no bottom sheet, no navigation. Zero friction.
+- **Reuse `journal_entries` table** — A mood snapshot is just an entry with `entry_type: "mood_snapshot"`, a mood, and no body. All existing queries, insights, calendar, and AI context include it automatically.
+- **Not in entry type picker** — The 4 writing types (Journal, Reflection, Gratitude, Freewrite) stay as-is. Mood snapshots are created exclusively from the home screen strip.
+- **Cooldown, not rate limit** — After logging, the strip shows the last snapshot instead of pills. The user can tap to log again anytime. No hard limit, but the visual state change reduces accidental double-taps.
+- **Default journal** — Mood snapshots auto-assign to the user's first journal (same as check-in entries). No journal picker needed for a 2-second interaction.
+
+#### Radial Create Menu ✅
+
+Replaced the direct-navigate + button with a radial arc menu that opens two creation paths: "Journal" (new journal space) and "Entry" (new journal entry). The + button previously navigated straight to `/entry/create` — now it opens a glassmorphic semicircular menu above the tab bar.
+
+- [x] **`CreateMenu` component** — Skia-drawn annular sector (semicircle from 180°→360°) with glassmorphism layering: glass fill → accent gradient overlay → blurred glow stroke → crisp glass border. Radial divider line splits the arc into two segments
+- [x] **Radial sweep animation** — Pre-computed 61-frame SVG path lookup table (`arcPath.ts`). `useDerivedValue` worklet indexes into frames based on progress. Arc sweeps open radially (not linearly) in 280ms with `Easing.out(cubic)`, closes in 200ms. Items fade in staggered as the sweep passes their angular position
+- [x] **`CreateTabButton` update** — + icon spring-rotates 45° into × when menu is open. `isMenuOpen` prop
+- [x] **`CreateMenuItem` component** — Pressable items positioned along the arc midline radius at evenly spaced angles. Haptic feedback on tap
+- [x] **Backdrop dismiss** — Full-screen backdrop with `onPress` dismiss. Menu container uses `pointerEvents="box-none"` so taps on empty space pass through to backdrop
+- [x] **i18n** — `createMenu.newEntry`, `createMenu.newJournal` translation keys
+- [x] **"Entry" wired** — Navigates to `/entry/create` (existing flow)
+- [x] **"Journal" placeholder** — Closes menu, ready to wire to Create Journal screen (4G-10)
+
+**File structure:** `components/ui/TabBar/CreateMenu/` — `CreateMenu.tsx`, `CreateMenuItem.tsx`, `arcPath.ts`, `styles.ts`, `types.ts`, `index.ts`
+
+#### Remaining Home Screen Items
+- [ ] **Today's mood summary** — Compact card showing moods logged today (from both entries and snapshots)
+- [ ] **Recent entries** — Last 2–3 entries (title, mood orb, relative time). Tap navigates to detail
+- [ ] **Weekly mood dots** — 7 small dots (Sun–Sat) colored by dominant mood per day, empty for no-entry days
+
+---
+
+## Phase 7 — Production Deployment & Observability
 
 CI/CD pipelines, production Supabase project, monitoring, error tracking, app store submission.
 
 - [ ] Production SMTP — real email delivery (SendGrid, Postmark, or SES), custom templates
-- [ ] Token revocation — Redis-based token blacklist for immediate invalidation on sign-out
-- [ ] API gateway rate limiting
+- [x] Token revocation — Redis-based session blacklist for immediate JWT invalidation on sign-out. `TokenBlacklistService` uses Redis `SETEX`/`EXISTS` with TTL matching token expiry (auto-cleanup, no cron). `session_id` claim added to `UserPayload`. Blacklist check integrated into `get_current_user` DI dependency (single `EXISTS` per authenticated request). `POST /api/v1/auth/sign-out` endpoint revokes the session. Fail-open on Redis unavailability. Mobile: `signOutFromBackend(token)` fires best-effort before `supabase.auth.signOut()`, raw `fetch` to avoid 401→signOut recursion, token captured before state teardown. 18 new backend tests, 708 total
+- [x] API rate limiting — Sliding window rate limiter via Redis sorted sets + atomic Lua script. Pure ASGI middleware (not BaseHTTPMiddleware). 3-tier hierarchy: IP (120/min) → User (60/min) → Route-specific (write: 30/min, search: 20/min, AI: 10/min, media upload: 10/min). Fail-open on Redis unavailability. Singleton `RateLimitService` on `AppState`. Lightweight JWT `sub` extraction for user keying. `X-RateLimit-*` response headers on all requests. Mobile: `ApiError.isRateLimited` getter, `Retry-After` header parsing, 429-aware query retry with backoff. 48 new backend tests, 690 total
 - [ ] CORS production configuration
-- [ ] CI/CD pipelines — automated lint, typecheck, test on every PR
+- [x] CI/CD pipelines — GitHub Actions: lint workflow (backend format-check + lint + typecheck, mobile typecheck + lint, docs build), test workflow (pytest with coverage → SonarCloud). All jobs use `just` commands
 - [ ] Error tracking — Sentry integration for backend and mobile
 - [ ] Log aggregation — structured log shipping
 - [ ] Performance budgets — bundle size limits, API response time targets
 - [ ] App store submission — iOS App Store and Google Play Store
 - [ ] Network resilience — offline detection, retry logic, offline indicator in UI
+
+### JWKS Auto-Refresh — Critical Auth Resilience
+
+**Problem:** The JWKS key store (`core/jwks.py`) loads signing keys from Supabase exactly once at startup via `jwks_store.load()` in `main.py`'s lifespan. There is no periodic refresh and no cache-miss retry. When Supabase rotates its JWT signing keys (routine during upgrades, restarts, or configuration changes), the backend will hold stale keys. New ES256-signed JWTs will carry a `kid` not present in the store, causing `_decode_with_jwks()` to return `None`. The HS256 fallback then attempts to verify an ES256-signed token with the HS256 secret, which fails with `InvalidSignatureError` — resulting in 401 for every authenticated request until the backend is restarted.
+
+**Impact:** Complete authentication outage for all users after any Supabase key rotation event. No user action can resolve it — requires backend restart.
+
+**Root cause trace:**
+1. `jwks_store` is a module-level singleton (`core/jwks.py:38`)
+2. `load()` called once in `lifespan()` (`main.py:38`)
+3. `_decode_with_jwks()` (`security.py:41`) — `get_key(kid)` returns `None` for unknown `kid` → returns `None`
+4. `verify_jwt()` (`security.py:76–77`) — `None` result triggers `_decode_with_secret()` HS256 fallback
+5. HS256 decode of an ES256-signed token → `InvalidSignatureError` → `InvalidTokenError` → HTTP 401
+
+**Fix — two complementary strategies (both required):**
+
+**Strategy A: Cache-miss reload (immediate recovery)**
+
+When `_decode_with_jwks()` encounters a `kid` not in the store, attempt a single JWKS reload before giving up. This provides instant recovery on the first request after key rotation, with no background task needed.
+
+- [ ] **`JWKSKeyStore` — add async `reload_if_missing(kid, supabase_url)` method** — If `get_key(kid)` returns `None` and a reload hasn't been attempted within a cooldown window (e.g., 30s), call `load()` and retry `get_key(kid)`. Use an `asyncio.Lock` to prevent thundering herd (concurrent requests all triggering reloads). Store `_last_reload_attempt: float` to enforce the cooldown. Return the key or `None` if still not found after reload.
+- [ ] **`JWKSKeyStore` — store `_supabase_url` from initial `load()` call** — The reload method needs the URL but shouldn't require it as a parameter on every call. Store it as instance state during the first `load()`.
+- [ ] **`security.py` — convert `_decode_with_jwks()` to async** — Currently synchronous. Must become `async` to call `reload_if_missing()`. This means `verify_jwt()` also becomes `async`.
+- [ ] **`api/deps.py` — update `get_current_user()`** — Already `async`, so calling `await verify_jwt()` is a minimal change.
+- [ ] **Update all test call sites** — `tests/core/test_security.py` calls `verify_jwt()` synchronously. All calls must become `await verify_jwt()`.
+
+**Strategy B: Background periodic refresh (proactive freshness)**
+
+A background `asyncio.Task` that refreshes the JWKS store on a fixed interval (e.g., every 5 minutes). This ensures the store stays warm even if no cache-miss occurs, and handles the case where Supabase adds new keys before the old ones expire.
+
+- [ ] **`JWKSKeyStore` — add `start_background_refresh(supabase_url, interval_seconds)` and `stop_background_refresh()`** — Spawns an `asyncio.Task` that loops: `await asyncio.sleep(interval)` → `await load()` (with try/except to log and continue on failure). Stores the task handle for cancellation.
+- [ ] **`config.py` — add `jwks_refresh_interval_seconds: int = 300`** — Configurable refresh interval, default 5 minutes.
+- [ ] **`main.py` lifespan — start background refresh after initial load, cancel on shutdown** — `await jwks_store.load(...)` then `jwks_store.start_background_refresh(...)` in startup. `jwks_store.stop_background_refresh()` before `close_redis_pool()` in shutdown.
+
+**Tests:**
+
+- [ ] **`tests/core/test_jwks.py`** — New test file:
+  - `test_load_populates_keys` — Mock httpx response with JWKS JSON, verify `get_key()` returns the key
+  - `test_load_clears_old_keys` — Load once, load again with different keys, verify old keys gone
+  - `test_get_key_unknown_kid_returns_none` — After load, request unknown `kid`
+  - `test_is_loaded_false_initially` — Before any `load()` call
+  - `test_is_loaded_true_after_load` — After successful `load()`
+  - `test_load_failure_preserves_existing_keys` — Load successfully, then load with failing HTTP, verify old keys still present
+  - `test_reload_if_missing_fetches_new_key` — Load with key A, request key B (miss), mock reload returns key B, verify found
+  - `test_reload_if_missing_respects_cooldown` — Two rapid misses, verify only one HTTP call
+  - `test_reload_if_missing_concurrent_requests_single_fetch` — Multiple concurrent `reload_if_missing()` calls, verify single HTTP request via lock
+  - `test_background_refresh_calls_load_periodically` — Start with short interval, verify `load()` called multiple times
+  - `test_background_refresh_survives_load_failure` — Inject failure, verify task continues and next iteration succeeds
+  - `test_stop_background_refresh_cancels_task` — Start then stop, verify task is cancelled
+- [ ] **`tests/core/test_security.py`** — Add key rotation scenarios:
+  - `test_unknown_kid_triggers_reload_and_succeeds` — ES256 token with new `kid`, mock reload returns matching key
+  - `test_unknown_kid_reload_fails_falls_back_to_hs256` — ES256 token with new `kid`, reload fails, HS256 fallback attempted
+  - `test_verify_jwt_is_async` — Verify the function is a coroutine
+
+**Files touched:**
+
+| File | Change |
+|------|--------|
+| `core/jwks.py` | Add `_supabase_url`, `_last_reload_attempt`, `_reload_lock`, `reload_if_missing()`, `start_background_refresh()`, `stop_background_refresh()`. Update `load()` to store URL. |
+| `core/security.py` | Make `_decode_with_jwks()` and `verify_jwt()` async. Call `await jwks_store.reload_if_missing()` on cache miss. |
+| `config.py` | Add `jwks_refresh_interval_seconds: int = 300` |
+| `main.py` | Start background refresh in lifespan startup, stop in shutdown. |
+| `api/deps.py` | `await verify_jwt()` (already in async context, minimal change) |
+| `tests/core/test_jwks.py` | New file — 12+ tests for reload, cooldown, concurrency, background refresh |
+| `tests/core/test_security.py` | Update existing tests to `await`, add key rotation tests |
+| `AGENT_CONTEXT.md` | Update JWKS description to reflect auto-refresh behavior |

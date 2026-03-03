@@ -8,14 +8,32 @@ export type { AIAvailabilityResult, AIModelStatus };
 
 const GENERATION_TIMEOUT_MS = 30_000;
 
-export class FoundationModelError extends Error {
-  readonly code: "timeout" | "generation_failed" | "unavailable";
+export type FoundationModelErrorCode =
+  | "timeout"
+  | "generation_failed"
+  | "safety_filter"
+  | "unavailable";
 
-  constructor(code: FoundationModelError["code"], message: string) {
+export class FoundationModelError extends Error {
+  readonly code: FoundationModelErrorCode;
+
+  constructor(code: FoundationModelErrorCode, message: string) {
     super(message);
     this.name = "FoundationModelError";
     this.code = code;
   }
+}
+
+const SAFETY_FILTER_PATTERNS: readonly string[] = [
+  "unsafe",
+  "safety",
+  "content filter",
+  "not allowed",
+];
+
+function isSafetyFilterError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return SAFETY_FILTER_PATTERNS.some((pattern) => lower.includes(pattern));
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -57,7 +75,8 @@ export async function generateText(
   } catch (err) {
     if (err instanceof FoundationModelError) throw err;
     const message = err instanceof Error ? err.message : "Unknown error";
-    throw new FoundationModelError("generation_failed", message);
+    const code = isSafetyFilterError(message) ? "safety_filter" : "generation_failed";
+    throw new FoundationModelError(code, message);
   }
 }
 

@@ -14,7 +14,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
 
-import { EntryForm, ReflectionCard } from "@/components/journal";
+import { EntryForm, MoodSnapshotDetail, ReflectionCard } from "@/components/journal";
 import { EmptyState, Header, HeaderAction, Icon, Skeleton } from "@/components/ui";
 import {
   useDeleteEntry,
@@ -61,12 +61,16 @@ export default function EntryScreen() {
         <View style={styles.emptyContainer}>
           <EmptyState
             icon={FileQuestion}
-            title={t("journal.detail.notFound")}
-            subtitle={t("journal.detail.notFoundSubtitle")}
+            title={t("journal.entryDetail.notFound")}
+            subtitle={t("journal.entryDetail.notFoundSubtitle")}
           />
         </View>
       </View>
     );
+  }
+
+  if (entry.entry_type === "mood_snapshot") {
+    return <MoodSnapshotScreen entryId={id} />;
   }
 
   return (
@@ -114,12 +118,12 @@ function EntryFormScreen({ entryId, existingMediaItems }: EntryFormScreenProps) 
 
   const handleDelete = useCallback(() => {
     Alert.alert(
-      t("journal.detail.deleteTitle"),
-      t("journal.detail.deleteMessage"),
+      t("journal.entryDetail.deleteTitle"),
+      t("journal.entryDetail.deleteMessage"),
       [
-        { text: t("journal.detail.deleteCancel"), style: "cancel" },
+        { text: t("journal.entryDetail.deleteCancel"), style: "cancel" },
         {
-          text: t("journal.detail.deleteConfirm"),
+          text: t("journal.entryDetail.deleteConfirm"),
           style: "destructive",
           onPress: () => {
             deleteMutation.mutate(entryId, {
@@ -147,7 +151,7 @@ function EntryFormScreen({ entryId, existingMediaItems }: EntryFormScreenProps) 
       ) : null}
       <Pressable
         onPress={handleDelete}
-        accessibilityLabel={t("journal.detail.delete")}
+        accessibilityLabel={t("journal.entryDetail.delete")}
       >
         <Icon icon={Trash2} size="sm" color={colors.textTertiary} />
       </Pressable>
@@ -236,6 +240,61 @@ function EntryFormScreen({ entryId, existingMediaItems }: EntryFormScreenProps) 
   );
 }
 
+interface MoodSnapshotScreenProps {
+  readonly entryId: string;
+}
+
+function MoodSnapshotScreen({ entryId }: MoodSnapshotScreenProps) {
+  const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const router = useRouter();
+  const headerHeight = useHeaderHeight();
+  const { data: entry } = useEntry(entryId);
+  const deleteMutation = useDeleteEntry();
+
+  const handleDelete = useCallback(() => {
+    Alert.alert(
+      t("journal.entryDetail.deleteTitle"),
+      t("journal.entryDetail.deleteMessage"),
+      [
+        { text: t("journal.entryDetail.deleteCancel"), style: "cancel" },
+        {
+          text: t("journal.entryDetail.deleteConfirm"),
+          style: "destructive",
+          onPress: () => {
+            deleteMutation.mutate(entryId, {
+              onSuccess: () => router.back(),
+            });
+          },
+        },
+      ],
+    );
+  }, [t, entryId, deleteMutation, router]);
+
+  const deleteAction = (
+    <Pressable
+      onPress={handleDelete}
+      accessibilityLabel={t("journal.entryDetail.delete")}
+    >
+      <Icon icon={Trash2} size="sm" color={colors.textTertiary} />
+    </Pressable>
+  );
+
+  return (
+    <View style={styles.root}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <Header
+        title=""
+        onBack={router.back}
+        rightAction={deleteAction}
+      />
+      <View style={[styles.snapshotContent, { paddingTop: headerHeight + spacing.xl }]}>
+        {entry ? <MoodSnapshotDetail entry={entry} /> : null}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -253,6 +312,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   content: {
+    paddingHorizontal: spacing.md,
+  },
+  snapshotContent: {
+    flex: 1,
     paddingHorizontal: spacing.md,
   },
   emptyContainer: {

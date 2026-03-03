@@ -22,7 +22,7 @@ export default function VerifyEmailScreen() {
 
   useEffect(() => {
     if (isEmailVerified) {
-      router.replace("/(tabs)");
+      router.replace("/");
     }
   }, [isEmailVerified, router]);
 

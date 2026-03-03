@@ -51,15 +51,11 @@ class TestUserAIProfileUpdate:
 
     def test_topics_too_many_rejected(self) -> None:
         with pytest.raises(ValidationError, match=f"Maximum {MAX_TOPICS_COUNT}"):
-            UserAIProfileUpdate(
-                topics_to_avoid=[f"topic{i}" for i in range(MAX_TOPICS_COUNT + 1)]
-            )
+            UserAIProfileUpdate(topics_to_avoid=[f"topic{i}" for i in range(MAX_TOPICS_COUNT + 1)])
 
     def test_topic_too_long_rejected(self) -> None:
         with pytest.raises(ValidationError, match=f"at most {MAX_TOPIC_LENGTH}"):
-            UserAIProfileUpdate(
-                topics_to_avoid=["x" * (MAX_TOPIC_LENGTH + 1)]
-            )
+            UserAIProfileUpdate(topics_to_avoid=["x" * (MAX_TOPIC_LENGTH + 1)])
 
     def test_topics_empty_list_accepted(self) -> None:
         update = UserAIProfileUpdate(topics_to_avoid=[])
@@ -72,9 +68,7 @@ class TestUserAIProfileUpdate:
 
     def test_goals_too_many_rejected(self) -> None:
         with pytest.raises(ValidationError, match=f"Maximum {MAX_GOALS_COUNT}"):
-            UserAIProfileUpdate(
-                goals=[{"title": f"goal{i}"} for i in range(MAX_GOALS_COUNT + 1)]
-            )
+            UserAIProfileUpdate(goals=[{"title": f"goal{i}"} for i in range(MAX_GOALS_COUNT + 1)])
 
     def test_goals_empty_list_accepted(self) -> None:
         update = UserAIProfileUpdate(goals=[])

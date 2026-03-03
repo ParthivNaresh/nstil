@@ -3,6 +3,5 @@ export { MoodAnomalyCard } from "./MoodAnomalyCard";
 export { MoodBar } from "./MoodBar";
 export { MoodTrendChart } from "./MoodTrendChart";
 export { NarrativeSummary } from "./NarrativeSummary";
-export { StreakBanner } from "./StreakBanner";
 export { WeeklySummaryCard } from "./WeeklySummaryCard";
 export { YearInPixels } from "./YearInPixels";

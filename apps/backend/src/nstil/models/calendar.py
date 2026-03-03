@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -7,6 +8,25 @@ class CalendarParams(BaseModel):
     year: int = Field(..., ge=2020, le=2100)
     month: int = Field(..., ge=1, le=12)
     timezone: str = Field(default="UTC", max_length=50)
+    journal_id: UUID | None = None
+
+
+class MoodTrendParams(BaseModel):
+    days: int = Field(default=7, ge=1, le=90)
+    timezone: str = Field(default="UTC", max_length=50)
+
+
+class DailyMoodCount(BaseModel):
+    date: str
+    mood_category: str
+    entry_count: int
+
+    model_config = {"extra": "ignore"}
+
+
+class MoodTrendResponse(BaseModel):
+    items: list[DailyMoodCount]
+    days: int
 
 
 class CalendarDay(BaseModel):

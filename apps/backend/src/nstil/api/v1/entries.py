@@ -13,6 +13,8 @@ from nstil.models import (
     JournalEntryListResponse,
     JournalEntryResponse,
     JournalEntryUpdate,
+    MoodTrendParams,
+    MoodTrendResponse,
     SearchParams,
     UserPayload,
 )
@@ -34,10 +36,7 @@ async def _build_responses_with_previews(
     previews: dict[UUID, MediaPreview] = await media_service.get_previews_for_entries(
         entry_ids, user_id
     )
-    return [
-        JournalEntryResponse.from_row(row, previews.get(row.id))
-        for row in rows
-    ]
+    return [JournalEntryResponse.from_row(row, previews.get(row.id)) for row in rows]
 
 
 @router.post(
@@ -68,8 +67,11 @@ async def list_entries(
     user_id = UUID(user.sub)
     params = CursorParams(cursor=cursor, limit=limit)
     rows, has_more = await service.list_entries(
-        user_id, params, journal_id=journal_id,
-        entry_date=entry_date, timezone=timezone,
+        user_id,
+        params,
+        journal_id=journal_id,
+        entry_date=entry_date,
+        timezone=timezone,
     )
     items = await _build_responses_with_previews(rows, user_id, media_service)
     next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
@@ -87,8 +89,9 @@ async def get_calendar(
     year: Annotated[int, Query(ge=2020, le=2100)],
     month: Annotated[int, Query(ge=1, le=12)],
     timezone: Annotated[str, Query(max_length=50)] = "UTC",
+    journal_id: Annotated[UUID | None, Query()] = None,
 ) -> CalendarResponse:
-    params = CalendarParams(year=year, month=month, timezone=timezone)
+    params = CalendarParams(year=year, month=month, timezone=timezone, journal_id=journal_id)
     days = await service.get_calendar(UUID(user.sub), params)
     total = sum(d.entry_count for d in days)
     today = datetime.now(UTC).date()
@@ -100,6 +103,18 @@ async def get_calendar(
         total_entries=total,
         streak=streak,
     )
+
+
+@router.get("/mood-trends", response_model=MoodTrendResponse)
+async def get_mood_trends(
+    user: Annotated[UserPayload, Depends(get_current_user)],
+    service: Annotated[CachedJournalService, Depends(get_journal_service)],
+    days: Annotated[int, Query(ge=1, le=90)] = 7,
+    timezone: Annotated[str, Query(max_length=50)] = "UTC",
+) -> MoodTrendResponse:
+    params = MoodTrendParams(days=days, timezone=timezone)
+    items = await service.get_mood_trends(UUID(user.sub), params)
+    return MoodTrendResponse(items=items, days=days)
 
 
 @router.get("/search", response_model=JournalEntryListResponse)
@@ -120,9 +135,7 @@ async def search_entries(
         )
     user_id = UUID(user.sub)
     params = SearchParams(query=stripped, cursor=cursor, limit=limit)
-    rows, has_more = await service.search(
-        user_id, params, journal_id=journal_id
-    )
+    rows, has_more = await service.search(user_id, params, journal_id=journal_id)
     items = await _build_responses_with_previews(rows, user_id, media_service)
     next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
     return JournalEntryListResponse(

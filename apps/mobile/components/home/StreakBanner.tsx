@@ -12,17 +12,16 @@ import { useTranslation } from "react-i18next";
 import { AppText, Icon } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { withAlpha } from "@/lib/colorUtils";
-import type { StreakData } from "@/lib/insightUtils";
 import { radius, spacing } from "@/styles";
 
 interface StreakBannerProps {
-  readonly data: StreakData;
+  readonly streak: number;
 }
 
 const GRADIENT_OPACITY = 0.15;
 const BANNER_RADIUS = 16;
 
-export function StreakBanner({ data }: StreakBannerProps) {
+export function StreakBanner({ streak }: StreakBannerProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -31,8 +30,6 @@ export function StreakBanner({ data }: StreakBannerProps) {
     const { width, height } = event.nativeEvent.layout;
     setSize({ width, height });
   }, []);
-
-  const isMilestone = data.milestone > 0;
 
   return (
     <View
@@ -62,16 +59,9 @@ export function StreakBanner({ data }: StreakBannerProps) {
 
       <View style={styles.content}>
         <Icon icon={Flame} size="lg" color="#F6B93B" />
-        <View style={styles.textSection}>
-          <AppText variant="h3" color={colors.textPrimary}>
-            {t("insights.streakCount", { count: data.streakLength })}
-          </AppText>
-          {isMilestone ? (
-            <AppText variant="bodySmall" color={colors.textSecondary}>
-              {t("insights.streakMilestone", { milestone: data.milestone })}
-            </AppText>
-          ) : null}
-        </View>
+        <AppText variant="h3" color={colors.textPrimary}>
+          {t("home.streakCount", { count: streak })}
+        </AppText>
       </View>
     </View>
   );
@@ -88,9 +78,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-  },
-  textSection: {
-    flex: 1,
-    gap: spacing.xs,
   },
 });

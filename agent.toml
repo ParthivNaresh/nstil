@@ -1,0 +1,20 @@
+version = "1.0"
+
+model = "claude-4.5-opus"
+
+instructions = """
+You are working on NStil, a cross-platform journaling app. Read AGENT_CONTEXT.md for full project context.
+Key rules: no comments in code, no `any` types, use `uv` not pip, use design tokens not hardcoded colors,
+use `AppText` not `Text`, all user-facing strings via i18n, form logic in hooks not screens.
+Always run verification after changes: `just backend-check` and `just mobile-check`.
+"""
+
+imports = [
+    "agents/orchestrator.toml",
+    "agents/planner.toml",
+    "agents/reviewer.toml",
+    "agents/backend.toml",
+    "agents/frontend.toml",
+    "agents/tester.toml",
+    "agents/verify.toml",
+]

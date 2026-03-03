@@ -3,9 +3,16 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { HomeCheckInSection } from "@/components/home";
+import { Greeting, HomeCheckInSection, JournalListCard, MoodSnapshotStrip, StreakBanner } from "@/components/home";
 import { Header } from "@/components/ui";
-import { useHeaderHeight, useTheme } from "@/hooks";
+import {
+  useCalendarRange,
+  useHeaderHeight,
+  useJournals,
+  useProfile,
+  useTabBarHeight,
+  useTheme,
+} from "@/hooks";
 import { queryKeys } from "@/lib/queryKeys";
 import { spacing } from "@/styles";
 
@@ -15,12 +22,22 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const headerHeight = useHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
 
+  const { data: profile } = useProfile();
+  const { streak } = useCalendarRange();
+  const { data: journals = [] } = useJournals();
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.prompts.generated() });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.prompts.generated() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.entries.calendars() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.entries.lists() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.all }),
+    ]);
     setRefreshing(false);
   }, [queryClient]);
 
@@ -31,7 +48,10 @@ export default function HomeScreen() {
         style={styles.content}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: headerHeight + spacing.xl },
+          {
+            paddingTop: headerHeight + spacing.xl,
+            paddingBottom: tabBarHeight + spacing.md,
+          },
         ]}
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical
@@ -43,6 +63,16 @@ export default function HomeScreen() {
           />
         }
       >
+        <Greeting displayName={profile?.display_name ?? null} />
+        <MoodSnapshotStrip />
+        {streak > 0 ? <StreakBanner streak={streak} /> : null}
+        {journals.length > 0 ? (
+          <JournalListCard
+            journals={journals}
+            label={t("home.myJournals")}
+            actionLabel={t("home.viewAll")}
+          />
+        ) : null}
         <HomeCheckInSection />
       </ScrollView>
     </View>

@@ -132,9 +132,7 @@ class TestAIAgentTaskUpdate:
         assert result["error"] == "Connection timeout"
 
     def test_output_field(self) -> None:
-        update = AIAgentTaskUpdate(
-            output={"insights_generated": 3}
-        )
+        update = AIAgentTaskUpdate(output={"insights_generated": 3})
         result = update.to_update_dict()
         assert result["output"] == {"insights_generated": 3}
 

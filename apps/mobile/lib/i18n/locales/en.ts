@@ -14,6 +14,10 @@ const en = {
     insights: "Insights",
     settings: "Settings",
   },
+  createMenu: {
+    newEntry: "Entry",
+    newJournal: "Journal",
+  },
   home: {
     title: "NStil",
     authenticated: "Authenticated",
@@ -21,6 +25,22 @@ const en = {
     checkIn: "Check In",
     fallbackPrompt: "How are you feeling right now?",
     quickCheckIn: "Quick Check-in",
+    streakCount: "{{count}}-day streak",
+    greeting: {
+      morning: "Good morning",
+      afternoon: "Good afternoon",
+      evening: "Good evening",
+      morningName: "Good morning, {{name}}",
+      afternoonName: "Good afternoon, {{name}}",
+      eveningName: "Good evening, {{name}}",
+    },
+    myJournals: "My Journals",
+    viewAll: "View All",
+    moodSnapshot: {
+      prompt: "How are you feeling?",
+      logged: "Logged",
+      logAgain: "Tap to log again",
+    },
   },
   settings: {
     appearance: "Appearance",
@@ -125,7 +145,7 @@ const en = {
       gratitude: "Gratitude",
       freewrite: "Freewrite",
     },
-    detail: {
+    entryDetail: {
       delete: "Delete Entry",
       deleteTitle: "Delete Entry",
       deleteMessage: "Are you sure you want to delete this entry? This cannot be undone.",
@@ -133,6 +153,26 @@ const en = {
       deleteCancel: "Cancel",
       notFound: "Entry not found",
       notFoundSubtitle: "This entry may have been deleted",
+    },
+    create: {
+      title: "New Journal",
+      save: "Create",
+      namePlaceholder: "Journal name",
+      color: "Color",
+      description: "Description",
+      descriptionPlaceholder: "What's this journal for?",
+      nameRequired: "Journal name is required",
+    },
+    list: {
+      title: "My Journals",
+      empty: "No journals yet",
+      emptySubtitle: "Create a journal to organize your entries",
+      entryCount_one: "{{count}} entry",
+      entryCount_other: "{{count}} entries",
+    },
+    detail: {
+      empty: "No entries yet",
+      emptySubtitle: "Start writing in this journal",
     },
     validation: {
       bodyRequired: "Entry body cannot be empty",
@@ -158,16 +198,44 @@ const en = {
     emptyTitle: "No insights yet",
     emptySubtitle: "Insights will appear as you journal",
     title: "Insights",
-    streakCount: "{{count}}-day streak",
-    streakMilestone: "🎉 {{milestone}}-day milestone!",
     weeklySummary: "Weekly Summary",
     entries: "Entries",
     avgLength: "Avg. Length",
     topThemes: "Top themes",
     moodTrends: "Mood Trends",
+    dailyMood: "Daily Mood",
+    noEntries: "No entries",
+    oneEntry: "1 entry",
+    entryCount: "{{count}} entries",
     yearInPixels: "Year in Pixels",
     confidenceLabel: "{{value}}% shift from average",
     period: "{{start}} – {{end}}",
+  },
+  onboarding: {
+    welcome: {
+      title: "Welcome to NStil",
+      subtitle: "Your personal reflection companion",
+      nameLabel: "What should we call you?",
+      namePlaceholder: "Your name",
+      continue: "Continue",
+      skip: "Skip",
+    },
+    style: {
+      title: "Set your vibe",
+      subtitle: "Choose how your AI companion communicates with you",
+      continue: "Continue",
+    },
+    theme: {
+      title: "Choose your look",
+      subtitle: "You can always change this later in settings",
+      continue: "Continue",
+    },
+    notifications: {
+      title: "Stay on track",
+      subtitle: "Get gentle reminders to check in with yourself",
+      enable: "Enable Notifications",
+      skip: "Maybe Later",
+    },
   },
   auth: {
     welcome: {

@@ -16,7 +16,7 @@ export async function tryGeneratePersonalizedTexts(): Promise<readonly string[] 
     const texts = await generateNotificationTexts(context, PERSONALIZED_TEXT_COUNT);
     return texts.length > 0 ? texts : undefined;
   } catch (err) {
-    console.error("[notifications] Failed to generate personalized texts:", err);
+    console.warn("[notifications] Failed to generate personalized texts:", err);
     return undefined;
   }
 }

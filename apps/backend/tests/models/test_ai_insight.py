@@ -177,9 +177,7 @@ class TestAIInsightCreate:
 
     def test_all_insight_types_accepted(self) -> None:
         for it in InsightType:
-            insight = AIInsightCreate(
-                insight_type=it, title="test", content="test"
-            )
+            insight = AIInsightCreate(insight_type=it, title="test", content="test")
             assert insight.insight_type == it
 
 

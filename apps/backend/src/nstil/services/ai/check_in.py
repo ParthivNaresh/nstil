@@ -173,9 +173,7 @@ class CheckInOrchestrator:
 
         current_step = _get_flow_step(session)
         if current_step != CheckInStep.PROMPTED.value:
-            raise CheckInError(
-                f"Cannot respond: session is in step '{current_step}'"
-            )
+            raise CheckInError(f"Cannot respond: session is in step '{current_step}'")
 
         prompt_id = _get_flow_prompt_id(session)
         if prompt_id is not None:
@@ -222,6 +220,22 @@ class CheckInOrchestrator:
 
         return CheckInResult(session=session)
 
+    async def _resolve_default_journal_id(self, user_id: UUID) -> UUID:
+        default_space = await self._spaces.get_default(user_id)
+        if default_space is None:
+            raise CheckInError("No journal found for user")
+        return default_space.id
+
+    @staticmethod
+    def _extract_mood_from_flow(
+        flow_state: dict[str, object],
+    ) -> tuple[MoodCategory | None, MoodSpecific | None]:
+        mood_cat_raw = flow_state.get("mood_category")
+        mood_spec_raw = flow_state.get("mood_specific")
+        mood_category = MoodCategory(str(mood_cat_raw)) if mood_cat_raw else None
+        mood_specific = MoodSpecific(str(mood_spec_raw)) if mood_spec_raw else None
+        return mood_category, mood_specific
+
     async def convert_to_entry(
         self,
         user_id: UUID,
@@ -234,23 +248,14 @@ class CheckInOrchestrator:
 
         current_step = _get_flow_step(session)
         if current_step != CheckInStep.RESPONDED.value:
-            raise CheckInError(
-                f"Cannot convert: session is in step '{current_step}'"
-            )
+            raise CheckInError(f"Cannot convert: session is in step '{current_step}'")
 
         target_journal_id = journal_id
         if target_journal_id is None:
-            default_space = await self._spaces.get_default(user_id)
-            if default_space is None:
-                raise CheckInError("No journal found for user")
-            target_journal_id = default_space.id
+            target_journal_id = await self._resolve_default_journal_id(user_id)
 
-        mood_cat_raw = session.flow_state.get("mood_category")
-        mood_spec_raw = session.flow_state.get("mood_specific")
+        mood_category, mood_specific = self._extract_mood_from_flow(session.flow_state)
         response_text = str(session.flow_state.get("response_text", ""))
-
-        mood_category = MoodCategory(str(mood_cat_raw)) if mood_cat_raw else None
-        mood_specific = MoodSpecific(str(mood_spec_raw)) if mood_spec_raw else None
 
         entry = await self._journal.create(
             user_id,
@@ -310,8 +315,21 @@ class CheckInOrchestrator:
 
         current_step = _get_flow_step(session)
         if current_step != CheckInStep.RESPONDED.value:
-            raise CheckInError(
-                f"Cannot complete: session is in step '{current_step}'"
+            raise CheckInError(f"Cannot complete: session is in step '{current_step}'")
+
+        entry: JournalEntryRow | None = None
+        mood_category, mood_specific = self._extract_mood_from_flow(session.flow_state)
+
+        if mood_category is not None:
+            target_journal_id = await self._resolve_default_journal_id(user_id)
+            entry = await self._journal.create(
+                user_id,
+                JournalEntryCreate(
+                    journal_id=target_journal_id,
+                    entry_type=EntryType.MOOD_SNAPSHOT,
+                    mood_category=mood_category,
+                    mood_specific=mood_specific,
+                ),
             )
 
         now = datetime.now(UTC).isoformat()
@@ -319,27 +337,42 @@ class CheckInOrchestrator:
             **session.flow_state,
             "step": CheckInStep.COMPLETED.value,
         }
+
+        session_update = AISessionUpdate(
+            status=SessionStatus.COMPLETED,
+            flow_state=flow_state,
+            completed_at=now,
+        )
+
+        if entry is not None:
+            flow_state["entry_id"] = str(entry.id)
+            session_update = AISessionUpdate(
+                status=SessionStatus.COMPLETED,
+                entry_id=entry.id,
+                flow_state=flow_state,
+                completed_at=now,
+            )
+
         updated_session = await self._sessions.update(
             user_id,
             session.id,
-            AISessionUpdate(
-                status=SessionStatus.COMPLETED,
-                flow_state=flow_state,
-                completed_at=now,
-            ),
+            session_update,
         )
 
         if updated_session is None:
             raise CheckInError("Failed to update session")
         session = updated_session
 
+        await self._context.invalidate(user_id)
+
         logger.info(
             "check_in.completed",
             user_id=str(user_id),
             session_id=str(session.id),
+            entry_id=str(entry.id) if entry else None,
         )
 
-        return CheckInResult(session=session)
+        return CheckInResult(session=session, entry=entry)
 
     async def abandon(
         self,
@@ -392,9 +425,7 @@ class CheckInOrchestrator:
             return None
         return rows[0]
 
-    async def _force_abandon(
-        self, user_id: UUID, session: AISessionRow
-    ) -> None:
+    async def _force_abandon(self, user_id: UUID, session: AISessionRow) -> None:
         now = datetime.now(UTC).isoformat()
         await self._sessions.update(
             user_id,

@@ -12,4 +12,5 @@ def settings() -> Settings:
         supabase_jwt_secret=SecretStr("test-secret"),
         redis_url="redis://localhost:6379",
         debug=True,
+        rate_limit_enabled=False,
     )

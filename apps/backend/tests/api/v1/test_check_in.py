@@ -162,6 +162,47 @@ class TestCompleteCheckIn:
         assert response.status_code == 200
         assert response.json()["session"]["status"] == "completed"
 
+    def test_complete_returns_mood_snapshot_entry(
+        self, client: TestClient, mock_check_in_orchestrator: AsyncMock
+    ) -> None:
+        session = make_ai_session_row(status="completed")
+        entry = make_entry_row(
+            entry_type="mood_snapshot",
+            mood_category="happy",
+            body="",
+            title="",
+        )
+        mock_check_in_orchestrator.complete.return_value = CheckInResult(
+            session=session, entry=entry
+        )
+
+        response = client.post(
+            f"{CHECK_IN_URL}/{session.id}/complete",
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["entry"] is not None
+        assert data["entry"]["id"] == str(entry.id)
+        assert data["entry"]["entry_type"] == "mood_snapshot"
+        assert data["entry"]["mood_category"] == "happy"
+
+    def test_complete_error_returns_422(
+        self, client: TestClient, mock_check_in_orchestrator: AsyncMock
+    ) -> None:
+        session = make_ai_session_row()
+        mock_check_in_orchestrator.complete.side_effect = CheckInError(
+            "Cannot complete: session is in step 'prompted'"
+        )
+
+        response = client.post(
+            f"{CHECK_IN_URL}/{session.id}/complete",
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 422
+
 
 class TestAbandonCheckIn:
     def test_abandon_success(
@@ -180,9 +221,7 @@ class TestAbandonCheckIn:
 
 
 class TestGetActiveCheckIn:
-    def test_active_found(
-        self, client: TestClient, mock_check_in_orchestrator: AsyncMock
-    ) -> None:
+    def test_active_found(self, client: TestClient, mock_check_in_orchestrator: AsyncMock) -> None:
         session = make_ai_session_row()
         mock_check_in_orchestrator.get_active.return_value = CheckInResult(
             session=session, prompt_content="How are you?"

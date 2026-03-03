@@ -1,7 +1,7 @@
 import "@/lib/i18n";
 
 import { QueryClientProvider } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useRef } from "react";
@@ -78,11 +78,29 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [handleNotificationTap]);
 
+  const session = useAuthStore((s) => s.session);
+  const isEmailVerified = useAuthStore((s) => s.isEmailVerified);
+  const segments = useSegments();
+  const isReady = authInitialized && themeInitialized;
+
   useEffect(() => {
     if (authInitialized && themeInitialized) {
       navigationReady.current = true;
     }
   }, [authInitialized, themeInitialized]);
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+    const isAuthenticated = !!session && isEmailVerified;
+
+    if (isAuthenticated && inAuthGroup) {
+      router.replace("/(tabs)");
+    } else if (!isAuthenticated && !inAuthGroup && segments.length > 0) {
+      router.replace("/(auth)");
+    }
+  }, [session, isEmailVerified, segments, isReady, router]);
 
   useEffect(() => {
     const cleanup = setupDeepLinkListener();

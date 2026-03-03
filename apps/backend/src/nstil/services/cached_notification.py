@@ -20,6 +20,16 @@ class CachedNotificationService:
             await self._cache.set_notification_prefs(user_id, row)
         return row
 
+    async def get_or_create(self, user_id: UUID) -> NotificationPreferencesRow | None:
+        cached = await self._cache.get_notification_prefs(user_id)
+        if cached is not None:
+            return cached
+
+        row = await self._db.get_or_create(user_id)
+        if row is not None:
+            await self._cache.set_notification_prefs(user_id, row)
+        return row
+
     async def update(
         self, user_id: UUID, data: NotificationPreferencesUpdate
     ) -> NotificationPreferencesRow | None:

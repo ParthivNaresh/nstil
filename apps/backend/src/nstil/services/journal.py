@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 from supabase import AsyncClient
 
-from nstil.models.calendar import CalendarDay, CalendarParams
+from nstil.models.calendar import CalendarDay, CalendarParams, DailyMoodCount, MoodTrendParams
 from nstil.models.journal import JournalEntryCreate, JournalEntryRow, JournalEntryUpdate
 from nstil.models.pagination import CursorParams, SearchParams
 
@@ -33,11 +33,7 @@ class JournalService:
         }
         if data.created_at is not None:
             payload["created_at"] = data.created_at.isoformat()
-        result = await (
-            self._client.table(TABLE)
-            .insert(payload)
-            .execute()
-        )
+        result = await self._client.table(TABLE).insert(payload).execute()
         return JournalEntryRow.model_validate(result.data[0])
 
     async def get_by_id(self, user_id: UUID, entry_id: UUID) -> JournalEntryRow | None:
@@ -129,9 +125,7 @@ class JournalService:
         if journal_id is not None:
             rpc_params["p_journal_id"] = str(journal_id)
 
-        result = await self._client.rpc(
-            "search_journal_entries", rpc_params
-        ).execute()
+        result = await self._client.rpc("search_journal_entries", rpc_params).execute()
 
         data: list[dict[str, Any]] = result.data  # type: ignore[assignment]
         rows = [JournalEntryRow.model_validate(row) for row in data]
@@ -142,18 +136,29 @@ class JournalService:
 
         return rows, has_more
 
-    async def get_calendar(
-        self, user_id: UUID, params: CalendarParams
-    ) -> list[CalendarDay]:
-        rpc_params: dict[str, str | int] = {
+    async def get_calendar(self, user_id: UUID, params: CalendarParams) -> list[CalendarDay]:
+        rpc_params: dict[str, str | int | None] = {
             "p_user_id": str(user_id),
             "p_year": params.year,
             "p_month": params.month,
             "p_timezone": params.timezone,
+            "p_journal_id": str(params.journal_id) if params.journal_id else None,
         }
         result = await self._client.rpc("get_calendar_data", rpc_params).execute()
         data: list[dict[str, Any]] = result.data  # type: ignore[assignment]
         return [CalendarDay.model_validate(row) for row in data]
+
+    async def get_mood_trends(
+        self, user_id: UUID, params: MoodTrendParams
+    ) -> list[DailyMoodCount]:
+        rpc_params: dict[str, str | int] = {
+            "p_user_id": str(user_id),
+            "p_days": params.days,
+            "p_timezone": params.timezone,
+        }
+        result = await self._client.rpc("get_daily_mood_distribution", rpc_params).execute()
+        data: list[dict[str, Any]] = result.data  # type: ignore[assignment]
+        return [DailyMoodCount.model_validate(row) for row in data]
 
     async def soft_delete(self, user_id: UUID, entry_id: UUID) -> bool:
         now = datetime.now(UTC).isoformat()

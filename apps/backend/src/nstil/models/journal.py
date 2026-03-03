@@ -14,6 +14,12 @@ class EntryType(StrEnum):
     GRATITUDE = "gratitude"
     FREEWRITE = "freewrite"
     CHECK_IN = "check_in"
+    MOOD_SNAPSHOT = "mood_snapshot"
+
+
+BODYLESS_ENTRY_TYPES: frozenset[EntryType] = frozenset(
+    {EntryType.CHECK_IN, EntryType.MOOD_SNAPSHOT}
+)
 
 
 MAX_TITLE_LENGTH = 200
@@ -70,8 +76,11 @@ class JournalEntryCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_entry(self) -> "JournalEntryCreate":
-        if self.entry_type != EntryType.CHECK_IN and not self.body:
-            msg = "Body is required for non-check-in entries"
+        if self.entry_type not in BODYLESS_ENTRY_TYPES and not self.body:
+            msg = "Body is required for this entry type"
+            raise ValueError(msg)
+        if self.entry_type == EntryType.MOOD_SNAPSHOT and self.mood_category is None:
+            msg = "mood_category is required for mood snapshots"
             raise ValueError(msg)
         validate_mood_pair(self.mood_category, self.mood_specific)
         validate_coordinate_pair(self.latitude, self.longitude)
@@ -126,10 +135,7 @@ class JournalEntryUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_mood_and_fields(self) -> "JournalEntryUpdate":
-        has_value = any(
-            getattr(self, field) is not None
-            for field in self.__class__.model_fields
-        )
+        has_value = any(getattr(self, field) is not None for field in self.__class__.model_fields)
         if not has_value:
             msg = "At least one field must be provided"
             raise ValueError(msg)
@@ -181,11 +187,7 @@ class JournalEntryUpdate(BaseModel):
         return v.strip()
 
     def to_update_dict(self) -> dict[str, str | int | bool | list[str]]:
-        return {
-            k: v
-            for k, v in self.model_dump(mode="json").items()
-            if v is not None
-        }
+        return {k: v for k, v in self.model_dump(mode="json").items() if v is not None}
 
 
 class JournalEntryRow(BaseModel):

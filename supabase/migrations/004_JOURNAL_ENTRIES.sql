@@ -21,7 +21,7 @@ create table public.journal_entries (
     deleted_at      timestamptz,
 
     constraint journal_entries_entry_type_check
-        check (entry_type in ('journal', 'reflection', 'gratitude', 'freewrite', 'check_in')),
+        check (entry_type in ('journal', 'reflection', 'gratitude', 'freewrite', 'check_in', 'mood_snapshot')),
 
     constraint journal_entries_mood_category_valid
         check (mood_category in ('happy', 'calm', 'sad', 'anxious', 'angry')),
@@ -169,7 +169,8 @@ create or replace function public.get_calendar_data(
     p_user_id uuid,
     p_year int,
     p_month int,
-    p_timezone text default 'UTC'
+    p_timezone text default 'UTC',
+    p_journal_id uuid default null
 )
 returns table (
     date text,
@@ -190,6 +191,7 @@ as $$
           and e.deleted_at is null
           and extract(year from e.created_at at time zone p_timezone) = p_year
           and extract(month from e.created_at at time zone p_timezone) = p_month
+          and (p_journal_id is null or e.journal_id = p_journal_id)
     ),
     daily_counts as (
         select day, count(*) as cnt
@@ -211,6 +213,7 @@ as $$
           and e.mood_category is not null
           and extract(year from e.created_at at time zone p_timezone) = p_year
           and extract(month from e.created_at at time zone p_timezone) = p_month
+          and (p_journal_id is null or e.journal_id = p_journal_id)
     ),
     daily_mood as (
         select day, mood_category, mood_specific
@@ -225,4 +228,33 @@ as $$
     from daily_counts dc
     left join daily_mood dm on dc.day = dm.day
     order by dc.day;
+$$;
+
+
+create or replace function public.get_daily_mood_distribution(
+    p_user_id uuid,
+    p_days int default 7,
+    p_timezone text default 'UTC'
+)
+returns table (
+    date text,
+    mood_category text,
+    entry_count bigint
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+    select
+        to_char(e.created_at at time zone p_timezone, 'YYYY-MM-DD') as date,
+        e.mood_category,
+        count(*) as entry_count
+    from public.journal_entries e
+    where e.user_id = p_user_id
+      and e.deleted_at is null
+      and e.mood_category is not null
+      and e.created_at >= (now() at time zone p_timezone - make_interval(days => p_days))::date::timestamptz
+    group by 1, e.mood_category
+    order by 1
 $$;

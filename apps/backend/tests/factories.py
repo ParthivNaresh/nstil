@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from datetime import time as dt_time
 
-from jose import jwt  # type: ignore[import-untyped]
+import jwt
 
 from nstil.models.ai_feedback import AIFeedbackRow
 from nstil.models.ai_insight import AIInsightRow
@@ -15,11 +15,13 @@ from nstil.models.ai_task import AIAgentTaskRow
 from nstil.models.journal import JournalEntryRow
 from nstil.models.media import EntryMediaRow
 from nstil.models.notification import NotificationPreferencesRow, ReminderTime
+from nstil.models.profile import ProfileRow
 from nstil.models.space import JournalSpaceRow
 
 DEFAULT_SECRET = "test-secret"
 DEFAULT_ALGORITHM = "HS256"
 DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
+DEFAULT_SESSION_ID = "00000000-0000-0000-0000-000000000099"
 DEFAULT_JOURNAL_ID = "00000000-0000-0000-0000-000000000010"
 
 
@@ -31,6 +33,7 @@ def build_jwt_claims(**overrides: object) -> dict[str, object]:
         "aud": "authenticated",
         "exp": int(time.time()) + 3600,
         "iss": "http://localhost:54321/auth/v1",
+        "session_id": DEFAULT_SESSION_ID,
     }
     defaults.update(overrides)
     return defaults
@@ -173,9 +176,7 @@ def make_ai_session_row(
     return AISessionRow(
         id=uuid.UUID(session_id) if session_id else uuid.uuid4(),
         user_id=uuid.UUID(user_id),
-        parent_session_id=(
-            uuid.UUID(parent_session_id) if parent_session_id else None
-        ),
+        parent_session_id=(uuid.UUID(parent_session_id) if parent_session_id else None),
         session_type=session_type,
         status=status,
         entry_id=uuid.UUID(entry_id) if entry_id else None,
@@ -222,9 +223,7 @@ def make_ai_prompt_row(
         mood_category=mood_category,
         session_id=uuid.UUID(session_id) if session_id else None,
         entry_id=uuid.UUID(entry_id) if entry_id else None,
-        converted_entry_id=(
-            uuid.UUID(converted_entry_id) if converted_entry_id else None
-        ),
+        converted_entry_id=(uuid.UUID(converted_entry_id) if converted_entry_id else None),
         status=status,
         delivered_at=delivered_at,
         seen_at=seen_at,
@@ -263,9 +262,7 @@ def make_ai_insight_row(
         insight_type=insight_type,
         title=title,
         content=content,
-        supporting_entry_ids=[
-            uuid.UUID(eid) for eid in (supporting_entry_ids or [])
-        ],
+        supporting_entry_ids=[uuid.UUID(eid) for eid in (supporting_entry_ids or [])],
         source=source,
         model_id=model_id,
         confidence=confidence,
@@ -385,6 +382,26 @@ def make_ai_feedback_row(
         reason=reason,
         metadata={},
         created_at=created_at or now,
+    )
+
+
+def make_profile_row(
+    *,
+    user_id: str = DEFAULT_USER_ID,
+    display_name: str | None = None,
+    avatar_url: str | None = None,
+    onboarding_completed_at: datetime | None = None,
+    created_at: datetime | None = None,
+    updated_at: datetime | None = None,
+) -> ProfileRow:
+    now = datetime.now(UTC)
+    return ProfileRow(
+        id=uuid.UUID(user_id),
+        display_name=display_name,
+        avatar_url=avatar_url,
+        onboarding_completed_at=onboarding_completed_at,
+        created_at=created_at or now,
+        updated_at=updated_at or now,
     )
 
 

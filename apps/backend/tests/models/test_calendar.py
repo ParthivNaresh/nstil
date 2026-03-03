@@ -74,9 +74,7 @@ class TestCalendarResponse:
             {"date": "2026-02-01", "mood_category": None, "mood_specific": None, "entry_count": 2},
             {"date": "2026-02-10", "mood_category": None, "mood_specific": None, "entry_count": 1},
         ]
-        response = CalendarResponse(
-            year=2026, month=2, days=days, total_entries=4, streak=0
-        )
+        response = CalendarResponse(year=2026, month=2, days=days, total_entries=4, streak=0)
         assert response.days[0].date == "2026-02-01"
         assert response.days[1].date == "2026-02-10"
         assert response.days[2].date == "2026-02-15"

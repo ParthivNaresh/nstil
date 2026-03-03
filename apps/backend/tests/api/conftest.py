@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterator
 from unittest.mock import AsyncMock
 
@@ -14,14 +15,15 @@ from nstil.api.deps import (
     get_journal_service,
     get_media_service,
     get_notification_service,
+    get_profile_service,
     get_prompt_engine,
     get_redis,
     get_settings,
     get_space_service,
     get_supabase,
+    get_token_blacklist,
 )
 from nstil.config import Settings
-from nstil.main import create_app
 from nstil.services.ai.check_in import CheckInOrchestrator
 from nstil.services.ai.insight import AIInsightService
 from nstil.services.ai.insight_engine import InsightEngine
@@ -31,8 +33,14 @@ from nstil.services.cached_ai_context import CachedAIContextService
 from nstil.services.cached_ai_profile import CachedAIProfileService
 from nstil.services.cached_journal import CachedJournalService
 from nstil.services.cached_notification import CachedNotificationService
+from nstil.services.cached_profile import CachedProfileService
 from nstil.services.cached_space import CachedSpaceService
 from nstil.services.media import MediaService
+from nstil.services.token_blacklist import TokenBlacklistService
+
+os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
+os.environ.setdefault("SUPABASE_JWT_SECRET", "test-jwt-secret")
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 
 
 @pytest.fixture
@@ -105,6 +113,18 @@ def mock_prompt_engine() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_profile_service() -> AsyncMock:
+    return AsyncMock(spec=CachedProfileService)
+
+
+@pytest.fixture
+def mock_token_blacklist() -> AsyncMock:
+    mock = AsyncMock(spec=TokenBlacklistService)
+    mock.is_revoked.return_value = False
+    return mock
+
+
+@pytest.fixture
 def client(
     settings: Settings,
     mock_redis: AsyncMock,
@@ -120,7 +140,12 @@ def client(
     mock_ai_context_service: AsyncMock,
     mock_ai_prompt_service: AsyncMock,
     mock_prompt_engine: AsyncMock,
+    mock_profile_service: AsyncMock,
+    mock_token_blacklist: AsyncMock,
 ) -> Iterator[TestClient]:
+    from nstil.main import create_app
+
+    get_settings.cache_clear()
     app = create_app()
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_redis] = lambda: mock_redis
@@ -136,6 +161,9 @@ def client(
     app.dependency_overrides[get_ai_context_service] = lambda: mock_ai_context_service
     app.dependency_overrides[get_ai_prompt_service] = lambda: mock_ai_prompt_service
     app.dependency_overrides[get_prompt_engine] = lambda: mock_prompt_engine
+    app.dependency_overrides[get_profile_service] = lambda: mock_profile_service
+    app.dependency_overrides[get_token_blacklist] = lambda: mock_token_blacklist
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+    get_settings.cache_clear()

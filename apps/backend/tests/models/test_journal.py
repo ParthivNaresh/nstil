@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from nstil.models.journal import (
+    BODYLESS_ENTRY_TYPES,
     MAX_TAG_COUNT,
     MAX_TAG_LENGTH,
     EntryType,
@@ -333,14 +334,85 @@ class TestCreateWithCoordinates:
 
     def test_create_latitude_out_of_range_rejected(self) -> None:
         with pytest.raises(ValidationError, match="latitude must be between"):
-            JournalEntryCreate(
-                journal_id=JID, body="test", latitude=91.0, longitude=0.0
-            )
+            JournalEntryCreate(journal_id=JID, body="test", latitude=91.0, longitude=0.0)
 
     def test_create_defaults_no_coords(self) -> None:
         entry = JournalEntryCreate(journal_id=JID, body="test")
         assert entry.latitude is None
         assert entry.longitude is None
+
+
+class TestMoodSnapshot:
+    def test_mood_snapshot_with_category_accepted(self) -> None:
+        entry = JournalEntryCreate(
+            journal_id=JID,
+            entry_type=EntryType.MOOD_SNAPSHOT,
+            mood_category="happy",
+        )
+        assert entry.entry_type == EntryType.MOOD_SNAPSHOT
+        assert entry.mood_category == "happy"
+        assert entry.body == ""
+
+    def test_mood_snapshot_with_specific_accepted(self) -> None:
+        entry = JournalEntryCreate(
+            journal_id=JID,
+            entry_type=EntryType.MOOD_SNAPSHOT,
+            mood_category="anxious",
+            mood_specific="stressed",
+        )
+        assert entry.mood_category == "anxious"
+        assert entry.mood_specific == "stressed"
+
+    def test_mood_snapshot_without_mood_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="mood_category is required for mood snapshots"):
+            JournalEntryCreate(
+                journal_id=JID,
+                entry_type=EntryType.MOOD_SNAPSHOT,
+            )
+
+    def test_mood_snapshot_empty_body_accepted(self) -> None:
+        entry = JournalEntryCreate(
+            journal_id=JID,
+            entry_type=EntryType.MOOD_SNAPSHOT,
+            mood_category="calm",
+        )
+        assert entry.body == ""
+
+    def test_mood_snapshot_with_body_accepted(self) -> None:
+        entry = JournalEntryCreate(
+            journal_id=JID,
+            entry_type=EntryType.MOOD_SNAPSHOT,
+            mood_category="sad",
+            body="Feeling low after the meeting",
+        )
+        assert entry.body == "Feeling low after the meeting"
+
+    def test_mood_snapshot_invalid_mood_pair_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="not valid for category"):
+            JournalEntryCreate(
+                journal_id=JID,
+                entry_type=EntryType.MOOD_SNAPSHOT,
+                mood_category="happy",
+                mood_specific="stressed",
+            )
+
+    def test_mood_snapshot_in_bodyless_entry_types(self) -> None:
+        assert EntryType.MOOD_SNAPSHOT in BODYLESS_ENTRY_TYPES
+        assert EntryType.CHECK_IN in BODYLESS_ENTRY_TYPES
+        assert EntryType.JOURNAL not in BODYLESS_ENTRY_TYPES
+
+    def test_mood_snapshot_response_from_row(self) -> None:
+        row = make_entry_row(
+            entry_type="mood_snapshot",
+            mood_category="anxious",
+            mood_specific="overwhelmed",
+            body="",
+        )
+        response = JournalEntryResponse.from_row(row)
+        assert response.entry_type == "mood_snapshot"
+        assert response.mood_category == "anxious"
+        assert response.mood_specific == "overwhelmed"
+        assert response.body == ""
 
 
 class TestUpdateWithCoordinates:

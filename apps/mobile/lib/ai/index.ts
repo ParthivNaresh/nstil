@@ -5,7 +5,7 @@ export {
   getAvailability,
   isAvailable,
 } from "./foundationModels";
-export type { AIAvailabilityResult, AIModelStatus } from "./foundationModels";
+export type { AIAvailabilityResult, AIModelStatus, FoundationModelErrorCode } from "./foundationModels";
 export { buildContextString } from "./promptContext";
 export { generateOnDevicePrompt } from "./promptGenerator";
 export type { GeneratedPrompt } from "./promptGenerator";

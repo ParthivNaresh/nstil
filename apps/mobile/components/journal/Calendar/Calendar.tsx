@@ -28,6 +28,7 @@ export function Calendar({
   totalEntries,
   selectedDate,
   onDayPress,
+  headerAction,
 }: CalendarProps) {
   const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
@@ -91,7 +92,7 @@ export function Calendar({
 
   return (
     <Card style={[styles.container, { backgroundColor: calendarBg }]}>
-      <CalendarHeader year={visibleYear} month={visibleMonth} />
+      <CalendarHeader year={visibleYear} month={visibleMonth} rightAction={headerAction} />
       <CalendarWeekdayRow />
 
       <View style={styles.scrollContainer}>

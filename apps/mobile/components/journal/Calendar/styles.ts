@@ -25,12 +25,19 @@ export const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     paddingHorizontal: spacing.xs,
     paddingBottom: spacing.xs,
   },
+  headerSpacer: {
+    width: 32,
+  },
   headerCenter: {
+    flex: 1,
     alignItems: "center",
+  },
+  headerRight: {
+    width: 32,
+    alignItems: "flex-end",
   },
   weekdayRow: {
     flexDirection: "row",

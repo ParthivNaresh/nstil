@@ -1,0 +1,71 @@
+site_name: NStil
+site_description: Cross-platform reflection and journaling companion with on-device AI
+site_url: https://nstil.dev
+repo_url: https://github.com/nstil/nstil
+repo_name: nstil/nstil
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Setup: getting-started/setup.md
+      - Commands: getting-started/commands.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Backend: architecture/backend.md
+      - Mobile: architecture/mobile.md
+      - On-Device AI: architecture/on-device-ai.md
+      - Database: architecture/database.md
+  - Contributing:
+      - Agent Context: contributing/agent-context.md
+      - Conventions: contributing/conventions.md
+  - Roadmap: roadmap.md

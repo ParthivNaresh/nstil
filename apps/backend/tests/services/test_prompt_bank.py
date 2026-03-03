@@ -98,24 +98,18 @@ class TestGetFiltered:
             assert PromptTag.RELATIONSHIPS not in p.tags
 
     def test_max_intensity_light(self) -> None:
-        filtered = PromptBank.get_filtered(
-            "check_in", max_intensity=PromptIntensity.LIGHT
-        )
+        filtered = PromptBank.get_filtered("check_in", max_intensity=PromptIntensity.LIGHT)
         for p in filtered:
             assert p.intensity == PromptIntensity.LIGHT
 
     def test_max_intensity_moderate(self) -> None:
-        filtered = PromptBank.get_filtered(
-            "check_in", max_intensity=PromptIntensity.MODERATE
-        )
+        filtered = PromptBank.get_filtered("check_in", max_intensity=PromptIntensity.MODERATE)
         for p in filtered:
             assert p.intensity in (PromptIntensity.LIGHT, PromptIntensity.MODERATE)
 
     def test_max_intensity_deep_includes_all(self) -> None:
         all_check_in = PromptBank.get_by_type("check_in")
-        filtered = PromptBank.get_filtered(
-            "check_in", max_intensity=PromptIntensity.DEEP
-        )
+        filtered = PromptBank.get_filtered("check_in", max_intensity=PromptIntensity.DEEP)
         assert len(filtered) == len(all_check_in)
 
 

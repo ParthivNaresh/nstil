@@ -9,15 +9,17 @@ import { ThemeModeCard } from "./ThemeModeCard";
 import { THEME_MODE_OPTIONS } from "./themeModes";
 import type { ThemePickerProps } from "./types";
 
-export function ThemePicker({ currentMode, onSelect }: ThemePickerProps) {
+export function ThemePicker({ currentMode, onSelect, showLabel = true }: ThemePickerProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
 
   return (
     <View style={styles.container} accessibilityRole="radiogroup">
-      <AppText variant="label" color={colors.textSecondary}>
-        {t("settings.theme")}
-      </AppText>
+      {showLabel ? (
+        <AppText variant="label" color={colors.textSecondary}>
+          {t("settings.theme")}
+        </AppText>
+      ) : null}
       <View style={styles.options}>
         {THEME_MODE_OPTIONS.map((option) => (
           <ThemeModeCard

@@ -21,20 +21,14 @@ class EmbeddingService:
             "dimensions": data.dimensions,
         }
         result = await (
-            self._client.table(TABLE)
-            .upsert(payload, on_conflict="entry_id,model_id")
-            .execute()
+            self._client.table(TABLE).upsert(payload, on_conflict="entry_id,model_id").execute()
         )
         return EntryEmbeddingRow.model_validate(result.data[0])
 
     async def get_by_entry(
         self, entry_id: UUID, model_id: str | None = None
     ) -> list[EntryEmbeddingRow]:
-        query = (
-            self._client.table(TABLE)
-            .select("*")
-            .eq("entry_id", str(entry_id))
-        )
+        query = self._client.table(TABLE).select("*").eq("entry_id", str(entry_id))
         if model_id is not None:
             query = query.eq("model_id", model_id)
 
@@ -42,11 +36,7 @@ class EmbeddingService:
         return [EntryEmbeddingRow.model_validate(row) for row in result.data]
 
     async def delete_by_entry(self, entry_id: UUID, model_id: str | None = None) -> int:
-        query = (
-            self._client.table(TABLE)
-            .delete()
-            .eq("entry_id", str(entry_id))
-        )
+        query = self._client.table(TABLE).delete().eq("entry_id", str(entry_id))
         if model_id is not None:
             query = query.eq("model_id", model_id)
 

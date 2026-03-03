@@ -1,7 +1,7 @@
 from datetime import date
 from uuid import UUID
 
-from nstil.models.calendar import CalendarDay, CalendarParams
+from nstil.models.calendar import CalendarDay, CalendarParams, DailyMoodCount, MoodTrendParams
 from nstil.models.journal import JournalEntryCreate, JournalEntryRow, JournalEntryUpdate
 from nstil.models.pagination import CursorParams, SearchParams
 from nstil.services.cache.entry_cache import EntryCacheService
@@ -9,24 +9,18 @@ from nstil.services.journal import JournalService
 
 
 class CachedJournalService:
-    def __init__(
-        self, db: JournalService, cache: EntryCacheService
-    ) -> None:
+    def __init__(self, db: JournalService, cache: EntryCacheService) -> None:
         self._db = db
         self._cache = cache
 
-    async def create(
-        self, user_id: UUID, data: JournalEntryCreate
-    ) -> JournalEntryRow:
+    async def create(self, user_id: UUID, data: JournalEntryCreate) -> JournalEntryRow:
         row = await self._db.create(user_id, data)
         await self._cache.set_entry(user_id, row.id, row)
         await self._cache.invalidate_user_lists(user_id)
         await self._cache.invalidate_user_calendars(user_id)
         return row
 
-    async def get_by_id(
-        self, user_id: UUID, entry_id: UUID
-    ) -> JournalEntryRow | None:
+    async def get_by_id(self, user_id: UUID, entry_id: UUID) -> JournalEntryRow | None:
         cached = await self._cache.get_entry(user_id, entry_id)
         if cached is not None:
             return cached
@@ -45,14 +39,10 @@ class CachedJournalService:
         timezone: str = "UTC",
     ) -> tuple[list[JournalEntryRow], bool]:
         if entry_date is not None:
-            return await self._db.list_entries(
-                user_id, params, journal_id, entry_date, timezone
-            )
+            return await self._db.list_entries(user_id, params, journal_id, entry_date, timezone)
 
         journal_id_str = str(journal_id) if journal_id else None
-        cached = await self._cache.get_list(
-            user_id, params.cursor, params.limit, journal_id_str
-        )
+        cached = await self._cache.get_list(user_id, params.cursor, params.limit, journal_id_str)
         if cached is not None:
             return cached
 
@@ -85,25 +75,34 @@ class CachedJournalService:
 
         rows, has_more = await self._db.search(user_id, params, journal_id)
         await self._cache.set_search(
-            user_id, params.query, params.cursor, params.limit, rows, has_more,
+            user_id,
+            params.query,
+            params.cursor,
+            params.limit,
+            rows,
+            has_more,
             journal_id_str,
         )
         return rows, has_more
 
-    async def get_calendar(
-        self, user_id: UUID, params: CalendarParams
-    ) -> list[CalendarDay]:
+    async def get_calendar(self, user_id: UUID, params: CalendarParams) -> list[CalendarDay]:
+        journal_id_str = str(params.journal_id) if params.journal_id else None
         cached = await self._cache.get_calendar(
-            user_id, params.year, params.month, params.timezone
+            user_id, params.year, params.month, params.timezone, journal_id_str
         )
         if cached is not None:
             return cached
 
         days = await self._db.get_calendar(user_id, params)
         await self._cache.set_calendar(
-            user_id, params.year, params.month, days, params.timezone
+            user_id, params.year, params.month, days, params.timezone, journal_id_str
         )
         return days
+
+    async def get_mood_trends(
+        self, user_id: UUID, params: MoodTrendParams
+    ) -> list[DailyMoodCount]:
+        return await self._db.get_mood_trends(user_id, params)
 
     async def soft_delete(self, user_id: UUID, entry_id: UUID) -> bool:
         deleted = await self._db.soft_delete(user_id, entry_id)

@@ -3,6 +3,7 @@ import type {
   JournalEntry,
   JournalEntryCreate,
   JournalEntryUpdate,
+  MoodTrendResponse,
   PaginatedResponse,
   SearchParams,
 } from "@/types";
@@ -84,6 +85,19 @@ export function searchEntries(
   }
   return apiFetch<PaginatedResponse<JournalEntry>>(
     `${ENTRIES_PATH}/search?${searchParams.toString()}`,
+  );
+}
+
+export function getMoodTrends(
+  days: number = 7,
+  timezone: string = "UTC",
+): Promise<MoodTrendResponse> {
+  const params = new URLSearchParams({
+    days: String(days),
+    timezone,
+  });
+  return apiFetch<MoodTrendResponse>(
+    `${ENTRIES_PATH}/mood-trends?${params.toString()}`,
   );
 }
 

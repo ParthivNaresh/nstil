@@ -12,9 +12,7 @@ def _auth_headers(sub: str = DEFAULT_USER_ID) -> dict[str, str]:
 
 
 class TestListInsights:
-    def test_list_success(
-        self, client: TestClient, mock_ai_insight_service: AsyncMock
-    ) -> None:
+    def test_list_success(self, client: TestClient, mock_ai_insight_service: AsyncMock) -> None:
         rows = [make_ai_insight_row(), make_ai_insight_row()]
         mock_ai_insight_service.list_insights.return_value = (rows, False)
 
@@ -26,9 +24,7 @@ class TestListInsights:
         assert data["has_more"] is False
         assert data["next_cursor"] is None
 
-    def test_list_empty(
-        self, client: TestClient, mock_ai_insight_service: AsyncMock
-    ) -> None:
+    def test_list_empty(self, client: TestClient, mock_ai_insight_service: AsyncMock) -> None:
         mock_ai_insight_service.list_insights.return_value = ([], False)
 
         response = client.get(INSIGHTS_URL, headers=_auth_headers())
@@ -237,9 +233,7 @@ class TestCreateInsight:
 
 
 class TestGenerateInsights:
-    def test_generate_success(
-        self, client: TestClient, mock_insight_engine: AsyncMock
-    ) -> None:
+    def test_generate_success(self, client: TestClient, mock_insight_engine: AsyncMock) -> None:
         rows = [make_ai_insight_row(), make_ai_insight_row()]
         mock_insight_engine.run.return_value = rows
 
@@ -252,9 +246,7 @@ class TestGenerateInsights:
         data = response.json()
         assert len(data) == 2
 
-    def test_generate_empty(
-        self, client: TestClient, mock_insight_engine: AsyncMock
-    ) -> None:
+    def test_generate_empty(self, client: TestClient, mock_insight_engine: AsyncMock) -> None:
         mock_insight_engine.run.return_value = []
 
         response = client.post(
@@ -267,9 +259,7 @@ class TestGenerateInsights:
 
 
 class TestUpdateInsight:
-    def test_update_success(
-        self, client: TestClient, mock_ai_insight_service: AsyncMock
-    ) -> None:
+    def test_update_success(self, client: TestClient, mock_ai_insight_service: AsyncMock) -> None:
         row = make_ai_insight_row(status="seen")
         mock_ai_insight_service.update.return_value = row
 

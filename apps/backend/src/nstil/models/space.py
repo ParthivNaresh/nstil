@@ -70,10 +70,7 @@ class JournalSpaceUpdate(BaseModel):
 
     @model_validator(mode="after")
     def at_least_one_field(self) -> "JournalSpaceUpdate":
-        has_value = any(
-            getattr(self, field) is not None
-            for field in self.__class__.model_fields
-        )
+        has_value = any(getattr(self, field) is not None for field in self.__class__.model_fields)
         if not has_value:
             msg = "At least one field must be provided"
             raise ValueError(msg)
@@ -85,11 +82,7 @@ class JournalSpaceUpdate(BaseModel):
     _strip_icon = field_validator("icon")(_validate_icon)
 
     def to_update_dict(self) -> dict[str, str | int]:
-        return {
-            k: v
-            for k, v in self.model_dump(mode="json").items()
-            if v is not None
-        }
+        return {k: v for k, v in self.model_dump(mode="json").items() if v is not None}
 
 
 class JournalSpaceRow(BaseModel):

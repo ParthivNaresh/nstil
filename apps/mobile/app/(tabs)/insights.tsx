@@ -9,7 +9,6 @@ import {
   MoodAnomalyCard,
   MoodTrendChart,
   NarrativeSummary,
-  StreakBanner,
   WeeklySummaryCard,
   YearInPixels,
 } from "@/components/insights";
@@ -19,13 +18,14 @@ import {
   useGenerateNarrativeSummary,
   useHeaderHeight,
   useInsightsList,
+  useMoodTrends,
+  useTabBarHeight,
   useTheme,
   useUpdateInsight,
   useYearCalendar,
 } from "@/hooks";
 import {
   parseMoodAnomalyData,
-  parseStreakData,
   parseWeeklySummaryData,
 } from "@/lib/insightUtils";
 import { queryClient } from "@/lib/queryClient";
@@ -35,20 +35,20 @@ import type { AIInsight } from "@/types";
 
 import { styles } from "@/styles/screens/insightsStyles";
 
-const CURRENT_YEAR = new Date().getFullYear();
-
 export default function InsightsScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
   const [refreshing, setRefreshing] = useState(false);
   const hasGenerated = useRef(false);
 
   const { mutate: generate } = useGenerateInsights();
   const { data: insightsResponse, isLoading: insightsLoading } = useInsightsList();
   const { mutate: updateInsight } = useUpdateInsight();
-  const { days: yearDays, isLoading: yearLoading } = useYearCalendar(CURRENT_YEAR);
+  const { data: moodTrends } = useMoodTrends();
+  const { days: yearDays, isLoading: yearLoading } = useYearCalendar();
 
   useEffect(() => {
     if (!hasGenerated.current) {
@@ -66,13 +66,11 @@ export default function InsightsScreen() {
   const narrativeAttempted = useRef(false);
 
   const {
-    streakInsight,
     weeklySummaryInsight,
     narrativeInsight,
     anomalyInsight,
     otherInsights,
   } = useMemo(() => {
-    let streak: AIInsight | null = null;
     let weekly: AIInsight | null = null;
     let narrative: AIInsight | null = null;
     let anomaly: AIInsight | null = null;
@@ -83,11 +81,7 @@ export default function InsightsScreen() {
 
       switch (insight.insight_type) {
         case "streak_milestone":
-          if (!streak && parseStreakData(insight)) {
-            streak = insight;
-          } else {
-            others.push(insight);
-          }
+          others.push(insight);
           break;
         case "weekly_summary":
           if (insight.source === "on_device_llm") {
@@ -105,7 +99,6 @@ export default function InsightsScreen() {
     }
 
     return {
-      streakInsight: streak,
       weeklySummaryInsight: weekly,
       narrativeInsight: narrative,
       anomalyInsight: anomaly,
@@ -124,11 +117,6 @@ export default function InsightsScreen() {
     }
   }, [weeklySummaryInsight, narrativeInsight, generateNarrative]);
 
-  const streakData = useMemo(
-    () => (streakInsight ? parseStreakData(streakInsight) : null),
-    [streakInsight],
-  );
-
   const weeklySummaryData = useMemo(
     () => (weeklySummaryInsight ? parseWeeklySummaryData(weeklySummaryInsight) : null),
     [weeklySummaryInsight],
@@ -142,7 +130,10 @@ export default function InsightsScreen() {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     generate();
-    await queryClient.invalidateQueries({ queryKey: queryKeys.insights.all });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.insights.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.entries.moodTrends() }),
+    ]);
     setRefreshing(false);
   }, [generate]);
 
@@ -179,7 +170,10 @@ export default function InsightsScreen() {
         style={styles.content}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: headerHeight + spacing.xl },
+          {
+            paddingTop: headerHeight + spacing.xl,
+            paddingBottom: tabBarHeight + spacing.md,
+          },
           isEmpty ? styles.emptyContainer : undefined,
         ]}
         showsVerticalScrollIndicator={false}
@@ -205,16 +199,14 @@ export default function InsightsScreen() {
           />
         ) : (
           <>
-            {streakData ? (
-              <StreakBanner data={streakData} />
-            ) : null}
-
             {narrativeInsight ? (
               <NarrativeSummary
                 insight={narrativeInsight}
                 onDismiss={handleDismiss}
               />
             ) : null}
+
+            <MoodTrendChart items={moodTrends?.items ?? []} />
 
             {weeklySummaryData ? (
               <WeeklySummaryCard data={weeklySummaryData} />
@@ -223,8 +215,6 @@ export default function InsightsScreen() {
             {anomalyInsight && anomalyData ? (
               <MoodAnomalyCard insight={anomalyInsight} data={anomalyData} />
             ) : null}
-
-            <MoodTrendChart insights={insights} />
 
             {!yearLoading && yearDays.length > 0 ? (
               <YearInPixels days={yearDays} onDayPress={handleDayPress} />

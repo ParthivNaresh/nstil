@@ -1,6 +1,11 @@
 import type { MediaPreview } from "./media";
 
-export type EntryType = "journal" | "reflection" | "gratitude" | "freewrite" | "check_in";
+export type EntryType = "journal" | "reflection" | "gratitude" | "freewrite" | "check_in" | "mood_snapshot";
+
+export const BODYLESS_ENTRY_TYPES: ReadonlySet<EntryType> = new Set<EntryType>([
+  "check_in",
+  "mood_snapshot",
+]);
 
 export type MoodCategory = "happy" | "calm" | "sad" | "anxious" | "angry";
 
@@ -32,7 +37,7 @@ export interface JournalEntry {
 
 export interface JournalEntryCreate {
   readonly journal_id: string;
-  readonly body: string;
+  readonly body?: string;
   readonly title?: string;
   readonly mood_category?: MoodCategory;
   readonly mood_specific?: MoodSpecific;

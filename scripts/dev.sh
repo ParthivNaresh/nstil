@@ -128,6 +128,22 @@ cd "$REPO_ROOT"
 supabase start > /dev/null 2>&1 || true
 echo "  Supabase started"
 
+step "Resetting iOS Simulator keychain"
+BOOTED_DEVICE_ID=$(xcrun simctl list devices booted -j 2>/dev/null | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for runtime, devices in data.get('devices', {}).items():
+    for d in devices:
+        if d.get('state') == 'Booted':
+            print(d['udid'])
+            sys.exit(0)
+" 2>/dev/null || true)
+if [[ -n "$BOOTED_DEVICE_ID" ]]; then
+  xcrun simctl keychain "$BOOTED_DEVICE_ID" reset 2>/dev/null && echo "  Keychain reset for $BOOTED_DEVICE_ID" || echo "  No booted simulator to reset"
+else
+  echo "  No booted simulator found — skipping"
+fi
+
 step "Waiting for Supabase Auth to be healthy"
 for i in $(seq 1 15); do
   status=$(curl -m 2 -s -o /dev/null -w "%{http_code}" http://127.0.0.1:54321/auth/v1/health 2>/dev/null || echo "000")
@@ -156,7 +172,7 @@ else
 fi
 
 step "Opening backend in new iTerm tab"
-open_iterm_tab "cd $REPO_ROOT/apps/backend && uv run uvicorn nstil.main:app --reload --host 0.0.0.0 --port 8000"
+open_iterm_tab "cd $REPO_ROOT/apps/backend && uv run uvicorn nstil.main:create_app --factory --reload --host 0.0.0.0 --port 8000"
 
 step "Waiting for backend to start"
 for i in $(seq 1 15); do
@@ -173,7 +189,7 @@ done
 
 if $DEVICE_MODE; then
   step "Opening Metro + iOS Device in new iTerm tab"
-  open_iterm_tab "cd $REPO_ROOT/apps/mobile && npx expo run:ios --device"
+  open_iterm_tab "cd $REPO_ROOT/apps/mobile && npx expo run:ios --device 2>&1 | grep -v 'HALC_ProxyObjectMap'"
 
   echo -e "\n${GREEN}${BOLD}All services started (device mode)!${RESET}"
   echo -e "  Backend:  http://${LAN_IP}:8000"
@@ -185,7 +201,7 @@ if $DEVICE_MODE; then
   echo -e "  ${YELLOW}Run 'just dev' to switch back to simulator mode.${RESET}"
 else
   step "Opening Metro + iOS Simulator in new iTerm tab"
-  open_iterm_tab "cd $REPO_ROOT/apps/mobile && EXPO_PACKAGER_PROXY_URL=http://localhost:8081 npx expo run:ios"
+  open_iterm_tab "cd $REPO_ROOT/apps/mobile && EXPO_PACKAGER_PROXY_URL=http://localhost:8081 npx expo run:ios 2>&1 | grep -v 'HALC_ProxyObjectMap'"
 
   echo -e "\n${GREEN}${BOLD}All services started!${RESET}"
   echo "  Backend:  http://localhost:8000"

@@ -11,17 +11,13 @@ logger = get_logger("nstil.cache.space")
 
 
 class SpaceCacheService(BaseCacheService):
-    async def get_space(
-        self, user_id: UUID, space_id: UUID
-    ) -> JournalSpaceRow | None:
+    async def get_space(self, user_id: UUID, space_id: UUID) -> JournalSpaceRow | None:
         data = await self._get(space_key(user_id, space_id))
         if data is None:
             return None
         return self._deserialize(JournalSpaceRow, data)
 
-    async def set_space(
-        self, user_id: UUID, space_id: UUID, row: JournalSpaceRow
-    ) -> None:
+    async def set_space(self, user_id: UUID, space_id: UUID, row: JournalSpaceRow) -> None:
         await self._set(
             space_key(user_id, space_id),
             self._serialize(row),
@@ -31,9 +27,7 @@ class SpaceCacheService(BaseCacheService):
     async def invalidate_space(self, user_id: UUID, space_id: UUID) -> None:
         await self._delete(space_key(user_id, space_id))
 
-    async def get_space_list(
-        self, user_id: UUID
-    ) -> list[JournalSpaceRow] | None:
+    async def get_space_list(self, user_id: UUID) -> list[JournalSpaceRow] | None:
         data = await self._get(space_list_key(user_id))
         if data is None:
             return None
@@ -46,9 +40,7 @@ class SpaceCacheService(BaseCacheService):
             logger.warning("cache.space_list.deserialize_failed", user_id=str(user_id))
             return None
 
-    async def set_space_list(
-        self, user_id: UUID, rows: list[JournalSpaceRow]
-    ) -> None:
+    async def set_space_list(self, user_id: UUID, rows: list[JournalSpaceRow]) -> None:
         payload = json.dumps([row.model_dump(mode="json") for row in rows])
         await self._set(
             space_list_key(user_id),

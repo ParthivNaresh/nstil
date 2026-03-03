@@ -108,8 +108,7 @@ GUIDED_PROMPTS: tuple[CuratedPrompt, ...] = (
         id="gu-013",
         prompt_type="guided",
         content=(
-            "Write about someone who has positively influenced your life."
-            " What did they teach you?"
+            "Write about someone who has positively influenced your life. What did they teach you?"
         ),
         mood_categories=ALL,
         tags=frozenset({PromptTag.RELATIONSHIPS, PromptTag.GRATITUDE}),

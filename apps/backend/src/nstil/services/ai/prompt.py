@@ -183,11 +183,13 @@ class AIPromptService:
         now = datetime.now(UTC).isoformat()
         result = await (
             self._client.table(TABLE)
-            .update({
-                "status": "converted",
-                "converted_at": now,
-                "converted_entry_id": str(entry_id),
-            })
+            .update(
+                {
+                    "status": "converted",
+                    "converted_at": now,
+                    "converted_entry_id": str(entry_id),
+                }
+            )
             .eq("id", str(prompt_id))
             .eq("user_id", str(user_id))
             .is_("deleted_at", "null")

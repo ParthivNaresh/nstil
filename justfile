@@ -2,6 +2,9 @@
 
 # ── High-level commands ──────────────────────────────────
 
+create:
+    cd apps/backend && uv run python ../../scripts/create_test_user.py
+
 doctor:
     ./scripts/doctor.sh
 
@@ -53,10 +56,10 @@ install: backend-install mobile-install
 # ── Backend ──────────────────────────────────────────────
 
 backend-install:
-    cd apps/backend && uv sync --dev
+    cd apps/backend && uv sync --extra dev
 
 backend-dev:
-    cd apps/backend && uv run uvicorn nstil.main:app --reload --host 0.0.0.0 --port 8000
+    cd apps/backend && uv run uvicorn nstil.main:create_app --factory --reload --host 0.0.0.0 --port 8000
 
 backend-lint:
     cd apps/backend && uv run ruff check src tests
@@ -73,7 +76,10 @@ backend-typecheck:
 backend-test:
     cd apps/backend && uv run pytest -v
 
-backend-check: backend-lint backend-typecheck backend-test
+backend-test-coverage:
+    cd apps/backend && uv run pytest -v --cov=nstil --cov-report=xml:coverage.xml
+
+backend-check: backend-format-check backend-lint backend-typecheck backend-test
 
 # ── Mobile ───────────────────────────────────────────────
 
@@ -103,6 +109,14 @@ mobile-typecheck:
 
 mobile-check: mobile-typecheck mobile-lint
 
+# ── Docs ─────────────────────────────────────────────────
+
+docs-serve:
+    cd apps/backend && uv run mkdocs serve -f ../../mkdocs.yml
+
+docs-build:
+    cd apps/backend && uv run mkdocs build -f ../../mkdocs.yml --strict
+
 # ── Database ─────────────────────────────────────────────
 
 db-reset:
@@ -112,12 +126,22 @@ db-reset:
     echo "→ Waiting for Supabase to stabilize..."
     for i in {1..15}; do
         if supabase status > /dev/null 2>&1 && curl -sf http://127.0.0.1:54321/rest/v1/ -o /dev/null 2>&1; then
-            echo "→ Database reset complete"
-            exit 0
+            break
         fi
         sleep 2
     done
-    echo "→ Database reset complete (containers may still be warming up)"
+    BOOTED_ID=$(xcrun simctl list devices booted -j 2>/dev/null | python3 -c "
+    import json, sys
+    data = json.load(sys.stdin)
+    for runtime, devices in data.get('devices', {}).items():
+        for d in devices:
+            if d.get('state') == 'Booted':
+                print(d['udid']); sys.exit(0)
+    " 2>/dev/null || true)
+    if [[ -n "${BOOTED_ID:-}" ]]; then
+        xcrun simctl keychain "$BOOTED_ID" reset 2>/dev/null && echo "→ Simulator keychain reset" || true
+    fi
+    echo "→ Database reset complete"
 
 db-migration name:
     supabase migration new {{name}}

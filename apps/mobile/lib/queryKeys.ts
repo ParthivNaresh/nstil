@@ -13,8 +13,10 @@ export const queryKeys = {
     dayEntry: (date: string, journalId?: string) =>
       [...queryKeys.entries.dayEntries(), { date, journalId }] as const,
     calendars: () => [...queryKeys.entries.all, "calendar"] as const,
-    calendar: (year: number, month: number) =>
-      [...queryKeys.entries.calendars(), { year, month }] as const,
+    calendar: (year: number, month: number, journalId?: string) =>
+      [...queryKeys.entries.calendars(), { year, month, journalId }] as const,
+    moodTrends: (days: number = 7) =>
+      [...queryKeys.entries.all, "moodTrends", { days }] as const,
   },
   media: {
     all: ["media"] as const,
@@ -53,6 +55,9 @@ export const queryKeys = {
     list: (type?: string, status?: string) =>
       [...queryKeys.insights.lists(), { type, status }] as const,
     generated: () => [...queryKeys.insights.all, "generated"] as const,
+  },
+  profile: {
+    all: ["profile"] as const,
   },
   aiProfile: {
     all: ["aiProfile"] as const,

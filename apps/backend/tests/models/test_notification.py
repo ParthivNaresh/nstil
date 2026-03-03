@@ -121,9 +121,7 @@ class TestNotificationPreferencesUpdate:
         assert "reminder_times" not in result
 
     def test_to_update_dict_serializes_times(self) -> None:
-        update = NotificationPreferencesUpdate(
-            reminder_times=[ReminderTime(hour=9, minute=30)]
-        )
+        update = NotificationPreferencesUpdate(reminder_times=[ReminderTime(hour=9, minute=30)])
         result = update.to_update_dict()
         assert result["reminder_times"] == [{"hour": 9, "minute": 30}]
 

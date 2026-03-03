@@ -38,7 +38,10 @@ export type {
   ValidationError,
   VerifyEmailRouteParams,
 } from "./auth";
-export type { CalendarDay, CalendarResponse } from "./calendar";
+export type { CalendarDay, CalendarResponse, DailyMoodCount, MoodTrendResponse } from "./calendar";
+export {
+  BODYLESS_ENTRY_TYPES,
+} from "./journal";
 export type {
   EntryType,
   JournalEntry,
@@ -64,6 +67,7 @@ export type {
   ReminderFrequency,
   ReminderTime,
 } from "./notification";
+export type { Profile, ProfileUpdate } from "./profile";
 export type {
   JournalSpace,
   JournalSpaceCreate,

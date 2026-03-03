@@ -26,10 +26,12 @@ from nstil.services.ai.insight_engine import InsightEngine
 router = APIRouter(prefix="/insights", tags=["insights"])
 
 
-_CLIENT_ALLOWED_SOURCES: frozenset[InsightSource] = frozenset({
-    InsightSource.ON_DEVICE_LLM,
-    InsightSource.CLOUD_LLM,
-})
+_CLIENT_ALLOWED_SOURCES: frozenset[InsightSource] = frozenset(
+    {
+        InsightSource.ON_DEVICE_LLM,
+        InsightSource.CLOUD_LLM,
+    }
+)
 
 
 class CreateInsightRequest(BaseModel):
@@ -72,9 +74,7 @@ async def list_insights(
         source=insight_source,
     )
     items = [AIInsightResponse.from_row(row) for row in rows]
-    next_cursor = (
-        rows[-1].created_at.isoformat() if has_more and rows else None
-    )
+    next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
     return AIInsightListResponse(
         items=items,
         next_cursor=next_cursor,

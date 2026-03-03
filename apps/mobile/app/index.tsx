@@ -1,11 +1,23 @@
 import { Redirect } from "expo-router";
 
+import { useProfile } from "@/hooks/useProfile";
 import { useAuthStore } from "@/stores/authStore";
 
 export default function Index() {
   const session = useAuthStore((s) => s.session);
+  const initialized = useAuthStore((s) => s.initialized);
   const isEmailVerified = useAuthStore((s) => s.isEmailVerified);
   const pendingDeepLinkType = useAuthStore((s) => s.pendingDeepLinkType);
+
+  const isAuthenticated = initialized && !!session && isEmailVerified && !pendingDeepLinkType;
+
+  const { data: profile, isLoading: profileLoading } = useProfile({
+    enabled: isAuthenticated,
+  });
+
+  if (!initialized) {
+    return null;
+  }
 
   if (!session) {
     return <Redirect href="/(auth)" />;
@@ -24,6 +36,14 @@ export default function Index() {
         }}
       />
     );
+  }
+
+  if (profileLoading || !profile) {
+    return null;
+  }
+
+  if (!profile.onboarding_completed_at) {
+    return <Redirect href="/(onboarding)" />;
   }
 
   return <Redirect href="/(tabs)" />;

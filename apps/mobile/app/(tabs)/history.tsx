@@ -1,9 +1,8 @@
 import { useRouter } from "expo-router";
-import { Feather, Search } from "lucide-react-native";
+import { Feather, Filter, Search } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -11,6 +10,8 @@ import {
   Calendar,
   DayActionBar,
   EntryCardSkeleton,
+  JournalFilterSheet,
+  MoodSnapshotPill,
 } from "@/components/journal";
 import {
   EmptyState,
@@ -21,6 +22,8 @@ import {
   useCalendarRange,
   useDayEntries,
   useHeaderHeight,
+  useJournals,
+  useTabBarHeight,
   useTheme,
 } from "@/hooks";
 import { formatDateString } from "@/lib/calendarUtils";
@@ -43,14 +46,17 @@ export default function HistoryScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
 
   const [selectedDate, setSelectedDate] = useState(getTodayString);
   const [inlineSearch, setInlineSearch] = useState("");
+  const [selectedJournalId, setSelectedJournalId] = useState<string | null>(null);
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
 
-  const calendarData = useCalendarRange();
-  const dayQuery = useDayEntries(selectedDate);
+  const { data: journals = [] } = useJournals();
+  const calendarData = useCalendarRange(selectedJournalId ?? undefined);
+  const dayQuery = useDayEntries(selectedDate, selectedJournalId ?? undefined);
 
   const dayEntries = useMemo<JournalEntry[]>(
     () => dayQuery.data?.items ?? EMPTY_ENTRIES,
@@ -97,10 +103,33 @@ export default function HistoryScreen() {
     router.push("/entry/search");
   }, [router]);
 
+  const handleFilterPress = useCallback(() => {
+    setFilterSheetVisible(true);
+  }, []);
+
+  const handleFilterClose = useCallback(() => {
+    setFilterSheetVisible(false);
+  }, []);
+
+  const handleFilterSelect = useCallback((id: string | null) => {
+    setSelectedJournalId(id);
+    setFilterSheetVisible(false);
+  }, []);
+
+  const selectedJournal = useMemo(
+    () => (selectedJournalId ? journals.find((j) => j.id === selectedJournalId) : undefined),
+    [selectedJournalId, journals],
+  );
+
+  const filterIconColor = selectedJournal?.color ?? colors.textTertiary;
+
   const renderItem = useCallback(
-    ({ item, index }: { item: JournalEntry; index: number }) => (
-      <AnimatedEntryCard entry={item} onPress={handleEntryPress} index={index} />
-    ),
+    ({ item, index }: { item: JournalEntry; index: number }) => {
+      if (item.entry_type === "mood_snapshot") {
+        return <MoodSnapshotPill entry={item} onPress={handleEntryPress} />;
+      }
+      return <AnimatedEntryCard entry={item} onPress={handleEntryPress} index={index} />;
+    },
     [handleEntryPress],
   );
 
@@ -115,6 +144,15 @@ export default function HistoryScreen() {
     </Pressable>
   );
 
+  const calendarFilterAction = useMemo(
+    () => (
+      <Pressable onPress={handleFilterPress} accessibilityLabel="Filter by journal" hitSlop={8}>
+        <Icon icon={Filter} size="sm" color={filterIconColor} />
+      </Pressable>
+    ),
+    [handleFilterPress, filterIconColor],
+  );
+
   const listHeader = useMemo(
     () => (
       <View style={styles.listHeader}>
@@ -125,6 +163,7 @@ export default function HistoryScreen() {
             totalEntries={calendarData.totalEntries}
             selectedDate={selectedDate}
             onDayPress={handleDayPress}
+            headerAction={calendarFilterAction}
           />
         </View>
         {hasEntries ? (
@@ -147,6 +186,7 @@ export default function HistoryScreen() {
       calendarData.totalEntries,
       selectedDate,
       handleDayPress,
+      calendarFilterAction,
       hasEntries,
       dayEntries.length,
       inlineSearch,
@@ -209,12 +249,19 @@ export default function HistoryScreen() {
           styles.list,
           {
             paddingTop: headerHeight + spacing.sm,
-            paddingBottom: insets.bottom + spacing.lg,
+            paddingBottom: tabBarHeight + spacing.md,
           },
           displayEntries.length === 0 && styles.emptyList,
         ]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={ItemSeparator}
+      />
+      <JournalFilterSheet
+        visible={filterSheetVisible}
+        journals={journals}
+        selectedId={selectedJournalId}
+        onSelect={handleFilterSelect}
+        onClose={handleFilterClose}
       />
     </View>
   );

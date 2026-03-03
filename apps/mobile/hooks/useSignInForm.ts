@@ -1,4 +1,3 @@
-import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -19,7 +18,6 @@ interface SignInFormReturn {
 
 export function useSignInForm(): SignInFormReturn {
   const { t } = useTranslation();
-  const router = useRouter();
   const signIn = useAuthStore((s) => s.signIn);
   const email = useFormField();
   const password = useFormField();
@@ -52,13 +50,12 @@ export function useSignInForm(): SignInFormReturn {
     setIsLoading(true);
     try {
       await signIn(email.value.trim(), password.value);
-      router.replace("/(tabs)");
     } catch (error: unknown) {
       setFormError(mapAuthError(error, t));
     } finally {
       setIsLoading(false);
     }
-  }, [email.value, password.value, signIn, t, applyFieldErrors, router]);
+  }, [email.value, password.value, signIn, t, applyFieldErrors]);
 
   return { email, password, isLoading, formError, handleSubmit };
 }
