@@ -30,11 +30,7 @@ class NotificationService:
             return existing
 
         try:
-            result = await (
-                self._client.table(TABLE)
-                .insert({"user_id": str(user_id)})
-                .execute()
-            )
+            result = await self._client.table(TABLE).insert({"user_id": str(user_id)}).execute()
             return NotificationPreferencesRow.model_validate(result.data[0])
         except APIError as exc:
             if "23503" in str(exc):

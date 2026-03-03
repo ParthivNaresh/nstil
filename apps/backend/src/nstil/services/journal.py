@@ -156,9 +156,7 @@ class JournalService:
             "p_days": params.days,
             "p_timezone": params.timezone,
         }
-        result = await self._client.rpc(
-            "get_daily_mood_distribution", rpc_params
-        ).execute()
+        result = await self._client.rpc("get_daily_mood_distribution", rpc_params).execute()
         data: list[dict[str, Any]] = result.data  # type: ignore[assignment]
         return [DailyMoodCount.model_validate(row) for row in data]
 

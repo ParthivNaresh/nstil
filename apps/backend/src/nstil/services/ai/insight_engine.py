@@ -36,18 +36,14 @@ def _find_weeks_with_entries(
     max_past_weeks: int,
 ) -> list[date]:
     dates_with_entries: set[date] = {
-        date.fromisoformat(d.date)
-        for d in calendar_days
-        if d.entry_count > 0
+        date.fromisoformat(d.date) for d in calendar_days if d.entry_count > 0
     }
 
     weeks: list[date] = []
     for offset in range(max_past_weeks + 1):
         week_start = current_week_start - timedelta(weeks=offset)
         week_end = week_start + timedelta(days=6)
-        has_entries = any(
-            week_start <= d <= week_end for d in dates_with_entries
-        )
+        has_entries = any(week_start <= d <= week_end for d in dates_with_entries)
         if has_entries:
             weeks.append(week_start)
 
@@ -195,9 +191,7 @@ class InsightEngine:
 
         days_from_start = (today - week_start).days
         days_back = max(days_from_start + 7, 14)
-        context = await self._context.get_context(
-            user_id, entry_limit=100, days_back=days_back
-        )
+        context = await self._context.get_context(user_id, entry_limit=100, days_back=days_back)
         return await self._generate_summary_for_week(user_id, week_start, context)
 
     async def _generate_summary_for_week(

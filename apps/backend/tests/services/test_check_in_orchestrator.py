@@ -59,7 +59,10 @@ class TestComplete:
         session = make_ai_session_row(flow_state=flow)
         completed_session = make_ai_session_row(status="completed", flow_state=flow)
         entry = make_entry_row(
-            entry_type="mood_snapshot", mood_category="calm", body="", title="",
+            entry_type="mood_snapshot",
+            mood_category="calm",
+            body="",
+            title="",
         )
         space = make_space_row()
 
@@ -101,7 +104,10 @@ class TestComplete:
         session = make_ai_session_row(flow_state=flow)
         completed_session = make_ai_session_row(status="completed", flow_state=flow)
         entry = make_entry_row(
-            entry_type="mood_snapshot", mood_category="sad", body="", title="",
+            entry_type="mood_snapshot",
+            mood_category="sad",
+            body="",
+            title="",
         )
         space = make_space_row()
 
@@ -133,7 +139,10 @@ class TestComplete:
         session = make_ai_session_row(flow_state=flow)
         completed_session = make_ai_session_row(status="completed", flow_state=flow)
         entry = make_entry_row(
-            entry_type="mood_snapshot", mood_category="happy", body="", title="",
+            entry_type="mood_snapshot",
+            mood_category="happy",
+            body="",
+            title="",
         )
         space = make_space_row()
 
@@ -166,7 +175,10 @@ class TestComplete:
         session = make_ai_session_row(flow_state=flow)
         completed_session = make_ai_session_row(status="completed", flow_state=flow)
         entry = make_entry_row(
-            entry_type="mood_snapshot", mood_category="anxious", body="", title="",
+            entry_type="mood_snapshot",
+            mood_category="anxious",
+            body="",
+            title="",
         )
         space = make_space_row()
 

@@ -63,9 +63,7 @@ class TestUpdateProfile:
         assert response.status_code == 200
         assert response.json()["display_name"] == "Updated"
 
-    def test_clear_display_name(
-        self, client: TestClient, mock_profile_service: AsyncMock
-    ) -> None:
+    def test_clear_display_name(self, client: TestClient, mock_profile_service: AsyncMock) -> None:
         row = make_profile_row(display_name=None)
         mock_profile_service.update.return_value = row
 

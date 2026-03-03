@@ -167,7 +167,10 @@ class TestCompleteCheckIn:
     ) -> None:
         session = make_ai_session_row(status="completed")
         entry = make_entry_row(
-            entry_type="mood_snapshot", mood_category="happy", body="", title="",
+            entry_type="mood_snapshot",
+            mood_category="happy",
+            body="",
+            title="",
         )
         mock_check_in_orchestrator.complete.return_value = CheckInResult(
             session=session, entry=entry
