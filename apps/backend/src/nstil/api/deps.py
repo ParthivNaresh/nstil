@@ -19,6 +19,7 @@ from nstil.services.ai.profile import AIProfileService
 from nstil.services.ai.prompt import AIPromptService
 from nstil.services.ai.prompt_engine import PromptEngine
 from nstil.services.ai.session import AISessionService
+from nstil.services.breathing import BreathingService
 from nstil.services.cache import EntryCacheService, SpaceCacheService
 from nstil.services.cache.ai_cache import AICacheService
 from nstil.services.cached_ai_context import CachedAIContextService
@@ -88,6 +89,12 @@ def get_media_service(
     supabase: Annotated[AsyncClient, Depends(get_supabase)],
 ) -> MediaService:
     return MediaService(supabase)
+
+
+def get_breathing_service(
+    supabase: Annotated[AsyncClient, Depends(get_supabase)],
+) -> BreathingService:
+    return BreathingService(supabase)
 
 
 def get_ai_cache_service(

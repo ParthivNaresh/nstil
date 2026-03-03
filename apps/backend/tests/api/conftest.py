@@ -10,6 +10,7 @@ from nstil.api.deps import (
     get_ai_insight_service,
     get_ai_profile_service,
     get_ai_prompt_service,
+    get_breathing_service,
     get_check_in_orchestrator,
     get_insight_engine,
     get_journal_service,
@@ -29,6 +30,7 @@ from nstil.services.ai.insight import AIInsightService
 from nstil.services.ai.insight_engine import InsightEngine
 from nstil.services.ai.prompt import AIPromptService
 from nstil.services.ai.prompt_engine import PromptEngine
+from nstil.services.breathing import BreathingService
 from nstil.services.cached_ai_context import CachedAIContextService
 from nstil.services.cached_ai_profile import CachedAIProfileService
 from nstil.services.cached_journal import CachedJournalService
@@ -118,6 +120,11 @@ def mock_profile_service() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_breathing_service() -> AsyncMock:
+    return AsyncMock(spec=BreathingService)
+
+
+@pytest.fixture
 def mock_token_blacklist() -> AsyncMock:
     mock = AsyncMock(spec=TokenBlacklistService)
     mock.is_revoked.return_value = False
@@ -132,6 +139,7 @@ def client(
     mock_journal_service: AsyncMock,
     mock_space_service: AsyncMock,
     mock_media_service: AsyncMock,
+    mock_breathing_service: AsyncMock,
     mock_check_in_orchestrator: AsyncMock,
     mock_insight_engine: AsyncMock,
     mock_ai_insight_service: AsyncMock,
@@ -153,6 +161,7 @@ def client(
     app.dependency_overrides[get_journal_service] = lambda: mock_journal_service
     app.dependency_overrides[get_space_service] = lambda: mock_space_service
     app.dependency_overrides[get_media_service] = lambda: mock_media_service
+    app.dependency_overrides[get_breathing_service] = lambda: mock_breathing_service
     app.dependency_overrides[get_check_in_orchestrator] = lambda: mock_check_in_orchestrator
     app.dependency_overrides[get_insight_engine] = lambda: mock_insight_engine
     app.dependency_overrides[get_ai_insight_service] = lambda: mock_ai_insight_service

@@ -1,6 +1,14 @@
 export { useAICapabilities } from "./useAICapabilities";
 export type { AICapabilities } from "./useAICapabilities";
 export { useAIProfile, useUpdateAIProfile } from "./useAIProfile";
+export { useBreathing } from "./useBreathing";
+export type { UseBreathingReturn } from "./useBreathing";
+export {
+  useBreathingSessions,
+  useBreathingStats,
+  useCreateBreathingSession,
+  useUpdateBreathingSession,
+} from "./useBreathingSessions";
 export { useEntryReflection, useGenerateReflection } from "./useEntryReflection";
 export { useCheckIn } from "./useCheckIn";
 export type { CheckInStep, UseCheckInReturn } from "./useCheckIn";

@@ -78,23 +78,10 @@ EOF
 
 write_backend_env() {
   local supabase_url="$1"
-  local service_key
-  local jwt_secret
-  local redis_url
-  local cors_origins
-  service_key=$(read_env_value "$BACKEND_ENV" "SUPABASE_SERVICE_KEY")
-  jwt_secret=$(read_env_value "$BACKEND_ENV" "SUPABASE_JWT_SECRET")
-  redis_url=$(read_env_value "$BACKEND_ENV" "REDIS_URL")
-  cors_origins=$(read_env_value "$BACKEND_ENV" "CORS_ORIGINS")
-
-  cat > "$BACKEND_ENV" <<EOF
-SUPABASE_URL=${supabase_url}
-SUPABASE_SERVICE_KEY=${service_key}
-SUPABASE_JWT_SECRET=${jwt_secret}
-REDIS_URL=${redis_url}
-CORS_ORIGINS=${cors_origins}
-DEBUG=true
-EOF
+  if [[ -f "$BACKEND_ENV" ]]; then
+    sed -i '' "s|^SUPABASE_URL=.*|SUPABASE_URL=${supabase_url}|" "$BACKEND_ENV"
+    grep -q "^DEBUG=" "$BACKEND_ENV" && sed -i '' "s|^DEBUG=.*|DEBUG=true|" "$BACKEND_ENV" || echo "DEBUG=true" >> "$BACKEND_ENV"
+  fi
 }
 
 if $DEVICE_MODE; then

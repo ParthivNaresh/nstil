@@ -41,6 +41,11 @@ const en = {
       logged: "Logged",
       logAgain: "Tap to log again",
     },
+    breathing: {
+      title: "Breathe",
+      subtitle: "Take a moment to center yourself",
+      action: "Start Breathing",
+    },
   },
   settings: {
     appearance: "Appearance",
@@ -123,6 +128,7 @@ const en = {
     abandonConfirm: "Discard",
     abandonCancel: "Keep Going",
     saved: "Check-in saved",
+    needAMoment: "Need a moment? Try breathing",
   },
   journal: {
     emptyTitle: "No entries yet",
@@ -235,6 +241,43 @@ const en = {
       subtitle: "Get gentle reminders to check in with yourself",
       enable: "Enable Notifications",
       skip: "Maybe Later",
+    },
+  },
+  breathing: {
+    patterns: {
+      box: {
+        name: "Box Breathing",
+        description: "Equal inhale, hold, exhale, rest — calms the nervous system",
+      },
+      478: {
+        name: "4-7-8",
+        description: "Extended exhale for deep relaxation and sleep",
+      },
+      calm: {
+        name: "Calm",
+        description: "Simple inhale-exhale for gentle stress relief",
+      },
+    },
+    phases: {
+      inhale: "Inhale",
+      hold: "Hold",
+      exhale: "Exhale",
+      rest: "Rest",
+    },
+    duration: {
+      label: "Duration",
+      minutes_one: "{{count}} min",
+      minutes_other: "{{count}} min",
+    },
+    progress: "{{current}} of {{total}}",
+    start: "Start",
+    pause: "Pause",
+    resume: "Resume",
+    complete: {
+      title: "Well Done",
+      subtitle: "You completed {{cycles}} cycles",
+      moodPrompt: "How do you feel now?",
+      done: "Done",
     },
   },
   auth: {

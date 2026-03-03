@@ -67,4 +67,11 @@ export const queryKeys = {
     capabilities: () => [...queryKeys.ai.all, "capabilities"] as const,
     context: () => [...queryKeys.ai.all, "context"] as const,
   },
+  breathing: {
+    all: ["breathing"] as const,
+    sessions: () => [...queryKeys.breathing.all, "sessions"] as const,
+    sessionList: (cursor?: string, limit?: number) =>
+      [...queryKeys.breathing.sessions(), { cursor, limit }] as const,
+    stats: () => [...queryKeys.breathing.all, "stats"] as const,
+  },
 } as const;
