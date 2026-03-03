@@ -1,6 +1,6 @@
 import { Check } from "lucide-react-native";
 import { useCallback, useEffect, useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   FadeIn,
   useAnimatedStyle,
@@ -9,6 +9,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 import { AppText, Button, Icon } from "@/components/ui";
@@ -39,6 +40,7 @@ export function CheckInOutcome({
 }: CheckInOutcomeProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const router = useRouter();
   const gradient = getMoodGradient(moodCategory);
   const pulseScale = useSharedValue(1);
   const autoCompleteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,6 +85,14 @@ export function CheckInOutcome({
     }
     onComplete();
   }, [onComplete]);
+
+  const handleBreathing = useCallback(() => {
+    if (autoCompleteRef.current) {
+      clearTimeout(autoCompleteRef.current);
+    }
+    onComplete();
+    router.push("/breathing");
+  }, [onComplete, router]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
@@ -132,6 +142,15 @@ export function CheckInOutcome({
             variant="secondary"
             disabled={isSubmitting}
           />
+          <Pressable
+            onPress={handleBreathing}
+            style={styles.breathingLink}
+            hitSlop={8}
+          >
+            <AppText variant="caption" color={colors.accent}>
+              {t("checkIn.needAMoment")}
+            </AppText>
+          </Pressable>
         </View>
       ) : null}
     </Animated.View>
@@ -168,5 +187,9 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: spacing.md,
+  },
+  breathingLink: {
+    alignItems: "center",
+    paddingVertical: spacing.xs,
   },
 });

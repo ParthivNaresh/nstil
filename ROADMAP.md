@@ -299,7 +299,64 @@ Replaced the direct-navigate + button with a radial arc menu that opens two crea
 
 ---
 
-## Phase 7 — Production Deployment & Observability
+## Phase 7 — Wellness & Mini-Games
+
+Interactive wellness features that give users a place to calm down and decompress. Starting with breathing exercises, expanding to ambient mini-games (terrarium, gentle glide, idle yard) in future iterations.
+
+### Subphase 7A — Breathing Exercise
+
+Full-screen guided breathing exercise with animated visual feedback, haptic transitions, and session persistence. Three patterns: Box Breathing (4-4-4-4), 4-7-8, and Calm (4-6).
+
+**Step 1: Database migration**
+- [ ] `supabase/migrations/009_BREATHING_SESSIONS.sql` — `breathing_sessions` table (id, user_id, pattern, duration_seconds, cycles_completed, cycles_target, mood_before, mood_after, completed, created_at). RLS policies. Index on (user_id, created_at desc)
+
+**Step 2: Backend models & service**
+- [ ] `models/breathing.py` — `BreathingPattern` (StrEnum), `BreathingSessionRow`, `BreathingSessionCreate`, `BreathingSessionUpdate`, `BreathingSessionResponse` (with `from_row()`), `BreathingStatsResponse`
+- [ ] `services/breathing.py` — `BreathingService`: `create()`, `complete()`, `get_stats()`, `list_recent()`
+
+**Step 3: Backend API routes, DI & tests**
+- [ ] `api/v1/breathing.py` — `POST /sessions`, `PATCH /sessions/{id}`, `GET /stats`, `GET /sessions`
+- [ ] `api/deps.py` — `get_breathing_service` factory
+- [ ] `api/router.py` — Wire breathing router
+- [ ] Backend tests for models, service, and routes
+
+**Step 4: Mobile types & API client**
+- [ ] `types/breathing.ts` — TypeScript interfaces: `BreathingPattern`, `BreathingPhase`, `BreathingSession`, `BreathingStats`
+- [ ] `lib/breathingPatterns.ts` — Pattern definitions (phases, durations per phase, cycle counts per session length)
+- [ ] `services/api/breathing.ts` — API client functions
+- [ ] `hooks/useBreathingSessions.ts` — TanStack Query hooks for CRUD + stats
+
+**Step 5: Core breathing hook**
+- [ ] `hooks/useBreathing.ts` — Timer state machine: `idle` → `inhale` → `hold` → `exhale` → `hold` (box only) → cycle or `complete`. Exposes `phase`, `progress` (Reanimated SharedValue 0→1), `currentCycle`, `totalCycles`, `isActive`, `start()`, `pause()`, `resume()`, `stop()`
+
+**Step 6: Breathing UI components**
+- [ ] `components/breathing/BreathingCircle.tsx` — Skia animated circle (radius driven by SharedValue, inhale expands, exhale contracts, hold pulses opacity)
+- [ ] `components/breathing/BreathingPhaseLabel.tsx` — "Inhale" / "Hold" / "Exhale" text with fade transitions
+- [ ] `components/breathing/BreathingPatternPicker.tsx` — Pattern selection (Box, 4-7-8, Calm) with descriptions
+- [ ] `components/breathing/BreathingDurationPicker.tsx` — Session length selector (1 min, 3 min, 5 min)
+- [ ] `components/breathing/BreathingProgress.tsx` — Cycle counter ("3 of 8")
+- [ ] `components/breathing/BreathingComplete.tsx` — Completion screen with optional mood tap
+
+**Step 7: Breathing screen & i18n**
+- [ ] `app/breathing.tsx` — Route screen (thin wrapper): pattern picker → exercise → completion. Haptic pulse on phase transitions (`expo-haptics`). Ambient background reuse
+- [ ] `lib/i18n/locales/en.ts` — `breathing.*` namespace (patterns, phases, durations, completion)
+- [ ] Wire session persistence into breathing screen (log session on completion)
+
+**Step 8: Home screen entry point**
+- [ ] Breathing card on home screen alongside check-in card
+- [ ] "Need a moment?" link on check-in outcome screen
+
+### Subphase 7B — Ambient Mini-Games (future)
+
+Calm, low-pressure interactive experiences. Requires game engine evaluation (Unity via react-native-unity, or Skia-only for simpler concepts).
+
+- [ ] **Terrarium** — Grow plants over real time. Place items, mist/water, growth ticks tied to journaling activity. No failure state. Mood-tagged plants as visual timeline
+- [ ] **Gentle Endless Glide** — One-touch glide with no punishment. Silhouette parallax, day/night cycle, "wonder moments." Drift prompts for mindfulness
+- [ ] **Idle Yard** — Place attractors, return later to find visitors. Memory card collection. Visitor mood tags seed journal entries
+
+---
+
+## Phase 8 — Production Deployment & Observability
 
 CI/CD pipelines, production Supabase project, monitoring, error tracking, app store submission.
 

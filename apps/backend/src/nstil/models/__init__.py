@@ -67,6 +67,15 @@ from nstil.models.ai_task import (
     TaskType,
 )
 from nstil.models.auth import UserPayload
+from nstil.models.breathing import (
+    BreathingPattern,
+    BreathingSessionCreate,
+    BreathingSessionListResponse,
+    BreathingSessionResponse,
+    BreathingSessionRow,
+    BreathingSessionUpdate,
+    BreathingStatsResponse,
+)
 from nstil.models.calendar import (
     CalendarDay,
     CalendarParams,
@@ -118,6 +127,13 @@ from nstil.models.space import (
 
 __all__ = [
     "BODYLESS_ENTRY_TYPES",
+    "BreathingPattern",
+    "BreathingSessionCreate",
+    "BreathingSessionListResponse",
+    "BreathingSessionResponse",
+    "BreathingSessionRow",
+    "BreathingSessionUpdate",
+    "BreathingStatsResponse",
     "AIAgentTaskCreate",
     "AIAgentTaskListResponse",
     "AIAgentTaskResponse",

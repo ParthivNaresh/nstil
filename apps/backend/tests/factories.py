@@ -12,6 +12,7 @@ from nstil.models.ai_profile import UserAIProfileRow
 from nstil.models.ai_prompt import AIPromptRow
 from nstil.models.ai_session import AISessionRow
 from nstil.models.ai_task import AIAgentTaskRow
+from nstil.models.breathing import BreathingSessionRow, BreathingStatsResponse
 from nstil.models.journal import JournalEntryRow
 from nstil.models.media import EntryMediaRow
 from nstil.models.notification import NotificationPreferencesRow, ReminderTime
@@ -402,6 +403,49 @@ def make_profile_row(
         onboarding_completed_at=onboarding_completed_at,
         created_at=created_at or now,
         updated_at=updated_at or now,
+    )
+
+
+def make_breathing_session_row(
+    *,
+    user_id: str = DEFAULT_USER_ID,
+    session_id: str | None = None,
+    pattern: str = "box",
+    duration_seconds: int = 120,
+    cycles_completed: int = 0,
+    cycles_target: int = 4,
+    mood_before: str | None = None,
+    mood_after: str | None = None,
+    completed: bool = False,
+    created_at: datetime | None = None,
+) -> BreathingSessionRow:
+    now = datetime.now(UTC)
+    return BreathingSessionRow(
+        id=uuid.UUID(session_id) if session_id else uuid.uuid4(),
+        user_id=uuid.UUID(user_id),
+        pattern=pattern,
+        duration_seconds=duration_seconds,
+        cycles_completed=cycles_completed,
+        cycles_target=cycles_target,
+        mood_before=mood_before,
+        mood_after=mood_after,
+        completed=completed,
+        created_at=created_at or now,
+    )
+
+
+def make_breathing_stats(
+    *,
+    total_sessions: int = 0,
+    completed_sessions: int = 0,
+    total_minutes: int = 0,
+    sessions_this_week: int = 0,
+) -> BreathingStatsResponse:
+    return BreathingStatsResponse(
+        total_sessions=total_sessions,
+        completed_sessions=completed_sessions,
+        total_minutes=total_minutes,
+        sessions_this_week=sessions_this_week,
     )
 
 

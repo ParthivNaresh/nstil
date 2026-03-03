@@ -31,6 +31,16 @@ export type {
 } from "./ai";
 export type { CursorParams, PaginatedResponse, SearchParams } from "./api";
 export type {
+  BreathingPatternConfig,
+  BreathingPatternId,
+  BreathingPhase,
+  BreathingPhaseConfig,
+  BreathingSession,
+  BreathingSessionCreate,
+  BreathingSessionUpdate,
+  BreathingStats,
+} from "./breathing";
+export type {
   DeepLinkType,
   ResetPasswordFormData,
   SignInFormData,
