@@ -303,56 +303,215 @@ Replaced the direct-navigate + button with a radial arc menu that opens two crea
 
 Interactive wellness features that give users a place to calm down and decompress. Starting with breathing exercises, expanding to ambient mini-games (terrarium, gentle glide, idle yard) in future iterations.
 
-### Subphase 7A — Breathing Exercise
+### Subphase 7A — Breathing Exercise ✅
 
-Full-screen guided breathing exercise with animated visual feedback, haptic transitions, and session persistence. Three patterns: Box Breathing (4-4-4-4), 4-7-8, and Calm (4-6).
+Full-screen guided breathing exercise with shader-based animated orb, haptic transitions, session persistence, and phase-aware easing. Three patterns: Box Breathing (4-4-4-4), 4-7-8, and Calm (4-6).
 
-**Step 1: Database migration**
-- [ ] `supabase/migrations/009_BREATHING_SESSIONS.sql` — `breathing_sessions` table (id, user_id, pattern, duration_seconds, cycles_completed, cycles_target, mood_before, mood_after, completed, created_at). RLS policies. Index on (user_id, created_at desc)
+**Step 1: Database migration ✅**
+- [x] `supabase/migrations/009_BREATHING_SESSIONS.sql` — `breathing_sessions` table (id, user_id, pattern, duration_seconds, cycles_completed, cycles_target, mood_before, mood_after, completed, created_at). RLS policies. Index on (user_id, created_at desc)
 
-**Step 2: Backend models & service**
-- [ ] `models/breathing.py` — `BreathingPattern` (StrEnum), `BreathingSessionRow`, `BreathingSessionCreate`, `BreathingSessionUpdate`, `BreathingSessionResponse` (with `from_row()`), `BreathingStatsResponse`
-- [ ] `services/breathing.py` — `BreathingService`: `create()`, `complete()`, `get_stats()`, `list_recent()`
+**Step 2: Backend models & service ✅**
+- [x] `models/breathing.py` — `BreathingPattern` (StrEnum), `BreathingSessionRow`, `BreathingSessionCreate`, `BreathingSessionUpdate`, `BreathingSessionResponse` (with `from_row()`), `BreathingStatsResponse`
+- [x] `services/breathing.py` — `BreathingService`: `create()`, `complete()`, `get_stats()`, `list_recent()`
 
-**Step 3: Backend API routes, DI & tests**
-- [ ] `api/v1/breathing.py` — `POST /sessions`, `PATCH /sessions/{id}`, `GET /stats`, `GET /sessions`
-- [ ] `api/deps.py` — `get_breathing_service` factory
-- [ ] `api/router.py` — Wire breathing router
-- [ ] Backend tests for models, service, and routes
+**Step 3: Backend API routes, DI & tests ✅**
+- [x] `api/v1/breathing.py` — `POST /sessions`, `PATCH /sessions/{id}`, `GET /stats`, `GET /sessions`
+- [x] `api/deps.py` — `get_breathing_service` factory
+- [x] `api/router.py` — Wire breathing router
+- [x] Backend tests for models, service, and routes
 
-**Step 4: Mobile types & API client**
-- [ ] `types/breathing.ts` — TypeScript interfaces: `BreathingPattern`, `BreathingPhase`, `BreathingSession`, `BreathingStats`
-- [ ] `lib/breathingPatterns.ts` — Pattern definitions (phases, durations per phase, cycle counts per session length)
-- [ ] `services/api/breathing.ts` — API client functions
-- [ ] `hooks/useBreathingSessions.ts` — TanStack Query hooks for CRUD + stats
+**Step 4: Mobile types & API client ✅**
+- [x] `types/breathing.ts` — TypeScript interfaces: `BreathingPatternId`, `BreathingPhase`, `BreathingSession`, `BreathingStats`, `BreathingPhaseConfig`, `BreathingPatternConfig`
+- [x] `lib/breathingPatterns.ts` — Pattern definitions (phases, durations per phase, cycle counts per session length). `getBreathingPattern()`, `computeCycleCount()`, `computeSessionDuration()`
+- [x] `services/api/breathing.ts` — API client functions
+- [x] `hooks/useBreathingSessions.ts` — TanStack Query hooks: `useBreathingStats`, `useBreathingSessions`, `useCreateBreathingSession`, `useUpdateBreathingSession`
 
-**Step 5: Core breathing hook**
-- [ ] `hooks/useBreathing.ts` — Timer state machine: `idle` → `inhale` → `hold` → `exhale` → `hold` (box only) → cycle or `complete`. Exposes `phase`, `progress` (Reanimated SharedValue 0→1), `currentCycle`, `totalCycles`, `isActive`, `start()`, `pause()`, `resume()`, `stop()`
+**Step 5: Core breathing hook ✅**
+- [x] `hooks/useBreathing.ts` — Timer state machine: `idle` → `inhale` → `hold` → `exhale` → `rest` → cycle or `complete`. Exposes `phase`, `phaseSignal` (SharedValue for stutter-free UI thread animation), `phaseIndex`, `phaseCount`, `progress` (SharedValue 0→1), `currentCycle`, `totalCycles`, `isActive`, `start()`, `pause()`, `resume()`, `stop()`. Phase-aware easing: inhale uses `Easing.out(cubic)`, exhale uses `Easing.in(cubic)`, hold/rest use linear. Resume uses linear for remaining fraction to avoid easing discontinuity
 
-**Step 6: Breathing UI components**
-- [ ] `components/breathing/BreathingCircle.tsx` — Skia animated circle (radius driven by SharedValue, inhale expands, exhale contracts, hold pulses opacity)
-- [ ] `components/breathing/BreathingPhaseLabel.tsx` — "Inhale" / "Hold" / "Exhale" text with fade transitions
-- [ ] `components/breathing/BreathingPatternPicker.tsx` — Pattern selection (Box, 4-7-8, Calm) with descriptions
-- [ ] `components/breathing/BreathingDurationPicker.tsx` — Session length selector (1 min, 3 min, 5 min)
-- [ ] `components/breathing/BreathingProgress.tsx` — Cycle counter ("3 of 8")
-- [ ] `components/breathing/BreathingComplete.tsx` — Completion screen with optional mood tap
+**Step 6: Breathing UI components ✅**
+- [x] `components/breathing/BreathingOrb/` — Shader-based animated orb replacing flat circle:
+  - `shader.ts` — SkSL runtime shader with organic wobble distortion, core-to-edge gradient, soft glow halo, circular boundary fade (no square clipping)
+  - `colors.ts` — `hexToShaderColor()` utility converting hex to float4 shader uniforms
+  - `BreathingOrb.tsx` — Drives shader uniforms from `phaseSignal` SharedValue (no React prop dependency, zero-stutter phase transitions). Continuous wobble via `withRepeat` time loop with proper `cancelAnimation` cleanup
+  - `ProgressRing.tsx` — Skia arc-based session progress ring (phase-granular: `completedCycles * phaseCount + phaseIndex`). Updates on React re-renders (phase transitions), positioned absolutely over orb
+  - `types.ts`, `index.ts` — Typed props, barrel exports
+- [x] `components/breathing/BreathingPhaseLabel.tsx` — "Inhale" / "Hold" / "Exhale" / "Rest" text with Reanimated fade transitions
+- [x] `components/breathing/BreathingPatternPicker.tsx` — Pattern selection (Box, 4-7-8, Calm) with Skia gradient pills and descriptions
+- [x] `components/breathing/BreathingDurationPicker.tsx` — Session length selector (1 min, 3 min, 5 min)
+- [x] `components/breathing/BreathingProgress.tsx` — Cycle counter ("3 of 8")
+- [x] `components/breathing/BreathingComplete.tsx` — Completion screen with success animation, optional mood selector, done button
 
-**Step 7: Breathing screen & i18n**
-- [ ] `app/breathing.tsx` — Route screen (thin wrapper): pattern picker → exercise → completion. Haptic pulse on phase transitions (`expo-haptics`). Ambient background reuse
-- [ ] `lib/i18n/locales/en.ts` — `breathing.*` namespace (patterns, phases, durations, completion)
-- [ ] Wire session persistence into breathing screen (log session on completion)
+**Step 7: Breathing screen & i18n ✅**
+- [x] `app/breathing.tsx` — Route screen: 3-step flow (setup → exercise → complete). Haptic pulse on phase transitions (`expo-haptics`). Ambient background reuse. Session persistence (create on start, update on stop/complete with cycles and mood)
+- [x] `lib/i18n/locales/en.ts` — `breathing.*` namespace (patterns, phases, durations, completion, progress)
+
+**Step 8: Home screen entry point ✅**
+- [x] `components/home/BreathingCard.tsx` — Breathing card on home screen alongside check-in card
+- [x] "Need a moment? Try breathing" link on check-in outcome screen (`CheckInOutcome.tsx`)
+
+### Subphase 7A+ — Animation Library Foundation & Cleanup ✅
+
+Shared animation infrastructure extracted from breathing work. Reusable across all Skia/Reanimated components.
+
+- [x] `lib/animation/useCanvasSize.ts` — Hook returning `{ size, onLayout, hasSize }` for Skia Canvas sizing. Refactored into 10 components (StreakBanner, AmbientBackground, GradientBackground, MoodItem, MoodSpecificItem, PromptStylePicker/StylePill, DaySelector/DayPill, FrequencyPicker/FrequencyPill, MoodAccent, YearInPixels)
+- [x] `lib/animation/worklets.ts` — `lerp()` worklet-tagged linear interpolation. Used by BreathingOrb
+- [x] `lib/animation/index.ts` — Barrel exports for `useCanvasSize`, `CanvasSize`, `UseCanvasSizeReturn`, `lerp`
+- [x] Missing `cancelAnimation` cleanup added to `Skeleton.tsx` and `CheckInOutcome.tsx` useEffect returns
+
+### Subphase 7B — Gentle Drift
+
+Full-screen, no-score, no-failure calm experience inspired by Alto's Odyssey Zen Mode. A small silhouette glides across a looping landscape with layered parallax terrain, a cycling day/night sky, and ambient audio. Touch to descend, release to rise. No obstacles that punish — soft auto-correct on terrain contact. Sessions are 3 minutes by default with an option to keep drifting. Zero backend dependencies — purely a mobile-side feature.
+
+**Visual target:** Alto's Odyssey silhouette aesthetic — flat color layers, gradient sky, minimal detail. Monument Valley's color palette meets Alto's parallax depth. 3 terrain layers (darkest foreground, lightest background), procedural star field at night, sun/moon disc at horizon, subtle wind-streak particles.
+
+**Architecture: Hybrid rendering (revised from shader-only after peer review)**
+- **Sky:** Skia `LinearGradient` fill with 4-phase color interpolation (no shader needed for gradient alone)
+- **Stars:** 50-150 Skia `Circle` elements with precomputed positions, opacity driven by `dayProgress`. Geometry-based, not per-pixel hash — cheaper and safer than shader noise
+- **Sun/moon disc:** Skia `Circle` with radial gradient, position/opacity tied to `dayProgress`
+- **Terrain layers:** 3 Skia `Path` fills, **generated once at mount** and translated with `-(scrollX % loopWidth)`. Two copies of each Path drawn (at `x` and `x + loopWidth`) for seamless wrap with zero recomputation. Terrain height from integer-harmonic sine waves guaranteeing exact loop: `y(x) = Σ aᵢ * sin(2π * kᵢ * x / loopWidth + φᵢ)` where each `kᵢ` is an integer
+- **Player:** Skia `Circle` or simple `Path` silhouette, Y-position clamped to terrain height with **hover margin** (~8-12px above surface) and short easing spring on contact for a floating feel (not sticky ground scraping)
+- **Particles:** Skia `Line` elements with SharedValue positions for wind streaks
+- **Why hybrid:** Full-screen fragment shader computing 3 terrain layers + stars + particles = ~44M math ops/frame on iPhone 14. The breathing orb shader works because it's a small circle with simple math. Hybrid keeps sky as geometry fills and terrain as Path geometry computed at ~300 points per layer, not millions of pixels
+
+**Day/night cycle — four-phase model:**
+- 0.00 = dawn, 0.25 = day, 0.50 = dusk, 0.75 = night, 1.00 = dawn (wrap)
+- Stars fade in 0.6→0.75, full opacity 0.75→0.9, fade out 0.9→1.0
+- Terrain tint interpolates across all four phases (warm brown → cool blue → deep navy → warm brown)
+- Full cycle duration: 90 seconds
+
+**Tech stack (zero new dependencies):**
+
+| Dependency | Purpose | Status |
+|---|---|---|
+| `@shopify/react-native-skia` 2.2.12 | Canvas, SkSL shader, Path, Circle | ✅ Installed |
+| `react-native-reanimated` ~4.1.1 | SharedValues for scroll/player/day cycle | ✅ Installed |
+| `react-native-gesture-handler` ~2.28.0 | `Gesture.Pan().minDistance(0)` for immediate press/release | ✅ Installed |
+| `expo-av` ~16.0.8 | Ambient audio loop (already used for voice memos) | ✅ Installed |
+| `expo-haptics` | Session start/end haptics | ✅ Installed |
+
+**Hard scope boundaries (what this is NOT):**
+- No backend API endpoints, no database tables, no session persistence
+- No multiple biomes/themes (one scene, one palette cycle)
+- No scoring, coins, collectibles, or progression
+- No procedural terrain generation (deterministic sine-wave composition, looping)
+- No collision physics (soft visual clamp only)
+
+**Step 1: Scene infrastructure — `lib/drift/`**
+- [ ] `types.ts` — `DriftConfig`, `DriftPhase` (`"idle" | "drifting" | "ending"`), `DriftSessionResult`, `TerrainLayerConfig` (harmonics array, amplitude, parallax factor, tint)
+- [ ] `terrainCurve.ts` — Worklet-friendly pure math for terrain height. **Integer-harmonic sine waves** guaranteeing exact loop: `y(x) = Σ aᵢ * sin(2π * kᵢ * x / loopWidth + φᵢ)` where each `kᵢ` is an integer. Single source of truth for both Path generation (at mount) and player Y clamp (per frame). `getTerrainHeight(x, layerConfig, loopWidth)` and `generateTerrainPath(canvasWidth, canvasHeight, layerConfig, loopWidth, pointCount)` — Path generated once, never recomputed
+- [ ] `dayNightCycle.ts` — `getSkyColors(dayProgress)` (4-phase gradient endpoints), `getTerrainTint(dayProgress, layerIndex)` (silhouette color per phase per layer), `getStarOpacity(dayProgress)`, `getSunMoonPosition(dayProgress, canvasHeight)`. Piecewise interpolation across dawn/day/dusk/night
+- [ ] `driftConfig.ts` — Default constants: scroll speed (px/sec), terrain harmonics per layer (integer `k` values + amplitudes + phases), parallax depth ratios (back 0.3x, mid 0.6x, front 1.0x), player gravity/buoyancy, hover margin (8-12px), day cycle 90s, session default 3 min, terrain loop width, star count (100)
+
+**Step 2: Sky rendering — geometry-based (no shader)**
+- [ ] Sky gradient: Skia `LinearGradient` fill with color stops from `getSkyColors(dayProgress)`. 4-phase interpolation (dawn peach→blue, day pale blue→white, dusk orange→purple, night navy→black). Colors update via `useDerivedValue` driven by `dayProgress`
+- [ ] Stars: 100 Skia `Circle` elements with positions precomputed once at mount (seeded pseudo-random). Opacity driven by `getStarOpacity(dayProgress)` — geometry-based, not per-pixel shader hash. Varying radii (0.5-2px) for depth
+- [ ] Sun/moon disc: Skia `Circle` with `RadialGradient` fill. Position from `getSunMoonPosition(dayProgress, canvasHeight)` — rises/sets at horizon. Opacity fades at dawn/dusk transitions
+
+**Step 3: Game hook — `hooks/useDrift.ts`**
+- [ ] State machine: `idle` → `drifting` → `ending` → `idle`
+- [ ] **Single `time` SharedValue** as the only continuously running animation: `withRepeat(withTiming(...))`. All other scene values derived from it to eliminate drift between independent animations:
+  - `scrollX` = `useDerivedValue(() => (time.value * scrollSpeed) % loopWidth)`
+  - `dayProgress` = `useDerivedValue(() => (time.value % cycleDurationSec) / cycleDurationSec)`
+- [ ] `playerY` SharedValue: touch down → `withTiming` toward ground (`Easing.out(cubic)`), touch up → `withTiming` toward sky (`Easing.in(cubic)`). Clamped to terrain height at player's fixed X with hover margin (~8-12px above surface) + short easing spring on contact
+- [ ] `isTouching` SharedValue (0 or 1): driven by gesture handler
+- [ ] Session timer: **wall-clock timestamps** (not `setTimeout`) with `AppState` listener for pause/resume on backgrounding. `startWallTime` stored, elapsed computed as `now - start` on each check. Audio and animation pause on background, resume on foreground
+- [ ] **Reduce motion:** Check `AccessibilityInfo.isReduceMotionEnabled` — if true, reduce particle count, slow parallax, soften transitions
+- [ ] Returns: `{ phase, playerY, scrollX, dayProgress, elapsed, start, stop }`
+- [ ] **SharedValues total: 3** (`time`, `playerY`, `isTouching`). `scrollX` and `dayProgress` are derived, not independent
+
+**Step 4: Scene component — `components/drift/DriftScene/`**
+- [ ] `DriftScene.tsx` — Full-screen `<Canvas>` with:
+  - `<Rect>` with `<LinearGradient>` for sky background (colors from `getSkyColors(dayProgress)`)
+  - `<Circle>` with `<RadialGradient>` for sun/moon disc
+  - 100 `<Circle>` elements for stars (precomputed positions, opacity from `dayProgress`)
+  - 6 `<Path>` fills for terrain (2 copies × 3 layers for seamless wrap), translated by `-(scrollX % loopWidth) * parallaxFactor`
+  - `<Circle>` or simple `<Path>` for player silhouette at `(fixedX, playerY)`
+  - `<Line>` elements for wind-streak particles
+- [ ] `GestureDetector` wrapping canvas: `Gesture.Pan().minDistance(0)` for immediate down/up. `hitSlop` margins on left edge to avoid conflict with iOS back-swipe gesture
+- [ ] `useCanvasSize` from `lib/animation/` for responsive sizing
+- [ ] Dev-only FPS overlay + quality toggles (layer count, particles on/off, stars on/off) — built from day one for cross-device profiling
+
+**Step 5: Audio — `hooks/useDriftAudio.ts`**
+- [ ] `useDriftAudio()` — loads and loops a single ambient audio file via `expo-av`
+- [ ] Fade in on session start, fade out on session end
+- [ ] Volume updates **throttled to phase boundaries** (dawn/day/dusk/night transitions), not per-frame
+- [ ] Audio mode: `Audio.setAudioModeAsync({ playsInSilentModeOnIOS: false, staysActiveInBackground: false, shouldDuckAndroid: false, interruptionModeIOS: InterruptionModeIOS.MixWithOthers })` — respects silent switch, mixes with user's music, no ducking, stops on background
+- [ ] Pauses on `AppState` background, resumes on foreground
+- [ ] Audio asset: single royalty-free ambient loop (~30-60s), stored in `assets/audio/`
+
+**Step 6: UI chrome — `components/drift/`**
+- [ ] `DriftTimer.tsx` — Elapsed time (top-right, semi-transparent). "2:34" format. **Updates at 1Hz** via `setInterval`, not per-frame — avoids re-render jank from rapidly changing text
+- [ ] `DriftControls.tsx` — "End Session" button (bottom, semi-transparent pill)
+- [ ] `DriftMoodPicker.tsx` — Post-session mood selector (reuses existing `MoodItem` components). Before/after mood capture. Not persisted to backend — reflective moment only
+
+**Step 7: Screen & integration — `app/drift.tsx`**
+- [ ] Thin route screen: 2-step flow (`"ready"` → `"drifting"` → `"complete"`)
+- [ ] Ready: "Tap to begin" overlay with ambient background
+- [ ] Drifting: full-screen DriftScene, minimal chrome
+- [ ] Complete: fade to mood picker → "How do you feel?" → done → `router.back()`
+- [ ] Haptic on session start (`impactAsync(Light)`) and end (`notificationAsync(Success)`)
+- [ ] i18n: `drift.*` namespace
 
 **Step 8: Home screen entry point**
-- [ ] Breathing card on home screen alongside check-in card
-- [ ] "Need a moment?" link on check-in outcome screen
+- [ ] `DriftCard` on home screen alongside breathing card
+- [ ] "Need a moment?" link on check-in outcome screen gets second option: "Try drifting"
 
-### Subphase 7B — Ambient Mini-Games (future)
+**File structure:**
+```
+apps/mobile/
+├── lib/drift/
+│   ├── types.ts
+│   ├── terrainCurve.ts
+│   ├── dayNightCycle.ts
+│   ├── driftConfig.ts
+│   └── index.ts
+├── hooks/
+│   ├── useDrift.ts
+│   └── useDriftAudio.ts
+├── components/drift/
+│   ├── DriftScene/
+│   │   ├── DriftScene.tsx
+│   │   ├── types.ts
+│   │   └── index.ts
+│   ├── DriftTimer.tsx
+│   ├── DriftControls.tsx
+│   ├── DriftMoodPicker.tsx
+│   └── index.ts
+├── app/
+│   └── drift.tsx
+└── assets/audio/
+    └── drift-ambient.mp3
+```
 
-Calm, low-pressure interactive experiences. Requires game engine evaluation (Unity via react-native-unity, or Skia-only for simpler concepts).
+**Performance budget:**
+- Target: 60fps sustained on iPhone 12+ and equivalent Android
+- SharedValues: 3 total (`time`, `playerY`, `isTouching`). `scrollX` and `dayProgress` are derived via `useDerivedValue`. Zero `useAnimatedStyle` calls. Lighter than breathing orb.
+- Terrain: 6 Skia Paths (2 copies × 3 layers) at ~300 points each, generated once at mount. Translation only per frame.
+- Sky: `LinearGradient` fill + 100 `Circle` elements (stars) + 1 `Circle` (sun/moon). All geometry, no shader.
+- Timer: 1Hz `setInterval` update, not per-frame re-render.
+- Audio: single `expo-av` instance, looping. Negligible CPU.
+- Memory: no images loaded. Pure Skia geometry.
 
-- [ ] **Terrarium** — Grow plants over real time. Place items, mist/water, growth ticks tied to journaling activity. No failure state. Mood-tagged plants as visual timeline
-- [ ] **Gentle Endless Glide** — One-touch glide with no punishment. Silhouette parallax, day/night cycle, "wonder moments." Drift prompts for mindfulness
-- [ ] **Idle Yard** — Place attractors, return later to find visitors. Memory card collection. Visitor mood tags seed journal entries
+**QA validation matrix:**
+
+| Device class | Target | Pass criteria |
+|---|---|---|
+| iPhone 12/13/14 | 60fps sustained | No frame drops during 3-min session |
+| Mid Android (Pixel 7a / Samsung A54) | 55+ fps sustained | Acceptable with quality toggle fallback |
+| Low Android (if supported) | 30+ fps | Reduced particles, 2 terrain layers |
+
+Pass/fail for all: no gesture latency, no audio glitches on background/foreground transitions, seamless terrain wrap.
+
+**Estimated effort:** 6-8 focused sessions. Terrain math + Path generation is the most complex piece. Everything else follows patterns established in breathing exercise.
+
+### Subphase 7C — Terrarium (future, post-Drift)
+
+Persistent calm garden tied to journaling activity. Deferred until Drift ships and user engagement data validates the mini-game approach. Requires backend persistence (Supabase tables), content pipeline (species, growth stages), and careful product design to avoid guilt mechanics.
+
+### Subphase 7D — Idle Yard (future, post-Terrarium)
+
+Place attractors, return later to find visitors. Memory card collection. Deferred until Terrarium validates persistent calm experiences.
 
 ---
 

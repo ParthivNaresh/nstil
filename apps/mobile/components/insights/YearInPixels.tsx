@@ -1,10 +1,10 @@
-import { memo, useCallback, useMemo, useState } from "react";
-import type { LayoutChangeEvent } from "react-native";
+import { memo, useCallback, useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { AppText, Card } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
+import { useCanvasSize } from "@/lib/animation";
 import { withAlpha } from "@/lib/colorUtils";
 import { getMoodAccentColor } from "@/lib/moodColors";
 import { radius, spacing } from "@/styles";
@@ -137,22 +137,18 @@ const PixelCell = memo(function PixelCell({
 export function YearInPixels({ days, onDayPress }: YearInPixelsProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const [containerWidth, setContainerWidth] = useState(0);
+  const { size: containerSize, onLayout } = useCanvasSize();
 
   const grid = useMemo(() => buildTrailingGrid(days), [days]);
   const monthPositions = useMemo(() => computeMonthPositions(grid), [grid]);
 
-  const handleLayout = (event: LayoutChangeEvent) => {
-    setContainerWidth(event.nativeEvent.layout.width);
-  };
-
-  const cellSize = containerWidth > 0
-    ? (containerWidth - (TRAILING_WEEKS - 1) * CELL_GAP) / TRAILING_WEEKS
+  const cellSize = containerSize.width > 0
+    ? (containerSize.width - (TRAILING_WEEKS - 1) * CELL_GAP) / TRAILING_WEEKS
     : 0;
 
   return (
     <Card>
-      <View style={styles.container} onLayout={handleLayout}>
+      <View style={styles.container} onLayout={onLayout}>
         <AppText variant="h3" color={colors.textPrimary}>
           {t("insights.yearInPixels")}
         </AppText>

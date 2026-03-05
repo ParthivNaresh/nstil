@@ -6,13 +6,13 @@ import { Dimensions, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import {
-  BreathingCircle,
   BreathingComplete,
   BreathingDurationPicker,
   BreathingPatternPicker,
   BreathingPhaseLabel,
   BreathingProgress,
 } from "@/components/breathing";
+import { BreathingOrb, ProgressRing } from "@/components/breathing/BreathingOrb";
 import { AmbientBackground, Button, Header, ScrollContainer } from "@/components/ui";
 import { useBreathing, useCreateBreathingSession, useHeaderHeight, useTheme, useUpdateBreathingSession } from "@/hooks";
 import { computeCycleCount, computeSessionDuration } from "@/lib/breathingPatterns";
@@ -175,11 +175,20 @@ export default function BreathingScreen() {
             totalCycles={totalCycles}
           />
           <View style={styles.circleContainer}>
-            <BreathingCircle
-              phase={breathing.phase}
-              progress={breathing.progress}
-              size={CIRCLE_SIZE}
-            />
+            <View style={styles.orbWrapper}>
+              <BreathingOrb
+                phaseSignal={breathing.phaseSignal}
+                progress={breathing.progress}
+                size={CIRCLE_SIZE}
+              />
+              <ProgressRing
+                size={CIRCLE_SIZE}
+                currentCycle={breathing.currentCycle}
+                totalCycles={totalCycles}
+                phaseIndex={breathing.phaseIndex}
+                phaseCount={breathing.phaseCount}
+              />
+            </View>
           </View>
           <BreathingPhaseLabel
             phase={breathing.phase}
@@ -228,6 +237,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
+  },
+  orbWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   exerciseActions: {
     gap: spacing.md,

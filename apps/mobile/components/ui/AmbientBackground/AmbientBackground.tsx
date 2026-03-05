@@ -1,6 +1,6 @@
 import { Canvas, Fill, Shader } from "@shopify/react-native-skia";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { useEffect, useMemo } from "react";
+import { StyleSheet, View } from "react-native";
 import {
   cancelAnimation,
   Easing,
@@ -11,6 +11,7 @@ import {
 } from "react-native-reanimated";
 
 import { useTheme } from "@/hooks/useTheme";
+import { useCanvasSize } from "@/lib/animation";
 
 import { getAmbientColors } from "./ambientColors";
 import { ambientShader } from "./shader";
@@ -21,7 +22,7 @@ const CYCLE_MAX = 1000;
 
 export function AmbientBackground({ style }: AmbientBackgroundProps) {
   const { mode, isDark } = useTheme();
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const { size, onLayout, hasSize } = useCanvasSize();
   const time = useSharedValue(0);
 
   useEffect(() => {
@@ -49,19 +50,12 @@ export function AmbientBackground({ style }: AmbientBackgroundProps) {
     uColor3: [...colorSet.color3] as const,
   }));
 
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setSize({ width, height });
-  }, []);
-
-  const hasSize = size.width > 0 && size.height > 0;
-
   if (!ambientShader) {
     return null;
   }
 
   return (
-    <View style={[styles.container, style]} onLayout={handleLayout}>
+    <View style={[styles.container, style]} onLayout={onLayout}>
       {hasSize ? (
         <Canvas style={styles.canvas}>
           <Fill>

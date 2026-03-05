@@ -5,12 +5,13 @@ import {
   vec,
 } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
-import { useCallback, useState } from "react";
-import { type LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
+import { useCallback } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { AppText } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
+import { useCanvasSize } from "@/lib/animation";
 import { withAlpha } from "@/lib/colorUtils";
 import { radius, spacing } from "@/styles";
 import type { PromptStyle } from "@/types";
@@ -40,17 +41,12 @@ interface StylePillProps {
 
 function StylePill({ style, label, isSelected, onSelect }: StylePillProps) {
   const { colors } = useTheme();
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const { size, onLayout, hasSize } = useCanvasSize();
 
   const handlePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onSelect(style);
   }, [style, onSelect]);
-
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setSize({ width, height });
-  }, []);
 
   const opacity = isSelected ? SELECTED_OPACITY : IDLE_OPACITY;
   const textColor = isSelected ? colors.accent : colors.textSecondary;
@@ -59,13 +55,13 @@ function StylePill({ style, label, isSelected, onSelect }: StylePillProps) {
   return (
     <Pressable
       onPress={handlePress}
-      onLayout={handleLayout}
+      onLayout={onLayout}
       style={[styles.pill, { borderColor }]}
       accessibilityRole="radio"
       accessibilityState={{ selected: isSelected }}
       accessibilityLabel={label}
     >
-      {size.width > 0 ? (
+      {hasSize ? (
         <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
           <RoundedRect
             x={0}

@@ -2,6 +2,7 @@ import { Check } from "lucide-react-native";
 import { useCallback, useEffect, useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
+  cancelAnimation,
   FadeIn,
   useAnimatedStyle,
   useSharedValue,
@@ -56,6 +57,7 @@ export function CheckInOutcome({
       -1,
       true,
     );
+    return () => cancelAnimation(pulseScale);
   }, [pulseScale]);
 
   useEffect(() => {

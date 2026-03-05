@@ -4,9 +4,9 @@ import {
   Rect,
   vec,
 } from "@shopify/react-native-skia";
-import { useCallback, useState } from "react";
-import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import { useCanvasSize } from "@/lib/animation";
 import { getMoodGradient } from "@/lib/moodColors";
 import type { MoodCategory } from "@/types";
 
@@ -17,21 +17,17 @@ interface MoodAccentProps {
 const STRIP_WIDTH = 4;
 
 export function MoodAccent({ moodCategory }: MoodAccentProps) {
-  const [height, setHeight] = useState(0);
+  const { size, onLayout, hasSize } = useCanvasSize();
   const gradient = getMoodGradient(moodCategory);
 
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    setHeight(event.nativeEvent.layout.height);
-  }, []);
-
   return (
-    <View style={styles.container} onLayout={handleLayout}>
-      {height > 0 ? (
+    <View style={styles.container} onLayout={onLayout}>
+      {hasSize ? (
         <Canvas style={styles.canvas}>
-          <Rect x={0} y={0} width={STRIP_WIDTH} height={height}>
+          <Rect x={0} y={0} width={STRIP_WIDTH} height={size.height}>
             <LinearGradient
               start={vec(0, 0)}
-              end={vec(0, height)}
+              end={vec(0, size.height)}
               colors={[gradient.from, gradient.to]}
             />
           </Rect>

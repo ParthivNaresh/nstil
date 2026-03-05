@@ -4,6 +4,7 @@ import {
   cancelAnimation,
   useSharedValue,
   withTiming,
+  type EasingFunction,
   type SharedValue,
 } from "react-native-reanimated";
 
@@ -26,6 +27,9 @@ interface BreathingState {
 
 export interface UseBreathingReturn {
   readonly phase: BreathingPhase;
+  readonly phaseSignal: SharedValue<number>;
+  readonly phaseIndex: number;
+  readonly phaseCount: number;
   readonly phaseDuration: number;
   readonly progress: SharedValue<number>;
   readonly currentCycle: number;
@@ -42,6 +46,25 @@ export interface UseBreathingReturn {
 const INITIAL_PHASE: BreathingPhase = "inhale";
 const PHASE_TRANSITION_BUFFER_MS = 50;
 const MS_PER_SECOND = 1000;
+
+const PHASE_TO_SIGNAL: Record<BreathingPhase, number> = {
+  inhale: 0,
+  hold: 1,
+  exhale: 2,
+  rest: 3,
+};
+
+const PHASE_EASING: Record<BreathingPhase, EasingFunction> = {
+  inhale: Easing.out(Easing.cubic),
+  exhale: Easing.in(Easing.cubic),
+  hold: Easing.linear,
+  rest: Easing.linear,
+};
+
+function getPhaseEasing(pattern: BreathingPatternConfig, phaseIndex: number): EasingFunction {
+  const phase = pattern.phases[phaseIndex].phase;
+  return PHASE_EASING[phase];
+}
 
 function buildInitialState(pattern: BreathingPatternConfig): BreathingState {
   return {
@@ -63,6 +86,7 @@ export function useBreathing(
   stateRef.current = state;
 
   const progress = useSharedValue(0);
+  const phaseSignal = useSharedValue(PHASE_TO_SIGNAL[INITIAL_PHASE]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
 
@@ -123,10 +147,13 @@ export function useBreathing(
 
   const runPhase = useCallback(
     (phaseIndex: number, cycle: number, durationMs: number) => {
+      const pat = patternRef.current;
+      const easing = getPhaseEasing(pat, phaseIndex);
+      phaseSignal.value = PHASE_TO_SIGNAL[pat.phases[phaseIndex].phase];
       progress.value = 0;
       progress.value = withTiming(1, {
         duration: durationMs,
-        easing: Easing.linear,
+        easing,
       });
 
       timerRef.current = setTimeout(() => {
@@ -138,7 +165,7 @@ export function useBreathing(
         }
       }, durationMs + PHASE_TRANSITION_BUFFER_MS);
     },
-    [progress, advanceToNextPhase],
+    [progress, phaseSignal, advanceToNextPhase],
   );
 
   useEffect(() => {
@@ -209,12 +236,16 @@ export function useBreathing(
   const stop = useCallback(() => {
     clearTimer();
     cancelAnimation(progress);
+    phaseSignal.value = PHASE_TO_SIGNAL[INITIAL_PHASE];
     progress.value = 0;
     setState(buildInitialState(pattern));
-  }, [pattern, clearTimer, progress]);
+  }, [pattern, clearTimer, progress, phaseSignal]);
 
   return {
     phase: state.phase,
+    phaseSignal,
+    phaseIndex: state.phaseIndex,
+    phaseCount: pattern.phases.length,
     phaseDuration: state.phaseDuration,
     progress,
     currentCycle: state.currentCycle,
