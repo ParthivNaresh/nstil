@@ -11,6 +11,9 @@ export {
 } from "./useBreathingSessions";
 export { useEntryReflection, useGenerateReflection } from "./useEntryReflection";
 export { useCheckIn } from "./useCheckIn";
+export { useDrift } from "./useDrift";
+export type { UseDriftReturn } from "./useDrift";
+export { useDriftAudio } from "./useDriftAudio";
 export type { CheckInStep, UseCheckInReturn } from "./useCheckIn";
 export {
   useDismissPrompt,

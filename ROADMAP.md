@@ -359,151 +359,122 @@ Shared animation infrastructure extracted from breathing work. Reusable across a
 - [x] `lib/animation/index.ts` — Barrel exports for `useCanvasSize`, `CanvasSize`, `UseCanvasSizeReturn`, `lerp`
 - [x] Missing `cancelAnimation` cleanup added to `Skeleton.tsx` and `CheckInOutcome.tsx` useEffect returns
 
-### Subphase 7B — Gentle Drift
+### Subphase 7B — Gentle Drift 🔄
 
-Full-screen, no-score, no-failure calm experience inspired by Alto's Odyssey Zen Mode. A small silhouette glides across a looping landscape with layered parallax terrain, a cycling day/night sky, and ambient audio. Touch to descend, release to rise. No obstacles that punish — soft auto-correct on terrain contact. Sessions are 3 minutes by default with an option to keep drifting. Zero backend dependencies — purely a mobile-side feature.
+Full-screen, no-score, no-failure calm experience inspired by Alto's Odyssey Zen Mode. A silhouette glides across a looping landscape with layered parallax terrain, a cycling day/night sky, and ambient audio. Touch to descend, release to rise. Zero backend dependencies — purely a mobile-side feature.
 
-**Visual target:** Alto's Odyssey silhouette aesthetic — flat color layers, gradient sky, minimal detail. Monument Valley's color palette meets Alto's parallax depth. 3 terrain layers (darkest foreground, lightest background), procedural star field at night, sun/moon disc at horizon, subtle wind-streak particles.
+**Visual target:** Alto's Odyssey silhouette aesthetic — flat color layers, gradient sky, minimal detail. Monument Valley's color palette meets Alto's parallax depth. 5-6 terrain layers with atmospheric perspective, procedural star field at night, separate sun/moon discs, paraglider silhouette, water surface at bottom.
 
-**Architecture: Hybrid rendering (revised from shader-only after peer review)**
-- **Sky:** Skia `LinearGradient` fill with 4-phase color interpolation (no shader needed for gradient alone)
-- **Stars:** 50-150 Skia `Circle` elements with precomputed positions, opacity driven by `dayProgress`. Geometry-based, not per-pixel hash — cheaper and safer than shader noise
-- **Sun/moon disc:** Skia `Circle` with radial gradient, position/opacity tied to `dayProgress`
-- **Terrain layers:** 3 Skia `Path` fills, **generated once at mount** and translated with `-(scrollX % loopWidth)`. Two copies of each Path drawn (at `x` and `x + loopWidth`) for seamless wrap with zero recomputation. Terrain height from integer-harmonic sine waves guaranteeing exact loop: `y(x) = Σ aᵢ * sin(2π * kᵢ * x / loopWidth + φᵢ)` where each `kᵢ` is an integer
-- **Player:** Skia `Circle` or simple `Path` silhouette, Y-position clamped to terrain height with **hover margin** (~8-12px above surface) and short easing spring on contact for a floating feel (not sticky ground scraping)
-- **Particles:** Skia `Line` elements with SharedValue positions for wind streaks
-- **Why hybrid:** Full-screen fragment shader computing 3 terrain layers + stars + particles = ~44M math ops/frame on iPhone 14. The breathing orb shader works because it's a small circle with simple math. Hybrid keeps sky as geometry fills and terrain as Path geometry computed at ~300 points per layer, not millions of pixels
+**Architecture:** Hybrid Skia rendering — sky as `LinearGradient`, terrain as `Path` geometry (generated once at mount, translated per frame), stars as `Circle` elements, player as `Path` silhouette. All animation driven by 3 SharedValues (`time`, `playerY`, `isTouching`) with `scrollX` and `dayProgress` derived. Zero new dependencies.
 
-**Day/night cycle — four-phase model:**
-- 0.00 = dawn, 0.25 = day, 0.50 = dusk, 0.75 = night, 1.00 = dawn (wrap)
-- Stars fade in 0.6→0.75, full opacity 0.75→0.9, fade out 0.9→1.0
-- Terrain tint interpolates across all four phases (warm brown → cool blue → deep navy → warm brown)
-- Full cycle duration: 90 seconds
+#### Steps 1–8: Core Implementation ✅
 
-**Tech stack (zero new dependencies):**
+Built the full feature end-to-end: scene infrastructure (`lib/drift/` — types, terrain math, day/night cycle, config), sky rendering (gradient + stars + celestial disc), game hook (`useDrift` — state machine, SharedValues, wall-clock timer, AppState, reduce-motion), scene compositor (`DriftScene/` — 6 sub-components with gesture handling), audio (`useDriftAudio` — fade in/out, phase-boundary volume, AppState pause/resume), UI chrome (timer, controls, mood picker, ready overlay), route screen (`app/drift.tsx` — ready → drifting → complete), and home screen integration (DriftCard + check-in outcome links). All i18n via `drift.*` namespace.
 
-| Dependency | Purpose | Status |
-|---|---|---|
-| `@shopify/react-native-skia` 2.2.12 | Canvas, SkSL shader, Path, Circle | ✅ Installed |
-| `react-native-reanimated` ~4.1.1 | SharedValues for scroll/player/day cycle | ✅ Installed |
-| `react-native-gesture-handler` ~2.28.0 | `Gesture.Pan().minDistance(0)` for immediate press/release | ✅ Installed |
-| `expo-av` ~16.0.8 | Ambient audio loop (already used for voice memos) | ✅ Installed |
-| `expo-haptics` | Session start/end haptics | ✅ Installed |
+**Files created:** `lib/drift/` (5 files), `hooks/useDrift.ts`, `hooks/useDriftAudio.ts`, `components/drift/` (10 files), `components/home/DriftCard.tsx`, `app/drift.tsx`, `assets/audio/drift-ambient.wav`
 
-**Hard scope boundaries (what this is NOT):**
-- No backend API endpoints, no database tables, no session persistence
-- No multiple biomes/themes (one scene, one palette cycle)
-- No scoring, coins, collectibles, or progression
-- No procedural terrain generation (deterministic sine-wave composition, looping)
-- No collision physics (soft visual clamp only)
+**Files modified:** `lib/i18n/locales/en.ts`, `components/home/index.ts`, `components/checkIn/CheckInOutcome.tsx`, `app/(tabs)/index.tsx`, `hooks/index.ts`
 
-**Step 1: Scene infrastructure — `lib/drift/`**
-- [ ] `types.ts` — `DriftConfig`, `DriftPhase` (`"idle" | "drifting" | "ending"`), `DriftSessionResult`, `TerrainLayerConfig` (harmonics array, amplitude, parallax factor, tint)
-- [ ] `terrainCurve.ts` — Worklet-friendly pure math for terrain height. **Integer-harmonic sine waves** guaranteeing exact loop: `y(x) = Σ aᵢ * sin(2π * kᵢ * x / loopWidth + φᵢ)` where each `kᵢ` is an integer. Single source of truth for both Path generation (at mount) and player Y clamp (per frame). `getTerrainHeight(x, layerConfig, loopWidth)` and `generateTerrainPath(canvasWidth, canvasHeight, layerConfig, loopWidth, pointCount)` — Path generated once, never recomputed
-- [ ] `dayNightCycle.ts` — `getSkyColors(dayProgress)` (4-phase gradient endpoints), `getTerrainTint(dayProgress, layerIndex)` (silhouette color per phase per layer), `getStarOpacity(dayProgress)`, `getSunMoonPosition(dayProgress, canvasHeight)`. Piecewise interpolation across dawn/day/dusk/night
-- [ ] `driftConfig.ts` — Default constants: scroll speed (px/sec), terrain harmonics per layer (integer `k` values + amplitudes + phases), parallax depth ratios (back 0.3x, mid 0.6x, front 1.0x), player gravity/buoyancy, hover margin (8-12px), day cycle 90s, session default 3 min, terrain loop width, star count (100)
+#### Step 9: Fix gesture handling & movement model ✅
 
-**Step 2: Sky rendering — geometry-based (no shader)**
-- [ ] Sky gradient: Skia `LinearGradient` fill with color stops from `getSkyColors(dayProgress)`. 4-phase interpolation (dawn peach→blue, day pale blue→white, dusk orange→purple, night navy→black). Colors update via `useDerivedValue` driven by `dayProgress`
-- [ ] Stars: 100 Skia `Circle` elements with positions precomputed once at mount (seeded pseudo-random). Opacity driven by `getStarOpacity(dayProgress)` — geometry-based, not per-pixel shader hash. Varying radii (0.5-2px) for depth
-- [ ] Sun/moon disc: Skia `Circle` with `RadialGradient` fill. Position from `getSunMoonPosition(dayProgress, canvasHeight)` — rises/sets at horizon. Opacity fades at dawn/dusk transitions
+Three bugs fixed: gesture reliability, binary movement, and canvas height mismatch.
 
-**Step 3: Game hook — `hooks/useDrift.ts`**
-- [ ] State machine: `idle` → `drifting` → `ending` → `idle`
-- [ ] **Single `time` SharedValue** as the only continuously running animation: `withRepeat(withTiming(...))`. All other scene values derived from it to eliminate drift between independent animations:
-  - `scrollX` = `useDerivedValue(() => (time.value * scrollSpeed) % loopWidth)`
-  - `dayProgress` = `useDerivedValue(() => (time.value % cycleDurationSec) / cycleDurationSec)`
-- [ ] `playerY` SharedValue: touch down → `withTiming` toward ground (`Easing.out(cubic)`), touch up → `withTiming` toward sky (`Easing.in(cubic)`). Clamped to terrain height at player's fixed X with hover margin (~8-12px above surface) + short easing spring on contact
-- [ ] `isTouching` SharedValue (0 or 1): driven by gesture handler
-- [ ] Session timer: **wall-clock timestamps** (not `setTimeout`) with `AppState` listener for pause/resume on backgrounding. `startWallTime` stored, elapsed computed as `now - start` on each check. Audio and animation pause on background, resume on foreground
-- [ ] **Reduce motion:** Check `AccessibilityInfo.isReduceMotionEnabled` — if true, reduce particle count, slow parallax, soften transitions
-- [ ] Returns: `{ phase, playerY, scrollX, dayProgress, elapsed, start, stop }`
-- [ ] **SharedValues total: 3** (`time`, `playerY`, `isTouching`). `scrollX` and `dayProgress` are derived, not independent
+**Fix A — Gesture:** Replaced `onBegin`/`onFinalize` with `onTouchesDown`/`onTouchesUp`/`onTouchesCancelled` raw touch callbacks. These fire reliably on every finger down/up regardless of Pan gesture state machine lifecycle (fixes iOS 26 + RNGH 2.28 bug where `onFinalize` doesn't fire for taps without drag). Removed `.runOnJS(true)` — all callbacks run as worklets on UI thread.
 
-**Step 4: Scene component — `components/drift/DriftScene/`**
-- [ ] `DriftScene.tsx` — Full-screen `<Canvas>` with:
-  - `<Rect>` with `<LinearGradient>` for sky background (colors from `getSkyColors(dayProgress)`)
-  - `<Circle>` with `<RadialGradient>` for sun/moon disc
-  - 100 `<Circle>` elements for stars (precomputed positions, opacity from `dayProgress`)
-  - 6 `<Path>` fills for terrain (2 copies × 3 layers for seamless wrap), translated by `-(scrollX % loopWidth) * parallaxFactor`
-  - `<Circle>` or simple `<Path>` for player silhouette at `(fixedX, playerY)`
-  - `<Line>` elements for wind-streak particles
-- [ ] `GestureDetector` wrapping canvas: `Gesture.Pan().minDistance(0)` for immediate down/up. `hitSlop` margins on left edge to avoid conflict with iOS back-swipe gesture
-- [ ] `useCanvasSize` from `lib/animation/` for responsive sizing
-- [ ] Dev-only FPS overlay + quality toggles (layer count, particles on/off, stars on/off) — built from day one for cross-device profiling
+**Fix B — Physics movement:** Replaced binary `withTiming` toggle (animate to top/bottom) with per-frame velocity-based physics. `useAnimatedReaction` watches `time.value` (already animated linearly), computes `dt`, smoothly interpolates `velocityY` toward `targetVy` (gravity when touching, -buoyancy when not) using exponential smoothing (`tau = 0.15s`), integrates `playerY += velocityY * dt`, clamps to bounds. Uses existing `player.gravity` (120) and `player.buoyancy` (80) config values that were previously dead code. Added `clamp` worklet to `lib/animation/worklets.ts`.
 
-**Step 5: Audio — `hooks/useDriftAudio.ts`**
-- [ ] `useDriftAudio()` — loads and loops a single ambient audio file via `expo-av`
-- [ ] Fade in on session start, fade out on session end
-- [ ] Volume updates **throttled to phase boundaries** (dawn/day/dusk/night transitions), not per-frame
-- [ ] Audio mode: `Audio.setAudioModeAsync({ playsInSilentModeOnIOS: false, staysActiveInBackground: false, shouldDuckAndroid: false, interruptionModeIOS: InterruptionModeIOS.MixWithOthers })` — respects silent switch, mixes with user's music, no ducking, stops on background
-- [ ] Pauses on `AppState` background, resumes on foreground
-- [ ] Audio asset: single royalty-free ambient loop (~30-60s), stored in `assets/audio/`
+**Fix C — Canvas height:** Eliminated `CANVAS_FALLBACK_HEIGHT = 600`. `useDrift()` now takes no parameters and owns a `canvasHeight` SharedValue. `DriftScene` writes measured height via `onLayout` callback. Physics loop guards on `canvasHeight.value > 0`.
 
-**Step 6: UI chrome — `components/drift/`**
-- [ ] `DriftTimer.tsx` — Elapsed time (top-right, semi-transparent). "2:34" format. **Updates at 1Hz** via `setInterval`, not per-frame — avoids re-render jank from rapidly changing text
-- [ ] `DriftControls.tsx` — "End Session" button (bottom, semi-transparent pill)
-- [ ] `DriftMoodPicker.tsx` — Post-session mood selector (reuses existing `MoodItem` components). Before/after mood capture. Not persisted to backend — reflective moment only
+**Files changed:** `hooks/useDrift.ts`, `components/drift/DriftScene/DriftScene.tsx`, `components/drift/DriftScene/types.ts`, `app/drift.tsx`, `lib/animation/worklets.ts`, `lib/animation/index.ts`, `hooks/useDriftAudio.ts` (added catch for placeholder audio crash)
 
-**Step 7: Screen & integration — `app/drift.tsx`**
-- [ ] Thin route screen: 2-step flow (`"ready"` → `"drifting"` → `"complete"`)
-- [ ] Ready: "Tap to begin" overlay with ambient background
-- [ ] Drifting: full-screen DriftScene, minimal chrome
-- [ ] Complete: fade to mood picker → "How do you feel?" → done → `router.back()`
-- [ ] Haptic on session start (`impactAsync(Light)`) and end (`notificationAsync(Success)`)
-- [ ] i18n: `drift.*` namespace
+#### Step 10: Fix celestial bodies — sun visible during night ✅
 
-**Step 8: Home screen entry point**
-- [ ] `DriftCard` on home screen alongside breathing card
-- [ ] "Need a moment?" link on check-in outcome screen gets second option: "Try drifting"
+**Problem:** `getSunMoonPosition` treated sun/moon as a single object with no phase-gating. The disc was always visible — opacity only faded at arc endpoints (first/last 10%), not based on day phase.
 
-**File structure:**
-```
-apps/mobile/
-├── lib/drift/
-│   ├── types.ts
-│   ├── terrainCurve.ts
-│   ├── dayNightCycle.ts
-│   ├── driftConfig.ts
-│   └── index.ts
-├── hooks/
-│   ├── useDrift.ts
-│   └── useDriftAudio.ts
-├── components/drift/
-│   ├── DriftScene/
-│   │   ├── DriftScene.tsx
-│   │   ├── types.ts
-│   │   └── index.ts
-│   ├── DriftTimer.tsx
-│   ├── DriftControls.tsx
-│   ├── DriftMoodPicker.tsx
-│   └── index.ts
-├── app/
-│   └── drift.tsx
-└── assets/audio/
-    └── drift-ambient.mp3
-```
+**Files changed:** `lib/drift/dayNightCycle.ts`, `components/drift/DriftScene/CelestialDisc.tsx`, `components/drift/DriftScene/DriftScene.tsx`, `components/drift/DriftScene/types.ts`, `lib/drift/index.ts`
 
-**Performance budget:**
-- Target: 60fps sustained on iPhone 12+ and equivalent Android
-- SharedValues: 3 total (`time`, `playerY`, `isTouching`). `scrollX` and `dayProgress` are derived via `useDerivedValue`. Zero `useAnimatedStyle` calls. Lighter than breathing orb.
-- Terrain: 6 Skia Paths (2 copies × 3 layers) at ~300 points each, generated once at mount. Translation only per frame.
-- Sky: `LinearGradient` fill + 100 `Circle` elements (stars) + 1 `Circle` (sun/moon). All geometry, no shader.
-- Timer: 1Hz `setInterval` update, not per-frame re-render.
-- Audio: single `expo-av` instance, looping. Negligible CPU.
-- Memory: no images loaded. Pure Skia geometry.
+- [x] Split `getSunMoonPosition` into `getSunPosition` (visible p=0.0→0.5) and `getMoonPosition` (visible p=0.5→1.0) with hard phase-gating (returns opacity 0 outside range) and 8% arc-progress fade at boundaries
+- [x] Sun: 55px body, 95px glow, 150px atmospheric bleed layer (very low opacity `#FFF8E718`). Warm white core `#FFFDF5`. Peak at 12% canvas height
+- [x] Moon: 22px body, 38px glow. Cool silver `#E0E8F0`. Peak at 18% canvas height. Max opacity 85%
+- [x] `CelestialBody` type (`"sun" | "moon"`) added to `types.ts`. `CelestialDiscProps` takes `body` prop. Two `CelestialDisc` instances rendered in `DriftScene.tsx`
+- [x] Removed `getSunMoonPosition` from barrel export, added `getSunPosition` and `getMoonPosition`
 
-**QA validation matrix:**
+**Future polish (deferred):**
+- [ ] Sun horizon color shift — warm orange/red tint near horizon (low arc progress), transitioning to bright white at peak. Lerp sun core color based on `arcProgress`
+- [ ] Moon surface detail — subtle crater-like darker patches via overlapping semi-transparent `Circle` elements offset from center, or a noise-based SkSL shader
+- [ ] Sun corona rays — 4-6 faint radial `Line` elements extending from sun body, slowly rotating via `time` SharedValue
+- [ ] Moon phase — crescent shadow overlay that shifts across the lunar cycle (could tie to real date or drift session count)
 
-| Device class | Target | Pass criteria |
-|---|---|---|
-| iPhone 12/13/14 | 60fps sustained | No frame drops during 3-min session |
-| Mid Android (Pixel 7a / Samsung A54) | 55+ fps sustained | Acceptable with quality toggle fallback |
-| Low Android (if supported) | 30+ fps | Reduced particles, 2 terrain layers |
+#### Step 11: Terrain overhaul — mountains, not sine waves
 
-Pass/fail for all: no gesture latency, no audio glitches on background/foreground transitions, seamless terrain wrap.
+**Problem:** 3 layers with conservative harmonics (max k=7, max amplitude 35) produce smooth undulating dunes. Layers are crammed between 55-75% of canvas height with nearly identical character. Tint colors are muddy browns/navies with inverted atmospheric perspective (far=dark, near=light).
 
-**Estimated effort:** 6-8 focused sessions. Terrain math + Path generation is the most complex piece. Everything else follows patterns established in breathing exercise.
+**Files:** `lib/drift/types.ts`, `lib/drift/terrainCurve.ts`, `lib/drift/driftConfig.ts`, `lib/drift/dayNightCycle.ts`, `components/drift/DriftScene/TerrainLayers.tsx`
+
+**A) Dynamic atmospheric perspective (tint generation):**
+- [ ] Replace static per-layer `tints` with dynamic computation: `getTerrainTint` computes tint as `lerpColor(skyBottom, nearSilhouette, depth)` where `depth` is the layer's `depthFactor` (0=far/sky-colored, 1=near/dark silhouette)
+- [ ] Define per-phase near-silhouette colors (dawn: dark warm brown, day: dark navy, dusk: deep indigo, night: near-black blue)
+- [ ] Remove `tints` from `TerrainLayerConfig`, add `depthFactor: number` (0→1, far→near)
+- [ ] `getTerrainTint(dayProgress, depthFactor)` signature — uses `getSkyColors(dayProgress).bottom` as fog target, lerps toward near-silhouette
+
+**B) Layer count & spread (5 layers):**
+- [ ] baseHeight spread: 0.48 → 0.58 → 0.68 → 0.78 → 0.86
+- [ ] parallax spread: 0.12 → 0.25 → 0.45 → 0.70 → 1.0
+- [ ] depthFactor spread: 0.0 → 0.25 → 0.50 → 0.75 → 1.0
+- [ ] Each layer gets unique harmonic signature — different k values, different phase offsets
+
+**C) Terrain shape (ridge shaping + x-warp):**
+- [ ] Ridge shaping in `getHarmonicHeight`: normalize sine sum to [-1,1], apply `ridge = 1 - abs(normalized)`, blend with original via per-layer `ridgeBlend` (0=pure sine, 1=full ridge). Front layers 0.3-0.5, back layers 0.1-0.2
+- [ ] X-warp per layer: `x' = x + warpAmp * sin(2π * warpK * x / loopWidth + warpPhase)` before harmonic evaluation. Breaks even peak spacing. Small warpAmp (5-25px)
+- [ ] More harmonics: front layers 6-8 harmonics with k up to 13-17, back layers 3-5 harmonics with lower k
+- [ ] Larger amplitudes: front 60-80px, back 10-20px
+- [ ] Add `ridgeBlend`, `warp` config to `TerrainLayerConfig`
+
+**D) Point count:**
+- [ ] Bump `terrainPointCount` from 300 to 450 to prevent faceting with higher harmonics
+
+#### Step 12: Water surface
+
+**Problem:** Reference has a reflective water body in the bottom ~15-20% that grounds the scene. Our front terrain just fills to bottom with solid color.
+
+**Files:** New `components/drift/DriftScene/WaterSurface.tsx`, `components/drift/DriftScene/DriftScene.tsx`, `components/drift/DriftScene/types.ts`, `components/drift/DriftScene/index.ts`
+
+- [ ] `WaterSurface` component — `Rect` in bottom 15% with `LinearGradient` that mirrors/darkens the sky bottom color at current `dayProgress`
+- [ ] Subtle horizontal `Line` elements at varying opacity for water ripple effect
+- [ ] Render after terrain layers so it overlaps the very bottom
+
+#### Step 13: Paraglider silhouette
+
+**Problem:** Two concentric circles (8px + 16px) are barely visible and have no character. Reference has a recognizable paraglider — canopy above, figure below.
+
+**Files:** `components/drift/DriftScene/PlayerSprite.tsx`
+
+- [ ] Replace circles with Skia `Path` silhouette: wide arc canopy (~40px wide, ~15px tall) via `cubicTo`, two thin lines to figure, small body shape below
+- [ ] Dark silhouette fill (near-black or darkest terrain tint)
+- [ ] Keep subtle glow halo behind for visibility against dark backgrounds
+- [ ] Squash transform on touch still applies to whole group
+
+#### Step 14: Wind-streak particles
+
+**Problem:** Reference has 2-3 diagonal white streaks suggesting motion. Planned but deferred.
+
+**Files:** New `components/drift/DriftScene/WindStreaks.tsx`, `components/drift/DriftScene/DriftScene.tsx`, `components/drift/DriftScene/types.ts`, `components/drift/DriftScene/index.ts`
+
+- [ ] 3-5 `Line` elements, low opacity white, slight diagonal angle (~15-20°)
+- [ ] Positions driven by `scrollX` SharedValue
+- [ ] Varying lengths (30-80px) and opacities (0.1-0.3)
+- [ ] Phase-aware: more visible at dusk/night, less during bright day
+
+#### Execution order
+
+1. **Step 9** (gesture fix) — functional bug, fix first
+2. **Steps 10** (celestial fix + sun size) — functional bug
+3. **Step 11** (terrain overhaul — shape, layers, colors) — core visual improvement, biggest impact
+4. **Step 12** (water surface) — new component
+5. **Step 13** (paraglider) — new Path geometry
+6. **Step 14** (wind streaks) — polish, lowest priority
+
+**Current ratings (post-Steps 1-8):** Structural 7/10, Visual 3/10. Target after Steps 9-14: Structural 9/10, Visual 7-8/10.
 
 ### Subphase 7C — Terrarium (future, post-Drift)
 

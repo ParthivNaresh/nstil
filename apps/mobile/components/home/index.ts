@@ -1,5 +1,6 @@
 export { BreathingCard } from "./BreathingCard";
 export { CheckInCard } from "./CheckInCard";
+export { DriftCard } from "./DriftCard";
 export { CheckInCardSkeleton } from "./CheckInCardSkeleton";
 export { CheckInFallbackCard } from "./CheckInFallbackCard";
 export { Greeting } from "./Greeting";

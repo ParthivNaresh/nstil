@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { BreathingCard, Greeting, HomeCheckInSection, JournalListCard, MoodSnapshotStrip, StreakBanner } from "@/components/home";
+import { BreathingCard, DriftCard, Greeting, HomeCheckInSection, JournalListCard, MoodSnapshotStrip, StreakBanner } from "@/components/home";
 import { Header } from "@/components/ui";
 import {
   useCalendarRange,
@@ -75,6 +75,7 @@ export default function HomeScreen() {
         ) : null}
         <HomeCheckInSection />
         <BreathingCard />
+        <DriftCard />
       </ScrollView>
     </View>
   );
