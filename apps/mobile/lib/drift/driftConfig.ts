@@ -1,63 +1,45 @@
+import {
+  FAR_RIDGE,
+  MID_FAR_RIDGE,
+  MID_NEAR_RIDGE,
+  MID_RIDGE,
+  NEAR_RIDGE,
+} from "./terrainPaths";
 import type { DriftConfig, TerrainLayerConfig } from "./types";
 
 const FAR_LAYER: TerrainLayerConfig = {
-  harmonics: [],
-  baseHeight: 0.40,
+  ridge: FAR_RIDGE,
   parallaxFactor: 0.08,
   depthFactor: 0.05,
-  ridgeBlend: 0,
-  ridgeExponent: 1.0,
-  warp: { amplitude: 0, k: 1, phase: 0 },
   loopWidth: 1536,
-  pointCount: 0,
 };
 
 const MID_FAR_LAYER: TerrainLayerConfig = {
-  harmonics: [],
-  baseHeight: 0.44,
+  ridge: MID_FAR_RIDGE,
   parallaxFactor: 0.20,
   depthFactor: 0.22,
-  ridgeBlend: 0,
-  ridgeExponent: 1.0,
-  warp: { amplitude: 0, k: 1, phase: 0 },
   loopWidth: 1536,
-  pointCount: 0,
 };
 
 const MID_LAYER: TerrainLayerConfig = {
-  harmonics: [],
-  baseHeight: 0.49,
+  ridge: MID_RIDGE,
   parallaxFactor: 0.40,
   depthFactor: 0.42,
-  ridgeBlend: 0,
-  ridgeExponent: 1.0,
-  warp: { amplitude: 0, k: 1, phase: 0 },
   loopWidth: 1536,
-  pointCount: 0,
 };
 
 const MID_NEAR_LAYER: TerrainLayerConfig = {
-  harmonics: [],
-  baseHeight: 0.54,
+  ridge: MID_NEAR_RIDGE,
   parallaxFactor: 0.65,
   depthFactor: 0.65,
-  ridgeBlend: 0,
-  ridgeExponent: 1.0,
-  warp: { amplitude: 0, k: 1, phase: 0 },
   loopWidth: 1536,
-  pointCount: 0,
 };
 
 const NEAR_LAYER: TerrainLayerConfig = {
-  harmonics: [],
-  baseHeight: 0.58,
+  ridge: NEAR_RIDGE,
   parallaxFactor: 1.0,
   depthFactor: 0.88,
-  ridgeBlend: 0,
-  ridgeExponent: 1.0,
-  warp: { amplitude: 0, k: 1, phase: 0 },
   loopWidth: 1536,
-  pointCount: 0,
 };
 
 export const DRIFT_CONFIG: DriftConfig = {

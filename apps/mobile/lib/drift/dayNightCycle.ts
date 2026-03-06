@@ -1,13 +1,6 @@
 import { lerp } from "@/lib/animation";
 
-import type {
-  CelestialPosition,
-  DayPhase,
-  DirectionalGradientColors,
-  GradientEndpoints,
-  LightDirection,
-  SkyPhaseColors,
-} from "./types";
+import type { CelestialPosition, DayPhase, SkyPhaseColors } from "./types";
 
 const DAWN_SKY: SkyPhaseColors = { top: "#2D1B4E", bottom: "#E87868" };
 const DAY_SKY: SkyPhaseColors = { top: "#4A90D9", bottom: "#B8D8F8" };
@@ -28,11 +21,19 @@ const MOON_PEAK_FRACTION = 0.18;
 const SUN_FADE_DURATION = 0.08;
 const MOON_FADE_DURATION = 0.08;
 
-const LIT_PHASE_COLORS: readonly string[] = ["#E8A878", "#D8C8A8", "#D07868", "#2A2A4E"];
+const SILHOUETTE_PHASE_COLORS: readonly string[] = [
+  "#2A1510",
+  "#1A2840",
+  "#1A1238",
+  "#0A0A20",
+];
 
-const SHADOW_PHASE_COLORS: readonly string[] = ["#1A1040", "#3A4A6A", "#1A1038", "#08081A"];
-
-const DESATURATION_STRENGTH = 0.55;
+const WARM_TINT_PHASE_COLORS: readonly string[] = [
+  "#F0A060",
+  "#E8D0B0",
+  "#E07058",
+  "#2A2A4E",
+];
 
 function parseHex(hex: string): [number, number, number] {
   "worklet";
@@ -88,11 +89,10 @@ function interpolatePhaseColor(
   return lerpColor(phases[index], phases[next], t);
 }
 
-function desaturate(hex: string, amount: number): string {
+function hexToFloat4(hex: string): readonly [number, number, number, number] {
   "worklet";
   const [r, g, b] = parseHex(hex);
-  const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return toHex(lerp(r, luma, amount), lerp(g, luma, amount), lerp(b, luma, amount));
+  return [r / 255, g / 255, b / 255, 1.0] as const;
 }
 
 export function getSkyColors(dayProgress: number): SkyPhaseColors {
@@ -105,54 +105,6 @@ export function getSkyColors(dayProgress: number): SkyPhaseColors {
     top: lerpColor(from.top, to.top, t),
     bottom: lerpColor(from.bottom, to.bottom, t),
   };
-}
-
-export function getLightDirection(dayProgress: number): LightDirection {
-  "worklet";
-  const p = ((dayProgress % 1) + 1) % 1;
-  const arcT = p < 0.5 ? p / 0.5 : (p - 0.5) / 0.5;
-  const angle = arcT * Math.PI;
-  return { dx: Math.cos(angle), dy: Math.sin(angle) };
-}
-
-export function getGradientEndpoints(
-  lightDir: LightDirection,
-  centerX: number,
-  centerY: number,
-  halfWidth: number,
-  halfHeight: number,
-): GradientEndpoints {
-  "worklet";
-  const r = Math.abs(lightDir.dx) * halfWidth + Math.abs(lightDir.dy) * halfHeight;
-  return {
-    startX: centerX - lightDir.dx * r,
-    startY: centerY - lightDir.dy * r,
-    endX: centerX + lightDir.dx * r,
-    endY: centerY + lightDir.dy * r,
-  };
-}
-
-export function getDirectionalGradient(
-  dayProgress: number,
-  depthFactor: number,
-): DirectionalGradientColors {
-  "worklet";
-  const litBase = interpolatePhaseColor(LIT_PHASE_COLORS, dayProgress);
-  const shadowBase = interpolatePhaseColor(SHADOW_PHASE_COLORS, dayProgress);
-  const atmosphere = interpolateSkyBottom(dayProgress);
-
-  const contrast = depthFactor;
-  let lit = lerpColor(atmosphere, litBase, contrast);
-  let shadow = lerpColor(atmosphere, shadowBase, contrast);
-
-  const desat = (1 - depthFactor) * DESATURATION_STRENGTH;
-  lit = desaturate(lit, desat);
-  shadow = desaturate(shadow, desat);
-
-  const midBias = lerp(0.6, 0.4, depthFactor);
-  const mid = lerpColor(lit, shadow, midBias);
-
-  return { lit, mid, shadow };
 }
 
 export function getStarOpacity(dayProgress: number): number {
@@ -232,26 +184,6 @@ export function getDayPhase(dayProgress: number): DayPhase {
   if (p < 0.5) return "day";
   if (p < 0.75) return "dusk";
   return "night";
-}
-
-const SILHOUETTE_PHASE_COLORS: readonly string[] = [
-  "#2A1510",
-  "#1A2840",
-  "#1A1238",
-  "#0A0A20",
-];
-
-const WARM_TINT_PHASE_COLORS: readonly string[] = [
-  "#F0A060",
-  "#E8D0B0",
-  "#E07058",
-  "#2A2A4E",
-];
-
-function hexToFloat4(hex: string): readonly [number, number, number, number] {
-  "worklet";
-  const [r, g, b] = parseHex(hex);
-  return [r / 255, g / 255, b / 255, 1.0] as const;
 }
 
 export function getSkyBottomFloat4(

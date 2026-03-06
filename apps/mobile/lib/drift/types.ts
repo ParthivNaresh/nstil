@@ -1,49 +1,16 @@
 import type { MoodCategory } from "@/types";
 
+import type { AuthoredRidgeData } from "./terrainPaths";
+
 export type DriftPhase = "idle" | "drifting" | "ending";
 
 export type DayPhase = "dawn" | "day" | "dusk" | "night";
 
-export interface Harmonic {
-  readonly k: number;
-  readonly amplitude: number;
-  readonly phase: number;
-}
-
-export interface TerrainWarpConfig {
-  readonly amplitude: number;
-  readonly k: number;
-  readonly phase: number;
-}
-
 export interface TerrainLayerConfig {
-  readonly harmonics: readonly Harmonic[];
-  readonly baseHeight: number;
+  readonly ridge: AuthoredRidgeData;
   readonly parallaxFactor: number;
   readonly depthFactor: number;
-  readonly ridgeBlend: number;
-  readonly ridgeExponent: number;
-  readonly warp: TerrainWarpConfig;
   readonly loopWidth: number;
-  readonly pointCount: number;
-}
-
-export interface DirectionalGradientColors {
-  readonly lit: string;
-  readonly mid: string;
-  readonly shadow: string;
-}
-
-export interface GradientEndpoints {
-  readonly startX: number;
-  readonly startY: number;
-  readonly endX: number;
-  readonly endY: number;
-}
-
-export interface LightDirection {
-  readonly dx: number;
-  readonly dy: number;
 }
 
 export interface SkyPhaseColors {

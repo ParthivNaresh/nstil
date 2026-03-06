@@ -4,11 +4,6 @@ import { useDerivedValue } from "react-native-reanimated";
 
 import {
   DRIFT_CONFIG,
-  FAR_RIDGE,
-  MID_FAR_RIDGE,
-  MID_NEAR_RIDGE,
-  MID_RIDGE,
-  NEAR_RIDGE,
   getSilhouetteFloat4,
   getSkyBottomFloat4,
   getSunInfluence,
@@ -16,19 +11,12 @@ import {
   getWarmTintFloat4,
   terrainShader,
 } from "@/lib/drift";
-import type { AuthoredRidgeData, TerrainLayerConfig } from "@/lib/drift";
+import type { AuthoredRidgeData } from "@/lib/drift/terrainPaths";
+import type { TerrainLayerConfig } from "@/lib/drift";
 
 import type { TerrainLayersProps } from "./types";
 
 const { layers } = DRIFT_CONFIG;
-
-const AUTHORED_RIDGES: ReadonlyMap<number, AuthoredRidgeData> = new Map([
-  [0, FAR_RIDGE],
-  [1, MID_FAR_RIDGE],
-  [2, MID_RIDGE],
-  [3, MID_NEAR_RIDGE],
-  [4, NEAR_RIDGE],
-]);
 
 interface TerrainPathData {
   readonly skPath: NonNullable<ReturnType<typeof Skia.Path.MakeFromSVGString>>;
@@ -62,8 +50,7 @@ function buildTerrainPaths(height: number): readonly TerrainPathData[] {
 
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
-    const ridge = AUTHORED_RIDGES.get(i);
-    if (!ridge) continue;
+    const { ridge } = layer;
 
     const skPath = buildAuthoredPath(ridge, layer, height);
     if (!skPath) continue;
