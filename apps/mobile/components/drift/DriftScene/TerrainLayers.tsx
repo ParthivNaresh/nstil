@@ -1,4 +1,4 @@
-import { Group, LinearGradient, Path, Skia, vec } from "@shopify/react-native-skia";
+import { Group, Path, Shader, Skia } from "@shopify/react-native-skia";
 import { useMemo } from "react";
 import { useDerivedValue } from "react-native-reanimated";
 
@@ -9,9 +9,12 @@ import {
   MID_NEAR_RIDGE,
   MID_RIDGE,
   NEAR_RIDGE,
-  getDirectionalGradient,
-  getGradientEndpoints,
-  getLightDirection,
+  getSilhouetteFloat4,
+  getSkyBottomFloat4,
+  getSunInfluence,
+  getSunPosition,
+  getWarmTintFloat4,
+  terrainShader,
 } from "@/lib/drift";
 import type { AuthoredRidgeData, TerrainLayerConfig } from "@/lib/drift";
 
@@ -27,10 +30,8 @@ const AUTHORED_RIDGES: ReadonlyMap<number, AuthoredRidgeData> = new Map([
   [4, NEAR_RIDGE],
 ]);
 
-const GRADIENT_POSITIONS = [0, 0.35, 1];
-
 interface TerrainPathData {
-  readonly skPath: ReturnType<typeof Skia.Path.MakeFromSVGString>;
+  readonly skPath: NonNullable<ReturnType<typeof Skia.Path.MakeFromSVGString>>;
   readonly layer: TerrainLayerConfig;
   readonly layerIndex: number;
   readonly ridgelineY: number;
@@ -65,6 +66,8 @@ function buildTerrainPaths(height: number): readonly TerrainPathData[] {
     if (!ridge) continue;
 
     const skPath = buildAuthoredPath(ridge, layer, height);
+    if (!skPath) continue;
+
     const scaleY = height / ridge.svgHeight;
     const ridgelineY = (ridge.ridgeMinY + ridge.verticalShift) * scaleY;
 
@@ -93,6 +96,8 @@ function TerrainCopy({
   const parallax = layer.parallaxFactor;
   const layerLoop = layer.loopWidth;
   const offset = copyIndex * layerLoop;
+  const depth = layer.depthFactor;
+  const normalizedRidgeY = ridgelineY / height;
 
   const scrollTx = useDerivedValue(() => {
     const layerScroll = scrollX.value * parallax;
@@ -102,33 +107,23 @@ function TerrainCopy({
 
   const pathTransform = useDerivedValue(() => [{ translateX: scrollTx.value }]);
 
-  const shaderTransform = useDerivedValue(() => [{ translateX: -scrollTx.value }]);
+  const uniforms = useDerivedValue(() => {
+    const sun = getSunPosition(dayProgress.value, width, height);
 
-  const depth = layer.depthFactor;
-  const gradientColors = useDerivedValue(() => {
-    const g = getDirectionalGradient(dayProgress.value, depth);
-    return [g.lit, g.mid, g.shadow];
+    return {
+      uResolution: [width, height] as const,
+      uSunPos: [sun.x / width, sun.y / height] as const,
+      uSunInfluence: getSunInfluence(dayProgress.value),
+      uDepth: depth,
+      uRidgeY: normalizedRidgeY,
+      uScrollTx: scrollTx.value,
+      uSkyBottom: getSkyBottomFloat4(dayProgress.value),
+      uSilhouette: getSilhouetteFloat4(dayProgress.value),
+      uWarmTint: getWarmTintFloat4(dayProgress.value),
+    };
   });
 
-  const halfWidth = width / 2;
-  const halfHeight = (height - ridgelineY) / 2;
-  const centerX = halfWidth;
-  const centerY = ridgelineY + halfHeight;
-
-  const endpoints = useDerivedValue(() => {
-    const dir = getLightDirection(dayProgress.value);
-    return getGradientEndpoints(dir, centerX, centerY, halfWidth, halfHeight);
-  });
-
-  const gradientStart = useDerivedValue(() =>
-    vec(endpoints.value.startX, endpoints.value.startY),
-  );
-
-  const gradientEnd = useDerivedValue(() =>
-    vec(endpoints.value.endX, endpoints.value.endY),
-  );
-
-  if (!pathData.skPath) return null;
+  if (!terrainShader) return null;
 
   return (
     <Path
@@ -136,13 +131,7 @@ function TerrainCopy({
       path={pathData.skPath}
       transform={pathTransform}
     >
-      <LinearGradient
-        start={gradientStart}
-        end={gradientEnd}
-        colors={gradientColors}
-        positions={GRADIENT_POSITIONS}
-        transform={shaderTransform}
-      />
+      <Shader source={terrainShader} uniforms={uniforms} />
     </Path>
   );
 }

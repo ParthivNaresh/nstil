@@ -233,3 +233,56 @@ export function getDayPhase(dayProgress: number): DayPhase {
   if (p < 0.75) return "dusk";
   return "night";
 }
+
+const SILHOUETTE_PHASE_COLORS: readonly string[] = [
+  "#2A1510",
+  "#1A2840",
+  "#1A1238",
+  "#0A0A20",
+];
+
+const WARM_TINT_PHASE_COLORS: readonly string[] = [
+  "#F0A060",
+  "#E8D0B0",
+  "#E07058",
+  "#2A2A4E",
+];
+
+function hexToFloat4(hex: string): readonly [number, number, number, number] {
+  "worklet";
+  const [r, g, b] = parseHex(hex);
+  return [r / 255, g / 255, b / 255, 1.0] as const;
+}
+
+export function getSkyBottomFloat4(
+  dayProgress: number,
+): readonly [number, number, number, number] {
+  "worklet";
+  return hexToFloat4(interpolateSkyBottom(dayProgress));
+}
+
+export function getSilhouetteFloat4(
+  dayProgress: number,
+): readonly [number, number, number, number] {
+  "worklet";
+  return hexToFloat4(interpolatePhaseColor(SILHOUETTE_PHASE_COLORS, dayProgress));
+}
+
+export function getWarmTintFloat4(
+  dayProgress: number,
+): readonly [number, number, number, number] {
+  "worklet";
+  return hexToFloat4(interpolatePhaseColor(WARM_TINT_PHASE_COLORS, dayProgress));
+}
+
+export function getSunInfluence(dayProgress: number): number {
+  "worklet";
+  const p = ((dayProgress % 1) + 1) % 1;
+  if (p < 0.5) {
+    const arcT = p / 0.5;
+    const fadeIn = Math.min(arcT / 0.1, 1);
+    const fadeOut = Math.min((1 - arcT) / 0.1, 1);
+    return Math.min(fadeIn, fadeOut);
+  }
+  return 0;
+}

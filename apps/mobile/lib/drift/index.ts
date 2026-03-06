@@ -21,9 +21,13 @@ export {
   getGradientEndpoints,
   getLightDirection,
   getMoonPosition,
+  getSilhouetteFloat4,
+  getSkyBottomFloat4,
   getSkyColors,
   getStarOpacity,
+  getSunInfluence,
   getSunPosition,
+  getWarmTintFloat4,
 } from "./dayNightCycle";
 
 export {
@@ -32,6 +36,8 @@ export {
   STAR_MAX_RADIUS,
   STAR_MIN_RADIUS,
 } from "./driftConfig";
+
+export { terrainShader } from "./terrainShader";
 
 export type { AuthoredRidgeData } from "./terrainPaths";
 
