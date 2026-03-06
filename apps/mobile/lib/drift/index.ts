@@ -1,10 +1,13 @@
 export type {
   CelestialPosition,
   DayPhase,
+  DirectionalGradientColors,
   DriftConfig,
   DriftPhase,
   DriftSessionResult,
+  GradientEndpoints,
   Harmonic,
+  LightDirection,
   PlayerConfig,
   SkyPhaseColors,
   StarPosition,
@@ -12,15 +15,15 @@ export type {
   TerrainWarpConfig,
 } from "./types";
 
-export { getHarmonicHeight, getTerrainHeight, generateTerrainPath } from "./terrainCurve";
-
 export {
   getDayPhase,
+  getDirectionalGradient,
+  getGradientEndpoints,
+  getLightDirection,
   getMoonPosition,
   getSkyColors,
   getStarOpacity,
   getSunPosition,
-  getTerrainTint,
 } from "./dayNightCycle";
 
 export {
@@ -29,3 +32,7 @@ export {
   STAR_MAX_RADIUS,
   STAR_MIN_RADIUS,
 } from "./driftConfig";
+
+export type { AuthoredRidgeData } from "./terrainPaths";
+
+export { FAR_RIDGE, MID_FAR_RIDGE, MID_NEAR_RIDGE, MID_RIDGE, NEAR_RIDGE } from "./terrainPaths";

@@ -24,6 +24,26 @@ export interface TerrainLayerConfig {
   readonly ridgeBlend: number;
   readonly ridgeExponent: number;
   readonly warp: TerrainWarpConfig;
+  readonly loopWidth: number;
+  readonly pointCount: number;
+}
+
+export interface DirectionalGradientColors {
+  readonly lit: string;
+  readonly mid: string;
+  readonly shadow: string;
+}
+
+export interface GradientEndpoints {
+  readonly startX: number;
+  readonly startY: number;
+  readonly endX: number;
+  readonly endY: number;
+}
+
+export interface LightDirection {
+  readonly dx: number;
+  readonly dy: number;
 }
 
 export interface SkyPhaseColors {
@@ -48,8 +68,6 @@ export interface PlayerConfig {
 
 export interface DriftConfig {
   readonly scrollSpeedPxPerSec: number;
-  readonly terrainLoopWidth: number;
-  readonly terrainPointCount: number;
   readonly dayCycleDurationSec: number;
   readonly defaultSessionDurationSec: number;
   readonly starCount: number;

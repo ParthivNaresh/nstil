@@ -18,13 +18,9 @@ function rawHarmonicSum(
   return sum;
 }
 
-export function getHarmonicHeight(
-  x: number,
-  layer: TerrainLayerConfig,
-  loopWidth: number,
-): number {
+export function getHarmonicHeight(x: number, layer: TerrainLayerConfig): number {
   "worklet";
-  const invLoop = TWO_PI / loopWidth;
+  const invLoop = TWO_PI / layer.loopWidth;
 
   const warpedX =
     x +
@@ -52,30 +48,38 @@ export function getHarmonicHeight(
 export function getTerrainHeight(
   x: number,
   layer: TerrainLayerConfig,
-  loopWidth: number,
   canvasHeight: number,
 ): number {
   "worklet";
-  const harmonicOffset = getHarmonicHeight(x, layer, loopWidth);
+  const harmonicOffset = getHarmonicHeight(x, layer);
   return canvasHeight * layer.baseHeight + harmonicOffset;
 }
 
+export function computeRidgelineY(
+  layer: TerrainLayerConfig,
+  canvasHeight: number,
+): number {
+  let maxUpward = 0;
+  for (let i = 0; i < layer.harmonics.length; i++) {
+    maxUpward += Math.abs(layer.harmonics[i].amplitude);
+  }
+  return canvasHeight * layer.baseHeight - maxUpward;
+}
+
 export function generateTerrainPath(
-  _canvasWidth: number,
   canvasHeight: number,
   layer: TerrainLayerConfig,
-  loopWidth: number,
-  pointCount: number,
 ): string {
+  const { loopWidth, pointCount } = layer;
   const path = Skia.Path.Make();
   const step = loopWidth / pointCount;
 
-  const startY = getTerrainHeight(0, layer, loopWidth, canvasHeight);
+  const startY = getTerrainHeight(0, layer, canvasHeight);
   path.moveTo(0, startY);
 
   for (let i = 1; i <= pointCount; i++) {
     const x = i * step;
-    const y = getTerrainHeight(x, layer, loopWidth, canvasHeight);
+    const y = getTerrainHeight(x, layer, canvasHeight);
     path.lineTo(x, y);
   }
 

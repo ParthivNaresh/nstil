@@ -16,7 +16,6 @@ import type { DriftPhase } from "@/lib/drift";
 
 const {
   scrollSpeedPxPerSec,
-  terrainLoopWidth,
   dayCycleDurationSec,
   defaultSessionDurationSec,
   player,
@@ -63,10 +62,7 @@ export function useDrift(): UseDriftReturn {
   const speedFactor = reduceMotion ? REDUCED_MOTION_SPEED_FACTOR : 1;
   const effectiveSpeed = scrollSpeedPxPerSec * speedFactor;
 
-  const scrollX = useDerivedValue(() => {
-    const raw = (time.value * effectiveSpeed) % terrainLoopWidth;
-    return raw < 0 ? raw + terrainLoopWidth : raw;
-  });
+  const scrollX = useDerivedValue(() => time.value * effectiveSpeed);
 
   const dayProgress = useDerivedValue(
     () => (time.value % dayCycleDurationSec) / dayCycleDurationSec,

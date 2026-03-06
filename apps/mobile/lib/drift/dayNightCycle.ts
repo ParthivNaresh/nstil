@@ -1,10 +1,17 @@
 import { lerp } from "@/lib/animation";
 
-import type { CelestialPosition, DayPhase, SkyPhaseColors } from "./types";
+import type {
+  CelestialPosition,
+  DayPhase,
+  DirectionalGradientColors,
+  GradientEndpoints,
+  LightDirection,
+  SkyPhaseColors,
+} from "./types";
 
-const DAWN_SKY: SkyPhaseColors = { top: "#2D1B4E", bottom: "#F4845F" };
+const DAWN_SKY: SkyPhaseColors = { top: "#2D1B4E", bottom: "#E87868" };
 const DAY_SKY: SkyPhaseColors = { top: "#4A90D9", bottom: "#B8D8F8" };
-const DUSK_SKY: SkyPhaseColors = { top: "#4A2545", bottom: "#E8734A" };
+const DUSK_SKY: SkyPhaseColors = { top: "#3A2055", bottom: "#D06878" };
 const NIGHT_SKY: SkyPhaseColors = { top: "#0A0A1A", bottom: "#1A1A3E" };
 
 const SKY_PHASES: readonly SkyPhaseColors[] = [DAWN_SKY, DAY_SKY, DUSK_SKY, NIGHT_SKY];
@@ -20,6 +27,12 @@ const MOON_PEAK_FRACTION = 0.18;
 
 const SUN_FADE_DURATION = 0.08;
 const MOON_FADE_DURATION = 0.08;
+
+const LIT_PHASE_COLORS: readonly string[] = ["#E8A878", "#D8C8A8", "#D07868", "#2A2A4E"];
+
+const SHADOW_PHASE_COLORS: readonly string[] = ["#1A1040", "#3A4A6A", "#1A1038", "#08081A"];
+
+const DESATURATION_STRENGTH = 0.55;
 
 function parseHex(hex: string): [number, number, number] {
   "worklet";
@@ -58,6 +71,30 @@ function getPhaseAndProgress(dayProgress: number): { index: number; t: number } 
   return { index, t };
 }
 
+function interpolateSkyBottom(dayProgress: number): string {
+  "worklet";
+  const { index, t } = getPhaseAndProgress(dayProgress);
+  const next = (index + 1) % 4;
+  return lerpColor(SKY_PHASES[index].bottom, SKY_PHASES[next].bottom, t);
+}
+
+function interpolatePhaseColor(
+  phases: readonly string[],
+  dayProgress: number,
+): string {
+  "worklet";
+  const { index, t } = getPhaseAndProgress(dayProgress);
+  const next = (index + 1) % 4;
+  return lerpColor(phases[index], phases[next], t);
+}
+
+function desaturate(hex: string, amount: number): string {
+  "worklet";
+  const [r, g, b] = parseHex(hex);
+  const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return toHex(lerp(r, luma, amount), lerp(g, luma, amount), lerp(b, luma, amount));
+}
+
 export function getSkyColors(dayProgress: number): SkyPhaseColors {
   "worklet";
   const { index, t } = getPhaseAndProgress(dayProgress);
@@ -70,32 +107,52 @@ export function getSkyColors(dayProgress: number): SkyPhaseColors {
   };
 }
 
-const NEAR_SILHOUETTE_DAWN = "#1A0E08";
-const NEAR_SILHOUETTE_DAY = "#0E1A28";
-const NEAR_SILHOUETTE_DUSK = "#0E0A1E";
-const NEAR_SILHOUETTE_NIGHT = "#050510";
-
-const NEAR_SILHOUETTES: readonly string[] = [
-  NEAR_SILHOUETTE_DAWN,
-  NEAR_SILHOUETTE_DAY,
-  NEAR_SILHOUETTE_DUSK,
-  NEAR_SILHOUETTE_NIGHT,
-];
-
-export function getTerrainTint(dayProgress: number, depthFactor: number): string {
+export function getLightDirection(dayProgress: number): LightDirection {
   "worklet";
-  const { index, t } = getPhaseAndProgress(dayProgress);
-  const next = (index + 1) % 4;
+  const p = ((dayProgress % 1) + 1) % 1;
+  const arcT = p < 0.5 ? p / 0.5 : (p - 0.5) / 0.5;
+  const angle = arcT * Math.PI;
+  return { dx: Math.cos(angle), dy: Math.sin(angle) };
+}
 
-  const fromSky = SKY_PHASES[index];
-  const toSky = SKY_PHASES[next];
-  const skyBottom = lerpColor(fromSky.bottom, toSky.bottom, t);
+export function getGradientEndpoints(
+  lightDir: LightDirection,
+  centerX: number,
+  centerY: number,
+  halfWidth: number,
+  halfHeight: number,
+): GradientEndpoints {
+  "worklet";
+  const r = Math.abs(lightDir.dx) * halfWidth + Math.abs(lightDir.dy) * halfHeight;
+  return {
+    startX: centerX - lightDir.dx * r,
+    startY: centerY - lightDir.dy * r,
+    endX: centerX + lightDir.dx * r,
+    endY: centerY + lightDir.dy * r,
+  };
+}
 
-  const fromNear = NEAR_SILHOUETTES[index];
-  const toNear = NEAR_SILHOUETTES[next];
-  const nearColor = lerpColor(fromNear, toNear, t);
+export function getDirectionalGradient(
+  dayProgress: number,
+  depthFactor: number,
+): DirectionalGradientColors {
+  "worklet";
+  const litBase = interpolatePhaseColor(LIT_PHASE_COLORS, dayProgress);
+  const shadowBase = interpolatePhaseColor(SHADOW_PHASE_COLORS, dayProgress);
+  const atmosphere = interpolateSkyBottom(dayProgress);
 
-  return lerpColor(skyBottom, nearColor, depthFactor);
+  const contrast = depthFactor;
+  let lit = lerpColor(atmosphere, litBase, contrast);
+  let shadow = lerpColor(atmosphere, shadowBase, contrast);
+
+  const desat = (1 - depthFactor) * DESATURATION_STRENGTH;
+  lit = desaturate(lit, desat);
+  shadow = desaturate(shadow, desat);
+
+  const midBias = lerp(0.6, 0.4, depthFactor);
+  const mid = lerpColor(lit, shadow, midBias);
+
+  return { lit, mid, shadow };
 }
 
 export function getStarOpacity(dayProgress: number): number {
