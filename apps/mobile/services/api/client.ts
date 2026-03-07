@@ -1,6 +1,6 @@
 import { useAuthStore } from "@/stores/authStore";
 
-import { ApiError, NoSessionError } from "./errors";
+import { ApiError, NetworkError, NoSessionError } from "./errors";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -45,6 +45,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function executeFetch(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error: unknown) {
+    throw new NetworkError(error);
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
@@ -57,7 +65,7 @@ export async function apiFetch<T>(
     ...options.headers,
   };
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await executeFetch(`${API_URL}${path}`, {
     ...options,
     headers,
   });
@@ -71,7 +79,7 @@ export async function apiUpload<T>(
 ): Promise<T> {
   const token = getAccessToken();
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await executeFetch(`${API_URL}${path}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

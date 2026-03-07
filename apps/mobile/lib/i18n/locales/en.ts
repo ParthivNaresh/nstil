@@ -6,6 +6,10 @@ const en = {
       showPassword: "Show password",
       hidePassword: "Hide password",
     },
+    error: {
+      connectionTitle: "Unable to Connect",
+      connectionSubtitle: "Check your internet connection or try again in a moment",
+    },
   },
   tabs: {
     home: "Home",

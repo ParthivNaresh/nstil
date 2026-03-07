@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Feather, Filter, Search } from "lucide-react-native";
+import { Feather, Filter, Search, WifiOff } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -56,11 +56,11 @@ export default function HistoryScreen() {
 
   const { data: journals = [] } = useJournals();
   const calendarData = useCalendarRange(selectedJournalId ?? undefined);
-  const dayQuery = useDayEntries(selectedDate, selectedJournalId ?? undefined);
+  const { data: dayData, isLoading: dayLoading, isPlaceholderData: dayPlaceholder, isError: dayError, refetch: refetchDay } = useDayEntries(selectedDate, selectedJournalId ?? undefined);
 
   const dayEntries = useMemo<JournalEntry[]>(
-    () => dayQuery.data?.items ?? EMPTY_ENTRIES,
-    [dayQuery.data],
+    () => dayData?.items ?? EMPTY_ENTRIES,
+    [dayData],
   );
 
   const isInlineSearching = inlineSearch.trim().length > 0;
@@ -75,7 +75,8 @@ export default function HistoryScreen() {
         entry.tags.some((tag) => tag.toLowerCase().includes(query)),
     );
   }, [dayEntries, inlineSearch, isInlineSearching]);
-  const isFirstLoad = dayQuery.isLoading && !dayQuery.isPlaceholderData;
+  const isFirstLoad = dayLoading && !dayPlaceholder;
+  const isDayError = dayError && dayEntries.length === 0;
   const hasEntries = dayEntries.length > 0;
 
   const handleDayPress = useCallback((dateString: string) => {
@@ -197,6 +198,10 @@ export default function HistoryScreen() {
 
   const isPastDay = selectedDate < getTodayString();
 
+  const handleDayRetry = useCallback(() => {
+    void refetchDay();
+  }, [refetchDay]);
+
   const emptyComponent = useMemo(
     () =>
       isFirstLoad ? (
@@ -207,6 +212,16 @@ export default function HistoryScreen() {
             </View>
           ))}
         </View>
+      ) : isDayError ? (
+        <Animated.View entering={FadeIn.duration(300)} style={styles.emptyContainer}>
+          <EmptyState
+            icon={WifiOff}
+            title={t("common.error.connectionTitle")}
+            subtitle={t("common.error.connectionSubtitle")}
+            actionLabel={t("common.tryAgain")}
+            onAction={handleDayRetry}
+          />
+        </Animated.View>
       ) : (
         <Animated.View entering={FadeIn.duration(300)} style={styles.emptyContainer}>
           <EmptyState
@@ -233,7 +248,7 @@ export default function HistoryScreen() {
           />
         </Animated.View>
       ),
-    [isFirstLoad, isInlineSearching, isPastDay, t, handleCreatePress],
+    [isFirstLoad, isDayError, isInlineSearching, isPastDay, t, handleCreatePress, handleDayRetry],
   );
 
   return (

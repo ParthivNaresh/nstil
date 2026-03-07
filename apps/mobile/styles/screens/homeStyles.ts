@@ -14,4 +14,10 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     gap: spacing.lg,
   },
+  centeredContent: {
+    justifyContent: "center",
+  },
+  loadingContainer: {
+    gap: spacing.md,
+  },
 });
