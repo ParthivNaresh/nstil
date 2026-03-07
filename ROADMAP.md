@@ -495,11 +495,11 @@ CI/CD pipelines, production Supabase project, monitoring, error tracking, app st
 - [x] API rate limiting — Sliding window rate limiter via Redis sorted sets + atomic Lua script. Pure ASGI middleware (not BaseHTTPMiddleware). 3-tier hierarchy: IP (120/min) → User (60/min) → Route-specific (write: 30/min, search: 20/min, AI: 10/min, media upload: 10/min). Fail-open on Redis unavailability. Singleton `RateLimitService` on `AppState`. Lightweight JWT `sub` extraction for user keying. `X-RateLimit-*` response headers on all requests. Mobile: `ApiError.isRateLimited` getter, `Retry-After` header parsing, 429-aware query retry with backoff. 48 new backend tests, 690 total
 - [ ] CORS production configuration
 - [x] CI/CD pipelines — GitHub Actions: lint workflow (backend format-check + lint + typecheck, mobile typecheck + lint, docs build), test workflow (pytest with coverage → SonarCloud). All jobs use `just` commands
-- [ ] Error tracking — Sentry integration for backend and mobile
+- [x] Error tracking — Sentry integration for mobile (`@sentry/react-native`, Expo plugin, session replay, feedback widget). DSN configured in `app/_layout.tsx`, source maps via `metro.config.js` (`getSentryExpoConfig`). Root layout wrapped with `Sentry.wrap()`. Backend Sentry deferred
 - [ ] Log aggregation — structured log shipping
 - [ ] Performance budgets — bundle size limits, API response time targets
 - [ ] App store submission — iOS App Store and Google Play Store
-- [ ] Network resilience — offline detection, retry logic, offline indicator in UI
+- [x] Network resilience — `NetworkError` class wrapping fetch failures in API client (`services/api/errors.ts`, `client.ts`). Error-type-aware query retry strategy in `queryClient.ts` (3 retries with exponential backoff for network errors, 2 retries with `Retry-After` for 429s, 0 for 401s, 1 for other API errors). `LoadingScreen` component (`components/ui/LoadingScreen/`) for full-screen gate states (root router). Screen-level error states on Home, Insights, and History tabs using `EmptyState` with `WifiOff` icon and retry callbacks. `isNetworkError()` guard in `authErrors.ts` handles both `NetworkError` and raw `TypeError` from Supabase SDK
 
 ### JWKS Auto-Refresh — Critical Auth Resilience
 
