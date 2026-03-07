@@ -22,12 +22,32 @@ import { useAuthStore } from "@/stores/authStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useThemeStore } from "@/stores/themeStore";
 import type { ColorPalette } from "@/styles/palettes";
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://0126de7e96ed4465ae587322a5264f2b@o4511003870035968.ingest.us.sentry.io/4511003872657408',
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: true,
+
+  // Enable Logs
+  enableLogs: true,
+
+  // Configure Session Replay
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1,
+  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
 
 configureNotificationHandler();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   const router = useRouter();
   const initializeAuth = useAuthStore((s) => s.initialize);
   const authInitialized = useAuthStore((s) => s.initialized);
@@ -122,7 +142,7 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   root: {
