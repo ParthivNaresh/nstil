@@ -20,6 +20,16 @@ class ProfileService:
             return None
         return ProfileRow.model_validate(result.data[0])
 
+    async def ensure(self, user_id: UUID) -> ProfileRow:
+        existing = await self.get(user_id)
+        if existing is not None:
+            return existing
+
+        result = await (
+            self._client.table(TABLE).upsert({"id": str(user_id)}, on_conflict="id").execute()
+        )
+        return ProfileRow.model_validate(result.data[0])
+
     async def update(self, user_id: UUID, data: ProfileUpdate) -> ProfileRow | None:
         update_data = data.to_update_dict()
         if not update_data:

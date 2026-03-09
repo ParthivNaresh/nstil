@@ -10,6 +10,7 @@ export default function Index() {
   const initialized = useAuthStore((s) => s.initialized);
   const isEmailVerified = useAuthStore((s) => s.isEmailVerified);
   const pendingDeepLinkType = useAuthStore((s) => s.pendingDeepLinkType);
+  const initialize = useAuthStore((s) => s.initialize);
 
   const isAuthenticated = initialized && !!session && isEmailVerified && !pendingDeepLinkType;
 
@@ -17,9 +18,10 @@ export default function Index() {
     enabled: isAuthenticated,
   });
 
-  const handleRetry = useCallback(() => {
-    void refetch();
-  }, [refetch]);
+  const handleRetry = useCallback(async () => {
+    await initialize();
+    await refetch();
+  }, [initialize, refetch]);
 
   if (!initialized) {
     return <LoadingScreen variant="initializing" />;

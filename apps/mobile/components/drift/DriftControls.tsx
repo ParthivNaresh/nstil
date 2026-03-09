@@ -25,7 +25,7 @@ export function DriftControls({ onEnd }: DriftControlsProps) {
   }, [onEnd]);
 
   return (
-    <View style={[styles.container, { bottom: insets.bottom + spacing.lg }]}>
+    <View style={[styles.container, { top: insets.top + spacing.sm }]}>
       <Pressable
         onPress={handleEnd}
         style={styles.pill}
@@ -43,9 +43,7 @@ export function DriftControls({ onEnd }: DriftControlsProps) {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    alignItems: "center",
+    left: spacing.md,
     zIndex: 10,
   },
   pill: {

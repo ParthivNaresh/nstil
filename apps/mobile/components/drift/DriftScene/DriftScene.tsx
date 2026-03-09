@@ -3,12 +3,8 @@ import { useCallback, useMemo, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
-import { CelestialDisc } from "./CelestialDisc";
+import { EnvironmentLayer } from "./EnvironmentLayer";
 import { PlayerSprite } from "./PlayerSprite";
-import { SkyGradient } from "./SkyGradient";
-import { StarField } from "./StarField";
-import { TerrainLayers } from "./TerrainLayers";
-import { generateStarPositions } from "./starPositions";
 import type { DriftSceneProps } from "./types";
 
 const HIT_SLOP_LEFT = 40;
@@ -21,6 +17,7 @@ interface CanvasSize {
 const INITIAL_SIZE: CanvasSize = { width: 0, height: 0 };
 
 export function DriftScene({
+  time,
   dayProgress,
   scrollX,
   playerY,
@@ -37,11 +34,6 @@ export function DriftScene({
       canvasHeight.value = height;
     },
     [canvasHeight],
-  );
-
-  const stars = useMemo(
-    () => (hasSize ? generateStarPositions(size.width, size.height) : []),
-    [hasSize, size.width, size.height],
   );
 
   const gesture = useMemo(
@@ -70,11 +62,8 @@ export function DriftScene({
         <GestureDetector gesture={gesture}>
           <View style={StyleSheet.absoluteFill}>
             <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-              <SkyGradient dayProgress={dayProgress} width={size.width} height={size.height} />
-              <StarField dayProgress={dayProgress} stars={stars} />
-              <CelestialDisc body="sun" dayProgress={dayProgress} width={size.width} height={size.height} />
-              <CelestialDisc body="moon" dayProgress={dayProgress} width={size.width} height={size.height} />
-              <TerrainLayers
+              <EnvironmentLayer
+                time={time}
                 dayProgress={dayProgress}
                 scrollX={scrollX}
                 width={size.width}

@@ -1,6 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 
-import { ApiError, NetworkError } from "@/services/api/errors";
+import { ApiError, NetworkError, NoSessionError } from "@/services/api/errors";
 
 const DEFAULT_RETRY_DELAY_MS = 1000;
 const RATE_LIMIT_FALLBACK_DELAY_MS = 5000;
@@ -12,6 +12,9 @@ const MAX_RATE_LIMIT_RETRIES = 2;
 const MAX_API_RETRIES = 1;
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
+  if (error instanceof NoSessionError) {
+    return false;
+  }
   if (error instanceof NetworkError) {
     return failureCount < MAX_NETWORK_RETRIES;
   }

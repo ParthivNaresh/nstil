@@ -20,6 +20,15 @@ class CachedProfileService:
             await self._cache.set_user_profile(user_id, row)
         return row
 
+    async def ensure(self, user_id: UUID) -> ProfileRow:
+        cached = await self._cache.get_user_profile(user_id)
+        if cached is not None:
+            return cached
+
+        row = await self._db.ensure(user_id)
+        await self._cache.set_user_profile(user_id, row)
+        return row
+
     async def update(self, user_id: UUID, data: ProfileUpdate) -> ProfileRow | None:
         row = await self._db.update(user_id, data)
         if row is not None:

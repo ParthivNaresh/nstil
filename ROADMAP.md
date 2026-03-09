@@ -476,6 +476,89 @@ Three bugs fixed: gesture reliability, binary movement, and canvas height mismat
 
 **Current ratings (post-Steps 1-8):** Structural 7/10, Visual 3/10. Target after Steps 9-14: Structural 9/10, Visual 7-8/10.
 
+#### Step 15: WebView Canvas 2D migration — replace SkSL water/reflection with full-scene HTML Canvas
+
+**Problem:** SkSL (Skia Shading Language) in `@shopify/react-native-skia` `RuntimeEffect` has severe limitations — no user-defined functions, silent compilation failures returning `null`, no debuggability, and extremely sparse training data for AI-assisted development. After multiple failed attempts to implement elliptical sun/moon reflections in the water shader, the SkSL approach is abandoned for the drift scene's visual rendering. Canvas 2D via WebView provides equivalent visual quality with dramatically better developer velocity, debuggability (browser DevTools), and a well-understood API surface.
+
+**Architecture:** Full-screen `react-native-webview` hosting an inline HTML Canvas 2D game. The drift scene (sky, stars, sun/moon, terrain, water with reflections, player, wind streaks) renders entirely within the WebView. React Native owns lifecycle, navigation, session persistence, and mood selection. Communication via typed `postMessage` / `onMessage` protocol.
+
+**A) Dependency & infrastructure:**
+- [ ] Install `react-native-webview` via `npx expo install react-native-webview`
+- [ ] Create `apps/mobile/lib/drift/game/` directory for all Canvas 2D game code
+- [ ] Game HTML exported as TypeScript string constant (not a file asset) — avoids Metro bundling issues, works identically on iOS and Android
+
+**B) HTML game source — modular TypeScript string construction:**
+- [ ] `apps/mobile/lib/drift/game/html.ts` — Assembles final HTML string from module parts, exports `DRIFT_GAME_HTML: string`
+- [ ] `apps/mobile/lib/drift/game/styles.ts` — CSS string: `touch-action: none`, `user-select: none`, `overflow: hidden`, viewport meta, full-bleed canvas
+- [ ] `apps/mobile/lib/drift/game/renderer/sky.ts` — Sky gradient, star field, sun disc + glow + atmospheric haze, moon disc + glow
+- [ ] `apps/mobile/lib/drift/game/renderer/terrain.ts` — 3-5 parallax mountain layers with quadratic curve smoothing, procedural generation from seed
+- [ ] `apps/mobile/lib/drift/game/renderer/water.ts` — Water gradient, mountain reflection (scale -1 + low alpha), sun/moon reflection column (animated width), ripple lines, surface gloss
+- [ ] `apps/mobile/lib/drift/game/renderer/player.ts` — Paraglider silhouette (bezier canopy, harness lines, pilot body), trail rendering
+- [ ] `apps/mobile/lib/drift/game/renderer/effects.ts` — Wind streaks, atmospheric particles
+- [ ] `apps/mobile/lib/drift/game/engine/colors.ts` — `lerpColor`, `rgba`, `skyPalette`, `mountainColors` — phase-driven color interpolation
+- [ ] `apps/mobile/lib/drift/game/engine/physics.ts` — Glider physics (gravity, lift, velocity damping, bounds), delta-time integration
+- [ ] `apps/mobile/lib/drift/game/engine/loop.ts` — `requestAnimationFrame` game loop, `visibilitychange` pause/resume, delta-time capping
+- [ ] `apps/mobile/lib/drift/game/engine/input.ts` — Touch input handling (`touchstart`/`touchend` with `preventDefault`), keyboard fallback
+- [ ] `apps/mobile/lib/drift/game/engine/bridge.ts` — `postMessage` protocol: outbound events to RN (`session:end`, `session:pause`), inbound config reception
+
+**C) Message protocol — typed contract between RN and WebView:**
+- [ ] `apps/mobile/lib/drift/game/protocol.ts` — Shared TypeScript interfaces:
+  - `DriftGameOutboundEvent`: `{ type: "session:end"; durationSec: number }` | `{ type: "session:pause" }`
+  - `DriftGameInboundEvent`: `{ type: "config"; dayCycleDurationSec: number; scrollSpeedPxPerSec: number }` | `{ type: "resume" }` | `{ type: "stop" }`
+- [ ] RN side: `onMessage` handler parses and dispatches typed events
+- [ ] WebView side: `window.ReactNativeWebView?.postMessage(JSON.stringify(event))` for outbound, `window.addEventListener("message", ...)` for inbound
+
+**D) WebView host component:**
+- [ ] `apps/mobile/components/drift/DriftWebView.tsx` — Wraps `<WebView>` with:
+  - `source={{ html: DRIFT_GAME_HTML }}`
+  - `scrollEnabled={false}`, `bounces={false}`, `overScrollMode="never"`
+  - `javaScriptEnabled={true}`, `allowsInlineMediaPlayback={true}`
+  - `setSupportMultipleWindows={false}`, `allowFileAccess={false}`
+  - `onShouldStartLoadWithRequest` — blocks all navigation (game should never navigate)
+  - `onMessage` handler with typed event parsing
+  - `ref` for `injectJavaScript` to send inbound events
+  - Props: `onSessionEnd: (durationSec: number) => void`, `config: DriftGameConfig`
+- [ ] `apps/mobile/components/drift/DriftWebView.types.ts` — Props interface
+
+**E) Canvas sizing — responsive, not hardcoded:**
+- [ ] Game reads `window.innerWidth` and `window.innerHeight` at startup
+- [ ] `devicePixelRatio` applied to canvas dimensions for Retina sharpness
+- [ ] `resize` event listener for orientation changes / split-screen
+
+**F) Lifecycle integration:**
+- [ ] `visibilitychange` event in HTML pauses/resumes game loop (handles app backgrounding)
+- [ ] RN `AppState` listener sends `stop` event on background, `resume` on foreground (belt and suspenders)
+- [ ] `cancelAnimationFrame` on game end — no leaked loops
+
+**G) Route screen update:**
+- [ ] `app/drift.tsx` — Replace `DriftScene` (Skia) with `DriftWebView` in the drifting phase
+- [ ] Keep existing `useDrift` hook for state machine (ready → drifting → complete), timer, mood selection
+- [ ] `DriftWebView.onSessionEnd` triggers the existing completion flow (mood picker, session persistence)
+
+**H) Disconnect existing Skia water surface:**
+- [ ] Remove `WaterSurface` from `DriftScene` render tree (already disconnected if using WebView for full scene)
+- [ ] Keep `waterShader.ts`, `WaterSurface.tsx`, and related Skia code in `lib/drift/` — do not delete. May be useful for ambient backgrounds on other screens
+- [ ] Remove `WaterSurface` from `DriftScene/index.ts` barrel export
+
+**I) Security hardening:**
+- [ ] No external URLs loaded — inline HTML only
+- [ ] `onShouldStartLoadWithRequest` returns `false` for any non-about:blank navigation
+- [ ] No `allowFileAccess`, no `allowUniversalAccessFromFileURLs`
+- [ ] No sensitive data passed to WebView (no tokens, no user data beyond config numbers)
+
+**J) Performance validation:**
+- [ ] Verify 60fps on target device (iPhone 16) via Safari Web Inspector → Timeline
+- [ ] Measure WebView cold-start time (acceptable: <500ms from component mount to first frame)
+- [ ] Confirm `requestAnimationFrame` pauses when app is backgrounded
+- [ ] Memory profile: WebView teardown on unmount releases all resources
+
+**Design decisions:**
+- **Full scene in WebView, not hybrid** — Rendering sky/terrain in Skia and water in WebView would require pixel-perfect alignment across two rendering systems. All-in-WebView is simpler and visually coherent
+- **Inline HTML string, not file asset** — Metro doesn't handle `.html` assets reliably. TypeScript string constants bundle with the JS bundle, work on both platforms, and can be composed from modular parts
+- **Modular string construction** — Each renderer module exports a JS function string. `html.ts` assembles them into a single HTML document. This keeps the game code organized despite being a string — each file is independently readable and editable
+- **Minimal message protocol** — Only `session:end` flows from WebView to RN. Config is injected once at mount. No per-frame communication. This avoids the RN↔WebView bridge latency issues documented in `react-native-webview` discussions (10-15ms per message on Android)
+- **Keep Skia code** — The terrain shader, day/night cycle utilities, and config values are still useful. The WebView game may even import color values from `dayNightCycle.ts` to ensure visual consistency
+
 ### Subphase 7C — Terrarium (future, post-Drift)
 
 Persistent calm garden tied to journaling activity. Deferred until Drift ships and user engagement data validates the mini-game approach. Requires backend persistence (Supabase tables), content pipeline (species, growth stages), and careful product design to avoid guilt mechanics.

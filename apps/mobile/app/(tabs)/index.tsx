@@ -15,6 +15,7 @@ import {
   useTheme,
 } from "@/hooks";
 import { queryKeys } from "@/lib/queryKeys";
+import { useAuthStore } from "@/stores/authStore";
 import { spacing } from "@/styles";
 
 import { styles } from "@/styles/screens/homeStyles";
@@ -46,6 +47,7 @@ export default function HomeScreen() {
   }, [queryClient]);
 
   const handleRetry = useCallback(async () => {
+    await useAuthStore.getState().initialize();
     await Promise.all([refetchProfile(), refetchJournals()]);
   }, [refetchProfile, refetchJournals]);
 

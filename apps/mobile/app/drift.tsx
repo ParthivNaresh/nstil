@@ -47,6 +47,7 @@ export default function DriftScreen() {
       <StatusBar style="light" />
 
       <DriftScene
+        time={drift.time}
         dayProgress={drift.dayProgress}
         scrollX={drift.scrollX}
         playerY={drift.playerY}
