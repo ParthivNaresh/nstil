@@ -376,7 +376,7 @@ create table public.entry_embeddings (
     entry_id        uuid not null references public.journal_entries(id) on delete cascade,
     user_id         uuid not null references auth.users on delete cascade,
     model_id        text not null,
-    embedding       vector(1536) not null,
+    embedding       extensions.vector(1536) not null,
     dimensions      smallint not null default 1536,
     created_at      timestamptz not null default now(),
     updated_at      timestamptz not null default now(),
@@ -398,7 +398,7 @@ create index idx_entry_embeddings_user_model
 
 create index idx_entry_embeddings_hnsw
     on public.entry_embeddings
-    using hnsw (embedding vector_cosine_ops)
+    using hnsw (embedding extensions.vector_cosine_ops)
     with (m = 16, ef_construction = 64);
 
 alter table public.entry_embeddings enable row level security;
@@ -417,7 +417,7 @@ create policy "Service role full access on entry_embeddings"
 
 create or replace function public.semantic_search(
     p_user_id uuid,
-    p_embedding vector(1536),
+    p_embedding extensions.vector(1536),
     p_model_id text,
     p_match_count int default 10,
     p_similarity_threshold real default 0.5

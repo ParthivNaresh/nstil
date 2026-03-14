@@ -6,6 +6,10 @@ const en = {
       showPassword: "Show password",
       hidePassword: "Hide password",
     },
+    error: {
+      connectionTitle: "Unable to Connect",
+      connectionSubtitle: "Check your internet connection or try again in a moment",
+    },
   },
   tabs: {
     home: "Home",
@@ -45,6 +49,11 @@ const en = {
       title: "Breathe",
       subtitle: "Take a moment to center yourself",
       action: "Start Breathing",
+    },
+    drift: {
+      title: "Drift",
+      subtitle: "Float through a calming landscape",
+      action: "Start Drifting",
     },
   },
   settings: {
@@ -128,7 +137,29 @@ const en = {
     abandonConfirm: "Discard",
     abandonCancel: "Keep Going",
     saved: "Check-in saved",
-    needAMoment: "Need a moment? Try breathing",
+    needAMoment: "Need a moment?",
+    tryBreathing: "Try breathing",
+    tryDrifting: "Try drifting",
+  },
+  drift: {
+    ready: {
+      title: "Gentle Drift",
+      subtitle: "Tap anywhere to begin",
+    },
+    endSession: "End Session",
+    endSessionA11y: "End drift session",
+    mood: {
+      beforeTitle: "Before drifting",
+      beforeSubtitle: "How were you feeling?",
+      afterTitle: "After drifting",
+      afterSubtitle: "How do you feel now?",
+      skip: "Skip",
+    },
+    complete: {
+      title: "Session complete",
+      duration: "{{duration}} of drifting",
+      done: "Done",
+    },
   },
   journal: {
     emptyTitle: "No entries yet",

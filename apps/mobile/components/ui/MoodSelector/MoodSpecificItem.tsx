@@ -5,11 +5,12 @@ import {
   RoundedRect,
   vec,
 } from "@shopify/react-native-skia";
-import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, type LayoutChangeEvent } from "react-native";
+import { useCallback } from "react";
+import { Pressable, StyleSheet } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
 import { useTheme } from "@/hooks/useTheme";
+import { useCanvasSize } from "@/lib/animation";
 import { withAlpha } from "@/lib/colorUtils";
 import { getMoodGradient } from "@/lib/moodColors";
 import { getMoodSpecificLabel } from "@/lib/moodUtils";
@@ -36,17 +37,12 @@ export function MoodSpecificItem({
   const { colors } = useTheme();
   const gradient = getMoodGradient(category);
   const label = getMoodSpecificLabel(specific);
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const { size, onLayout, hasSize } = useCanvasSize();
 
   const handlePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onSelect(specific);
   }, [specific, onSelect]);
-
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setSize({ width, height });
-  }, []);
 
   const opacity = isSelected ? SELECTED_OPACITY : IDLE_OPACITY;
   const textColor = isSelected ? gradient.from : colors.textSecondary;
@@ -55,13 +51,13 @@ export function MoodSpecificItem({
   return (
     <Pressable
       onPress={handlePress}
-      onLayout={handleLayout}
+      onLayout={onLayout}
       style={[styles.pill, { borderColor }]}
       accessibilityRole="radio"
       accessibilityState={{ selected: isSelected }}
       accessibilityLabel={label ?? specific}
     >
-      {size.width > 0 ? (
+      {hasSize ? (
         <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
           <RoundedRect
             x={0}

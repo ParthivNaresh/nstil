@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { type DimensionValue, View, type ViewStyle } from "react-native";
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -46,6 +47,7 @@ export function Skeleton({
       -1,
       true,
     );
+    return () => cancelAnimation(opacity);
   }, [opacity]);
 
   const containerStyle = useMemo<ViewStyle>(

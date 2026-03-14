@@ -1,4 +1,4 @@
-import { Lightbulb } from "lucide-react-native";
+import { Lightbulb, WifiOff } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -45,7 +45,7 @@ export default function InsightsScreen() {
   const hasGenerated = useRef(false);
 
   const { mutate: generate } = useGenerateInsights();
-  const { data: insightsResponse, isLoading: insightsLoading } = useInsightsList();
+  const { data: insightsResponse, isLoading: insightsLoading, isError: insightsError, refetch: refetchInsights } = useInsightsList();
   const { mutate: updateInsight } = useUpdateInsight();
   const { data: moodTrends } = useMoodTrends();
   const { days: yearDays, isLoading: yearLoading } = useYearCalendar();
@@ -160,8 +160,13 @@ export default function InsightsScreen() {
     [router],
   );
 
+  const handleRetry = useCallback(() => {
+    void refetchInsights();
+  }, [refetchInsights]);
+
   const isLoading = insightsLoading && insights.length === 0;
-  const isEmpty = !isLoading && insights.length === 0;
+  const isError = insightsError && insights.length === 0;
+  const isEmpty = !isLoading && !isError && insights.length === 0;
 
   return (
     <View style={styles.root}>
@@ -174,7 +179,7 @@ export default function InsightsScreen() {
             paddingTop: headerHeight + spacing.xl,
             paddingBottom: tabBarHeight + spacing.md,
           },
-          isEmpty ? styles.emptyContainer : undefined,
+          (isEmpty || isError) ? styles.emptyContainer : undefined,
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -191,6 +196,14 @@ export default function InsightsScreen() {
             <Skeleton shape="rect" height={200} />
             <Skeleton shape="rect" height={120} />
           </View>
+        ) : isError ? (
+          <EmptyState
+            icon={WifiOff}
+            title={t("common.error.connectionTitle")}
+            subtitle={t("common.error.connectionSubtitle")}
+            actionLabel={t("common.tryAgain")}
+            onAction={handleRetry}
+          />
         ) : isEmpty ? (
           <EmptyState
             icon={Lightbulb}

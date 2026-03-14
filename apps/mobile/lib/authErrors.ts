@@ -1,5 +1,7 @@
 import type { AuthError } from "@supabase/supabase-js";
 
+import { NetworkError } from "@/services/api/errors";
+
 type TranslateFn = (key: string) => string;
 
 const SUPABASE_ERROR_MAP: Record<string, string> = {
@@ -36,6 +38,9 @@ function isSupabaseAuthError(error: unknown): error is AuthError {
 }
 
 function isNetworkError(error: unknown): boolean {
+  if (error instanceof NetworkError) {
+    return true;
+  }
   if (error instanceof TypeError && error.message === "Network request failed") {
     return true;
   }

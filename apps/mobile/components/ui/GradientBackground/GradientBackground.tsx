@@ -4,8 +4,9 @@ import {
   Rect,
   vec,
 } from "@shopify/react-native-skia";
-import { useCallback, useState } from "react";
-import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { StyleSheet, View } from "react-native";
+
+import { useCanvasSize } from "@/lib/animation";
 
 import type { GradientBackgroundProps } from "./types";
 
@@ -18,24 +19,16 @@ export function GradientBackground({
   end = DEFAULT_END,
   style,
 }: GradientBackgroundProps) {
-  const [size, setSize] = useState({ width: 0, height: 0 });
-
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setSize({ width, height });
-  }, []);
-
-  const { width, height } = size;
-  const hasSize = width > 0 && height > 0;
+  const { size, onLayout, hasSize } = useCanvasSize();
 
   return (
-    <View style={[styles.container, style]} onLayout={handleLayout}>
+    <View style={[styles.container, style]} onLayout={onLayout}>
       {hasSize ? (
         <Canvas style={styles.canvas}>
-          <Rect x={0} y={0} width={width} height={height}>
+          <Rect x={0} y={0} width={size.width} height={size.height}>
             <LinearGradient
-              start={vec(start.x * width, start.y * height)}
-              end={vec(end.x * width, end.y * height)}
+              start={vec(start.x * size.width, start.y * size.height)}
+              end={vec(end.x * size.width, end.y * size.height)}
               colors={colors as string[]}
             />
           </Rect>

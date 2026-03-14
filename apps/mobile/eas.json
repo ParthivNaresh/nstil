@@ -1,0 +1,48 @@
+{
+  "cli": {
+    "version": ">= 16.32.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://intoanuwwweluknziprx.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImludG9hbnV3d3dlbHVrbnppcHJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MjA1MzcsImV4cCI6MjA4NjQ5NjUzN30.n7GvTkv8RStvBCFG_534WcYQMsalrDWEUgaLp1fbor0",
+        "EXPO_PUBLIC_API_URL": "https://nstil-api.onrender.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://intoanuwwweluknziprx.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImludG9hbnV3d3dlbHVrbnppcHJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MjA1MzcsImV4cCI6MjA4NjQ5NjUzN30.n7GvTkv8RStvBCFG_534WcYQMsalrDWEUgaLp1fbor0",
+        "EXPO_PUBLIC_API_URL": "https://nstil-api.onrender.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://intoanuwwweluknziprx.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImludG9hbnV3d3dlbHVrbnppcHJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MjA1MzcsImV4cCI6MjA4NjQ5NjUzN30.n7GvTkv8RStvBCFG_534WcYQMsalrDWEUgaLp1fbor0",
+        "EXPO_PUBLIC_API_URL": "https://nstil-api.onrender.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

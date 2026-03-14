@@ -31,6 +31,7 @@ This project is in active development. Backwards compatibility is not a concern.
 | Notifications | expo-notifications | latest | WEEKLY scheduled triggers, configurable quiet hours |
 | Audio | expo-av | latest | Recording with real-time metering, playback |
 | On-device AI | Apple Foundation Models | iOS 26+ | 3B param LLM via custom Expo native module |
+| Error tracking | @sentry/react-native | 8.x | Crash reports, session replay, source maps via Expo plugin |
 | Backend | FastAPI | 0.115+ | Async everywhere |
 | Python | CPython | 3.12+ | Strict mypy |
 | Logging | structlog | 25.x | Structured logging, sensitive data scrubbing |
@@ -198,6 +199,14 @@ The auth guard lives in `app/_layout.tsx` (root layout), NOT in `app/index.tsx`.
 - `signIn()` in `authStore` must update the Zustand store synchronously (not rely on `onAuthStateChange`)
 - iOS Simulator Keychain persists across app deletions — `just dev` and `just db-reset` reset it automatically
 
+### Error handling & observability
+
+- **Sentry**: `@sentry/react-native` initialized in `app/_layout.tsx`. Root layout wrapped with `Sentry.wrap()`. Expo plugin in `app.json` handles source maps and debug symbols. Metro config uses `getSentryExpoConfig()`. Session replay (10% sample, 100% on error) and feedback widget enabled
+- **API error classes** (`services/api/errors.ts`): `ApiError` (HTTP errors with status, body, retryAfter), `NetworkError` (wraps fetch `TypeError`), `NoSessionError` (no active auth session). All are typed classes, not string checks
+- **Network-aware retry** (`lib/queryClient.ts`): error-type-aware `retry` and `retryDelay` functions. `NetworkError` → 3 retries with exponential backoff (2s→4s→8s, cap 30s). `ApiError` 429 → 2 retries with `Retry-After` header. `ApiError` 401 → 0 retries. Other → 1 retry
+- **Root router error gate** (`components/ui/LoadingScreen/`): full-screen component with `initializing`/`loading`/`error` variants. Used in `app/index.tsx` for cold-start profile fetch failures. Error variant composes `EmptyState` internally
+- **Screen-level error states**: Home, Insights, and History tabs show `EmptyState` with `WifiOff` icon and retry callback when critical queries fail with no cached data. Error only shows on first load — stale cached data is preferred over error screens
+
 ### Key patterns
 
 - **No files in `app/` except route components**
@@ -251,6 +260,10 @@ See `ROADMAP.md` for full details. Summary:
 | 5C — On-Device AI (iOS) | ✅ | Foundation Models bridge, personalized prompts, reflections, narratives, notification text |
 | 5D — On-Device AI (Android) | ❌ | Not started |
 | 5E — AI Screens | ✅ | Check-in flow, home prompt card, insights dashboard, AI profile settings |
+| 6 — Onboarding & Home | 🔄 | Onboarding flow, greeting, mood snapshots, radial create menu (home polish remaining) |
+| 7A — Breathing | ✅ | Shader orb, 3 patterns, session persistence, haptics |
+| 7B — Gentle Drift | 🔄 | Core implementation done, terrain overhaul remaining |
+| 8 — Production & Observability | 🔄 | Sentry, network resilience, CI/CD, rate limiting, token revocation |
 
 ---
 

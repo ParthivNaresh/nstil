@@ -303,56 +303,258 @@ Replaced the direct-navigate + button with a radial arc menu that opens two crea
 
 Interactive wellness features that give users a place to calm down and decompress. Starting with breathing exercises, expanding to ambient mini-games (terrarium, gentle glide, idle yard) in future iterations.
 
-### Subphase 7A — Breathing Exercise
+### Subphase 7A — Breathing Exercise ✅
 
-Full-screen guided breathing exercise with animated visual feedback, haptic transitions, and session persistence. Three patterns: Box Breathing (4-4-4-4), 4-7-8, and Calm (4-6).
+Full-screen guided breathing exercise with shader-based animated orb, haptic transitions, session persistence, and phase-aware easing. Three patterns: Box Breathing (4-4-4-4), 4-7-8, and Calm (4-6).
 
-**Step 1: Database migration**
-- [ ] `supabase/migrations/009_BREATHING_SESSIONS.sql` — `breathing_sessions` table (id, user_id, pattern, duration_seconds, cycles_completed, cycles_target, mood_before, mood_after, completed, created_at). RLS policies. Index on (user_id, created_at desc)
+**Step 1: Database migration ✅**
+- [x] `supabase/migrations/009_BREATHING_SESSIONS.sql` — `breathing_sessions` table (id, user_id, pattern, duration_seconds, cycles_completed, cycles_target, mood_before, mood_after, completed, created_at). RLS policies. Index on (user_id, created_at desc)
 
-**Step 2: Backend models & service**
-- [ ] `models/breathing.py` — `BreathingPattern` (StrEnum), `BreathingSessionRow`, `BreathingSessionCreate`, `BreathingSessionUpdate`, `BreathingSessionResponse` (with `from_row()`), `BreathingStatsResponse`
-- [ ] `services/breathing.py` — `BreathingService`: `create()`, `complete()`, `get_stats()`, `list_recent()`
+**Step 2: Backend models & service ✅**
+- [x] `models/breathing.py` — `BreathingPattern` (StrEnum), `BreathingSessionRow`, `BreathingSessionCreate`, `BreathingSessionUpdate`, `BreathingSessionResponse` (with `from_row()`), `BreathingStatsResponse`
+- [x] `services/breathing.py` — `BreathingService`: `create()`, `complete()`, `get_stats()`, `list_recent()`
 
-**Step 3: Backend API routes, DI & tests**
-- [ ] `api/v1/breathing.py` — `POST /sessions`, `PATCH /sessions/{id}`, `GET /stats`, `GET /sessions`
-- [ ] `api/deps.py` — `get_breathing_service` factory
-- [ ] `api/router.py` — Wire breathing router
-- [ ] Backend tests for models, service, and routes
+**Step 3: Backend API routes, DI & tests ✅**
+- [x] `api/v1/breathing.py` — `POST /sessions`, `PATCH /sessions/{id}`, `GET /stats`, `GET /sessions`
+- [x] `api/deps.py` — `get_breathing_service` factory
+- [x] `api/router.py` — Wire breathing router
+- [x] Backend tests for models, service, and routes
 
-**Step 4: Mobile types & API client**
-- [ ] `types/breathing.ts` — TypeScript interfaces: `BreathingPattern`, `BreathingPhase`, `BreathingSession`, `BreathingStats`
-- [ ] `lib/breathingPatterns.ts` — Pattern definitions (phases, durations per phase, cycle counts per session length)
-- [ ] `services/api/breathing.ts` — API client functions
-- [ ] `hooks/useBreathingSessions.ts` — TanStack Query hooks for CRUD + stats
+**Step 4: Mobile types & API client ✅**
+- [x] `types/breathing.ts` — TypeScript interfaces: `BreathingPatternId`, `BreathingPhase`, `BreathingSession`, `BreathingStats`, `BreathingPhaseConfig`, `BreathingPatternConfig`
+- [x] `lib/breathingPatterns.ts` — Pattern definitions (phases, durations per phase, cycle counts per session length). `getBreathingPattern()`, `computeCycleCount()`, `computeSessionDuration()`
+- [x] `services/api/breathing.ts` — API client functions
+- [x] `hooks/useBreathingSessions.ts` — TanStack Query hooks: `useBreathingStats`, `useBreathingSessions`, `useCreateBreathingSession`, `useUpdateBreathingSession`
 
-**Step 5: Core breathing hook**
-- [ ] `hooks/useBreathing.ts` — Timer state machine: `idle` → `inhale` → `hold` → `exhale` → `hold` (box only) → cycle or `complete`. Exposes `phase`, `progress` (Reanimated SharedValue 0→1), `currentCycle`, `totalCycles`, `isActive`, `start()`, `pause()`, `resume()`, `stop()`
+**Step 5: Core breathing hook ✅**
+- [x] `hooks/useBreathing.ts` — Timer state machine: `idle` → `inhale` → `hold` → `exhale` → `rest` → cycle or `complete`. Exposes `phase`, `phaseSignal` (SharedValue for stutter-free UI thread animation), `phaseIndex`, `phaseCount`, `progress` (SharedValue 0→1), `currentCycle`, `totalCycles`, `isActive`, `start()`, `pause()`, `resume()`, `stop()`. Phase-aware easing: inhale uses `Easing.out(cubic)`, exhale uses `Easing.in(cubic)`, hold/rest use linear. Resume uses linear for remaining fraction to avoid easing discontinuity
 
-**Step 6: Breathing UI components**
-- [ ] `components/breathing/BreathingCircle.tsx` — Skia animated circle (radius driven by SharedValue, inhale expands, exhale contracts, hold pulses opacity)
-- [ ] `components/breathing/BreathingPhaseLabel.tsx` — "Inhale" / "Hold" / "Exhale" text with fade transitions
-- [ ] `components/breathing/BreathingPatternPicker.tsx` — Pattern selection (Box, 4-7-8, Calm) with descriptions
-- [ ] `components/breathing/BreathingDurationPicker.tsx` — Session length selector (1 min, 3 min, 5 min)
-- [ ] `components/breathing/BreathingProgress.tsx` — Cycle counter ("3 of 8")
-- [ ] `components/breathing/BreathingComplete.tsx` — Completion screen with optional mood tap
+**Step 6: Breathing UI components ✅**
+- [x] `components/breathing/BreathingOrb/` — Shader-based animated orb replacing flat circle:
+  - `shader.ts` — SkSL runtime shader with organic wobble distortion, core-to-edge gradient, soft glow halo, circular boundary fade (no square clipping)
+  - `colors.ts` — `hexToShaderColor()` utility converting hex to float4 shader uniforms
+  - `BreathingOrb.tsx` — Drives shader uniforms from `phaseSignal` SharedValue (no React prop dependency, zero-stutter phase transitions). Continuous wobble via `withRepeat` time loop with proper `cancelAnimation` cleanup
+  - `ProgressRing.tsx` — Skia arc-based session progress ring (phase-granular: `completedCycles * phaseCount + phaseIndex`). Updates on React re-renders (phase transitions), positioned absolutely over orb
+  - `types.ts`, `index.ts` — Typed props, barrel exports
+- [x] `components/breathing/BreathingPhaseLabel.tsx` — "Inhale" / "Hold" / "Exhale" / "Rest" text with Reanimated fade transitions
+- [x] `components/breathing/BreathingPatternPicker.tsx` — Pattern selection (Box, 4-7-8, Calm) with Skia gradient pills and descriptions
+- [x] `components/breathing/BreathingDurationPicker.tsx` — Session length selector (1 min, 3 min, 5 min)
+- [x] `components/breathing/BreathingProgress.tsx` — Cycle counter ("3 of 8")
+- [x] `components/breathing/BreathingComplete.tsx` — Completion screen with success animation, optional mood selector, done button
 
-**Step 7: Breathing screen & i18n**
-- [ ] `app/breathing.tsx` — Route screen (thin wrapper): pattern picker → exercise → completion. Haptic pulse on phase transitions (`expo-haptics`). Ambient background reuse
-- [ ] `lib/i18n/locales/en.ts` — `breathing.*` namespace (patterns, phases, durations, completion)
-- [ ] Wire session persistence into breathing screen (log session on completion)
+**Step 7: Breathing screen & i18n ✅**
+- [x] `app/breathing.tsx` — Route screen: 3-step flow (setup → exercise → complete). Haptic pulse on phase transitions (`expo-haptics`). Ambient background reuse. Session persistence (create on start, update on stop/complete with cycles and mood)
+- [x] `lib/i18n/locales/en.ts` — `breathing.*` namespace (patterns, phases, durations, completion, progress)
 
-**Step 8: Home screen entry point**
-- [ ] Breathing card on home screen alongside check-in card
-- [ ] "Need a moment?" link on check-in outcome screen
+**Step 8: Home screen entry point ✅**
+- [x] `components/home/BreathingCard.tsx` — Breathing card on home screen alongside check-in card
+- [x] "Need a moment? Try breathing" link on check-in outcome screen (`CheckInOutcome.tsx`)
 
-### Subphase 7B — Ambient Mini-Games (future)
+### Subphase 7A+ — Animation Library Foundation & Cleanup ✅
 
-Calm, low-pressure interactive experiences. Requires game engine evaluation (Unity via react-native-unity, or Skia-only for simpler concepts).
+Shared animation infrastructure extracted from breathing work. Reusable across all Skia/Reanimated components.
 
-- [ ] **Terrarium** — Grow plants over real time. Place items, mist/water, growth ticks tied to journaling activity. No failure state. Mood-tagged plants as visual timeline
-- [ ] **Gentle Endless Glide** — One-touch glide with no punishment. Silhouette parallax, day/night cycle, "wonder moments." Drift prompts for mindfulness
-- [ ] **Idle Yard** — Place attractors, return later to find visitors. Memory card collection. Visitor mood tags seed journal entries
+- [x] `lib/animation/useCanvasSize.ts` — Hook returning `{ size, onLayout, hasSize }` for Skia Canvas sizing. Refactored into 10 components (StreakBanner, AmbientBackground, GradientBackground, MoodItem, MoodSpecificItem, PromptStylePicker/StylePill, DaySelector/DayPill, FrequencyPicker/FrequencyPill, MoodAccent, YearInPixels)
+- [x] `lib/animation/worklets.ts` — `lerp()` worklet-tagged linear interpolation. Used by BreathingOrb
+- [x] `lib/animation/index.ts` — Barrel exports for `useCanvasSize`, `CanvasSize`, `UseCanvasSizeReturn`, `lerp`
+- [x] Missing `cancelAnimation` cleanup added to `Skeleton.tsx` and `CheckInOutcome.tsx` useEffect returns
+
+### Subphase 7B — Gentle Drift 🔄
+
+Full-screen, no-score, no-failure calm experience inspired by Alto's Odyssey Zen Mode. A silhouette glides across a looping landscape with layered parallax terrain, a cycling day/night sky, and ambient audio. Touch to descend, release to rise. Zero backend dependencies — purely a mobile-side feature.
+
+**Visual target:** Alto's Odyssey silhouette aesthetic — flat color layers, gradient sky, minimal detail. Monument Valley's color palette meets Alto's parallax depth. 5-6 terrain layers with atmospheric perspective, procedural star field at night, separate sun/moon discs, paraglider silhouette, water surface at bottom.
+
+**Architecture:** Hybrid Skia rendering — sky as `LinearGradient`, terrain as `Path` geometry (generated once at mount, translated per frame), stars as `Circle` elements, player as `Path` silhouette. All animation driven by 3 SharedValues (`time`, `playerY`, `isTouching`) with `scrollX` and `dayProgress` derived. Zero new dependencies.
+
+#### Steps 1–8: Core Implementation ✅
+
+Built the full feature end-to-end: scene infrastructure (`lib/drift/` — types, terrain math, day/night cycle, config), sky rendering (gradient + stars + celestial disc), game hook (`useDrift` — state machine, SharedValues, wall-clock timer, AppState, reduce-motion), scene compositor (`DriftScene/` — 6 sub-components with gesture handling), audio (`useDriftAudio` — fade in/out, phase-boundary volume, AppState pause/resume), UI chrome (timer, controls, mood picker, ready overlay), route screen (`app/drift.tsx` — ready → drifting → complete), and home screen integration (DriftCard + check-in outcome links). All i18n via `drift.*` namespace.
+
+**Files created:** `lib/drift/` (5 files), `hooks/useDrift.ts`, `hooks/useDriftAudio.ts`, `components/drift/` (10 files), `components/home/DriftCard.tsx`, `app/drift.tsx`, `assets/audio/drift-ambient.wav`
+
+**Files modified:** `lib/i18n/locales/en.ts`, `components/home/index.ts`, `components/checkIn/CheckInOutcome.tsx`, `app/(tabs)/index.tsx`, `hooks/index.ts`
+
+#### Step 9: Fix gesture handling & movement model ✅
+
+Three bugs fixed: gesture reliability, binary movement, and canvas height mismatch.
+
+**Fix A — Gesture:** Replaced `onBegin`/`onFinalize` with `onTouchesDown`/`onTouchesUp`/`onTouchesCancelled` raw touch callbacks. These fire reliably on every finger down/up regardless of Pan gesture state machine lifecycle (fixes iOS 26 + RNGH 2.28 bug where `onFinalize` doesn't fire for taps without drag). Removed `.runOnJS(true)` — all callbacks run as worklets on UI thread.
+
+**Fix B — Physics movement:** Replaced binary `withTiming` toggle (animate to top/bottom) with per-frame velocity-based physics. `useAnimatedReaction` watches `time.value` (already animated linearly), computes `dt`, smoothly interpolates `velocityY` toward `targetVy` (gravity when touching, -buoyancy when not) using exponential smoothing (`tau = 0.15s`), integrates `playerY += velocityY * dt`, clamps to bounds. Uses existing `player.gravity` (120) and `player.buoyancy` (80) config values that were previously dead code. Added `clamp` worklet to `lib/animation/worklets.ts`.
+
+**Fix C — Canvas height:** Eliminated `CANVAS_FALLBACK_HEIGHT = 600`. `useDrift()` now takes no parameters and owns a `canvasHeight` SharedValue. `DriftScene` writes measured height via `onLayout` callback. Physics loop guards on `canvasHeight.value > 0`.
+
+**Files changed:** `hooks/useDrift.ts`, `components/drift/DriftScene/DriftScene.tsx`, `components/drift/DriftScene/types.ts`, `app/drift.tsx`, `lib/animation/worklets.ts`, `lib/animation/index.ts`, `hooks/useDriftAudio.ts` (added catch for placeholder audio crash)
+
+#### Step 10: Fix celestial bodies — sun visible during night ✅
+
+**Problem:** `getSunMoonPosition` treated sun/moon as a single object with no phase-gating. The disc was always visible — opacity only faded at arc endpoints (first/last 10%), not based on day phase.
+
+**Files changed:** `lib/drift/dayNightCycle.ts`, `components/drift/DriftScene/CelestialDisc.tsx`, `components/drift/DriftScene/DriftScene.tsx`, `components/drift/DriftScene/types.ts`, `lib/drift/index.ts`
+
+- [x] Split `getSunMoonPosition` into `getSunPosition` (visible p=0.0→0.5) and `getMoonPosition` (visible p=0.5→1.0) with hard phase-gating (returns opacity 0 outside range) and 8% arc-progress fade at boundaries
+- [x] Sun: 55px body, 95px glow, 150px atmospheric bleed layer (very low opacity `#FFF8E718`). Warm white core `#FFFDF5`. Peak at 12% canvas height
+- [x] Moon: 22px body, 38px glow. Cool silver `#E0E8F0`. Peak at 18% canvas height. Max opacity 85%
+- [x] `CelestialBody` type (`"sun" | "moon"`) added to `types.ts`. `CelestialDiscProps` takes `body` prop. Two `CelestialDisc` instances rendered in `DriftScene.tsx`
+- [x] Removed `getSunMoonPosition` from barrel export, added `getSunPosition` and `getMoonPosition`
+
+**Future polish (deferred):**
+- [ ] Sun horizon color shift — warm orange/red tint near horizon (low arc progress), transitioning to bright white at peak. Lerp sun core color based on `arcProgress`
+- [ ] Moon surface detail — subtle crater-like darker patches via overlapping semi-transparent `Circle` elements offset from center, or a noise-based SkSL shader
+- [ ] Sun corona rays — 4-6 faint radial `Line` elements extending from sun body, slowly rotating via `time` SharedValue
+- [ ] Moon phase — crescent shadow overlay that shifts across the lunar cycle (could tie to real date or drift session count)
+
+#### Step 11: Terrain overhaul — mountains, not sine waves
+
+**Problem:** 3 layers with conservative harmonics (max k=7, max amplitude 35) produce smooth undulating dunes. Layers are crammed between 55-75% of canvas height with nearly identical character. Tint colors are muddy browns/navies with inverted atmospheric perspective (far=dark, near=light).
+
+**Files:** `lib/drift/types.ts`, `lib/drift/terrainCurve.ts`, `lib/drift/driftConfig.ts`, `lib/drift/dayNightCycle.ts`, `components/drift/DriftScene/TerrainLayers.tsx`
+
+**A) Dynamic atmospheric perspective (tint generation):**
+- [ ] Replace static per-layer `tints` with dynamic computation: `getTerrainTint` computes tint as `lerpColor(skyBottom, nearSilhouette, depth)` where `depth` is the layer's `depthFactor` (0=far/sky-colored, 1=near/dark silhouette)
+- [ ] Define per-phase near-silhouette colors (dawn: dark warm brown, day: dark navy, dusk: deep indigo, night: near-black blue)
+- [ ] Remove `tints` from `TerrainLayerConfig`, add `depthFactor: number` (0→1, far→near)
+- [ ] `getTerrainTint(dayProgress, depthFactor)` signature — uses `getSkyColors(dayProgress).bottom` as fog target, lerps toward near-silhouette
+
+**B) Layer count & spread (5 layers):**
+- [ ] baseHeight spread: 0.48 → 0.58 → 0.68 → 0.78 → 0.86
+- [ ] parallax spread: 0.12 → 0.25 → 0.45 → 0.70 → 1.0
+- [ ] depthFactor spread: 0.0 → 0.25 → 0.50 → 0.75 → 1.0
+- [ ] Each layer gets unique harmonic signature — different k values, different phase offsets
+
+**C) Terrain shape (ridge shaping + x-warp):**
+- [ ] Ridge shaping in `getHarmonicHeight`: normalize sine sum to [-1,1], apply `ridge = 1 - abs(normalized)`, blend with original via per-layer `ridgeBlend` (0=pure sine, 1=full ridge). Front layers 0.3-0.5, back layers 0.1-0.2
+- [ ] X-warp per layer: `x' = x + warpAmp * sin(2π * warpK * x / loopWidth + warpPhase)` before harmonic evaluation. Breaks even peak spacing. Small warpAmp (5-25px)
+- [ ] More harmonics: front layers 6-8 harmonics with k up to 13-17, back layers 3-5 harmonics with lower k
+- [ ] Larger amplitudes: front 60-80px, back 10-20px
+- [ ] Add `ridgeBlend`, `warp` config to `TerrainLayerConfig`
+
+**D) Point count:**
+- [ ] Bump `terrainPointCount` from 300 to 450 to prevent faceting with higher harmonics
+
+#### Step 12: Water surface
+
+**Problem:** Reference has a reflective water body in the bottom ~15-20% that grounds the scene. Our front terrain just fills to bottom with solid color.
+
+**Files:** New `components/drift/DriftScene/WaterSurface.tsx`, `components/drift/DriftScene/DriftScene.tsx`, `components/drift/DriftScene/types.ts`, `components/drift/DriftScene/index.ts`
+
+- [ ] `WaterSurface` component — `Rect` in bottom 15% with `LinearGradient` that mirrors/darkens the sky bottom color at current `dayProgress`
+- [ ] Subtle horizontal `Line` elements at varying opacity for water ripple effect
+- [ ] Render after terrain layers so it overlaps the very bottom
+
+#### Step 13: Paraglider silhouette
+
+**Problem:** Two concentric circles (8px + 16px) are barely visible and have no character. Reference has a recognizable paraglider — canopy above, figure below.
+
+**Files:** `components/drift/DriftScene/PlayerSprite.tsx`
+
+- [ ] Replace circles with Skia `Path` silhouette: wide arc canopy (~40px wide, ~15px tall) via `cubicTo`, two thin lines to figure, small body shape below
+- [ ] Dark silhouette fill (near-black or darkest terrain tint)
+- [ ] Keep subtle glow halo behind for visibility against dark backgrounds
+- [ ] Squash transform on touch still applies to whole group
+
+#### Execution order
+
+1. **Step 9** (gesture fix) — functional bug, fix first
+2. **Steps 10** (celestial fix + sun size) — functional bug
+3. **Step 11** (terrain overhaul — shape, layers, colors) — core visual improvement, biggest impact
+4. **Step 12** (water surface) — new component
+5. **Step 13** (paraglider) — new Path geometry
+6. **Step 14** (wind streaks) — polish, lowest priority
+
+**Current ratings (post-Steps 1-8):** Structural 7/10, Visual 3/10. Target after Steps 9-14: Structural 9/10, Visual 7-8/10.
+
+#### Step 15: WebView Canvas 2D migration — replace SkSL water/reflection with full-scene HTML Canvas
+
+**Problem:** SkSL (Skia Shading Language) in `@shopify/react-native-skia` `RuntimeEffect` has severe limitations — no user-defined functions, silent compilation failures returning `null`, no debuggability, and extremely sparse training data for AI-assisted development. After multiple failed attempts to implement elliptical sun/moon reflections in the water shader, the SkSL approach is abandoned for the drift scene's visual rendering. Canvas 2D via WebView provides equivalent visual quality with dramatically better developer velocity, debuggability (browser DevTools), and a well-understood API surface.
+
+**Architecture:** Full-screen `react-native-webview` hosting an inline HTML Canvas 2D game. The drift scene (sky, stars, sun/moon, terrain, water with reflections, player, wind streaks) renders entirely within the WebView. React Native owns lifecycle, navigation, session persistence, and mood selection. Communication via typed `postMessage` / `onMessage` protocol.
+
+**A) Dependency & infrastructure:**
+- [ ] Install `react-native-webview` via `npx expo install react-native-webview`
+- [ ] Create `apps/mobile/lib/drift/game/` directory for all Canvas 2D game code
+- [ ] Game HTML exported as TypeScript string constant (not a file asset) — avoids Metro bundling issues, works identically on iOS and Android
+
+**B) HTML game source — modular TypeScript string construction:**
+- [ ] `apps/mobile/lib/drift/game/html.ts` — Assembles final HTML string from module parts, exports `DRIFT_GAME_HTML: string`
+- [ ] `apps/mobile/lib/drift/game/styles.ts` — CSS string: `touch-action: none`, `user-select: none`, `overflow: hidden`, viewport meta, full-bleed canvas
+- [ ] `apps/mobile/lib/drift/game/renderer/sky.ts` — Sky gradient, star field, sun disc + glow + atmospheric haze, moon disc + glow
+- [ ] `apps/mobile/lib/drift/game/renderer/terrain.ts` — 3-5 parallax mountain layers with quadratic curve smoothing, procedural generation from seed
+- [ ] `apps/mobile/lib/drift/game/renderer/water.ts` — Water gradient, mountain reflection (scale -1 + low alpha), sun/moon reflection column (animated width), ripple lines, surface gloss
+- [ ] `apps/mobile/lib/drift/game/renderer/player.ts` — Paraglider silhouette (bezier canopy, harness lines, pilot body), trail rendering
+- [ ] `apps/mobile/lib/drift/game/renderer/effects.ts` — Wind streaks, atmospheric particles
+- [ ] `apps/mobile/lib/drift/game/engine/colors.ts` — `lerpColor`, `rgba`, `skyPalette`, `mountainColors` — phase-driven color interpolation
+- [ ] `apps/mobile/lib/drift/game/engine/physics.ts` — Glider physics (gravity, lift, velocity damping, bounds), delta-time integration
+- [ ] `apps/mobile/lib/drift/game/engine/loop.ts` — `requestAnimationFrame` game loop, `visibilitychange` pause/resume, delta-time capping
+- [ ] `apps/mobile/lib/drift/game/engine/input.ts` — Touch input handling (`touchstart`/`touchend` with `preventDefault`), keyboard fallback
+- [ ] `apps/mobile/lib/drift/game/engine/bridge.ts` — `postMessage` protocol: outbound events to RN (`session:end`, `session:pause`), inbound config reception
+
+**C) Message protocol — typed contract between RN and WebView:**
+- [ ] `apps/mobile/lib/drift/game/protocol.ts` — Shared TypeScript interfaces:
+  - `DriftGameOutboundEvent`: `{ type: "session:end"; durationSec: number }` | `{ type: "session:pause" }`
+  - `DriftGameInboundEvent`: `{ type: "config"; dayCycleDurationSec: number; scrollSpeedPxPerSec: number }` | `{ type: "resume" }` | `{ type: "stop" }`
+- [ ] RN side: `onMessage` handler parses and dispatches typed events
+- [ ] WebView side: `window.ReactNativeWebView?.postMessage(JSON.stringify(event))` for outbound, `window.addEventListener("message", ...)` for inbound
+
+**D) WebView host component:**
+- [ ] `apps/mobile/components/drift/DriftWebView.tsx` — Wraps `<WebView>` with:
+  - `source={{ html: DRIFT_GAME_HTML }}`
+  - `scrollEnabled={false}`, `bounces={false}`, `overScrollMode="never"`
+  - `javaScriptEnabled={true}`, `allowsInlineMediaPlayback={true}`
+  - `setSupportMultipleWindows={false}`, `allowFileAccess={false}`
+  - `onShouldStartLoadWithRequest` — blocks all navigation (game should never navigate)
+  - `onMessage` handler with typed event parsing
+  - `ref` for `injectJavaScript` to send inbound events
+  - Props: `onSessionEnd: (durationSec: number) => void`, `config: DriftGameConfig`
+- [ ] `apps/mobile/components/drift/DriftWebView.types.ts` — Props interface
+
+**E) Canvas sizing — responsive, not hardcoded:**
+- [ ] Game reads `window.innerWidth` and `window.innerHeight` at startup
+- [ ] `devicePixelRatio` applied to canvas dimensions for Retina sharpness
+- [ ] `resize` event listener for orientation changes / split-screen
+
+**F) Lifecycle integration:**
+- [ ] `visibilitychange` event in HTML pauses/resumes game loop (handles app backgrounding)
+- [ ] RN `AppState` listener sends `stop` event on background, `resume` on foreground (belt and suspenders)
+- [ ] `cancelAnimationFrame` on game end — no leaked loops
+
+**G) Route screen update:**
+- [ ] `app/drift.tsx` — Replace `DriftScene` (Skia) with `DriftWebView` in the drifting phase
+- [ ] Keep existing `useDrift` hook for state machine (ready → drifting → complete), timer, mood selection
+- [ ] `DriftWebView.onSessionEnd` triggers the existing completion flow (mood picker, session persistence)
+
+**H) Disconnect existing Skia water surface:**
+- [ ] Remove `WaterSurface` from `DriftScene` render tree (already disconnected if using WebView for full scene)
+- [ ] Keep `waterShader.ts`, `WaterSurface.tsx`, and related Skia code in `lib/drift/` — do not delete. May be useful for ambient backgrounds on other screens
+- [ ] Remove `WaterSurface` from `DriftScene/index.ts` barrel export
+
+**I) Security hardening:**
+- [ ] No external URLs loaded — inline HTML only
+- [ ] `onShouldStartLoadWithRequest` returns `false` for any non-about:blank navigation
+- [ ] No `allowFileAccess`, no `allowUniversalAccessFromFileURLs`
+- [ ] No sensitive data passed to WebView (no tokens, no user data beyond config numbers)
+
+**J) Performance validation:**
+- [ ] Verify 60fps on target device (iPhone 16) via Safari Web Inspector → Timeline
+- [ ] Measure WebView cold-start time (acceptable: <500ms from component mount to first frame)
+- [ ] Confirm `requestAnimationFrame` pauses when app is backgrounded
+- [ ] Memory profile: WebView teardown on unmount releases all resources
+
+**Design decisions:**
+- **Full scene in WebView, not hybrid** — Rendering sky/terrain in Skia and water in WebView would require pixel-perfect alignment across two rendering systems. All-in-WebView is simpler and visually coherent
+- **Inline HTML string, not file asset** — Metro doesn't handle `.html` assets reliably. TypeScript string constants bundle with the JS bundle, work on both platforms, and can be composed from modular parts
+- **Modular string construction** — Each renderer module exports a JS function string. `html.ts` assembles them into a single HTML document. This keeps the game code organized despite being a string — each file is independently readable and editable
+- **Minimal message protocol** — Only `session:end` flows from WebView to RN. Config is injected once at mount. No per-frame communication. This avoids the RN↔WebView bridge latency issues documented in `react-native-webview` discussions (10-15ms per message on Android)
+- **Keep Skia code** — The terrain shader, day/night cycle utilities, and config values are still useful. The WebView game may even import color values from `dayNightCycle.ts` to ensure visual consistency
+
+### Subphase 7C — Terrarium (future, post-Drift)
+
+Persistent calm garden tied to journaling activity. Deferred until Drift ships and user engagement data validates the mini-game approach. Requires backend persistence (Supabase tables), content pipeline (species, growth stages), and careful product design to avoid guilt mechanics.
+
+### Subphase 7D — Idle Yard (future, post-Terrarium)
+
+Place attractors, return later to find visitors. Memory card collection. Deferred until Terrarium validates persistent calm experiences.
 
 ---
 
@@ -365,11 +567,11 @@ CI/CD pipelines, production Supabase project, monitoring, error tracking, app st
 - [x] API rate limiting — Sliding window rate limiter via Redis sorted sets + atomic Lua script. Pure ASGI middleware (not BaseHTTPMiddleware). 3-tier hierarchy: IP (120/min) → User (60/min) → Route-specific (write: 30/min, search: 20/min, AI: 10/min, media upload: 10/min). Fail-open on Redis unavailability. Singleton `RateLimitService` on `AppState`. Lightweight JWT `sub` extraction for user keying. `X-RateLimit-*` response headers on all requests. Mobile: `ApiError.isRateLimited` getter, `Retry-After` header parsing, 429-aware query retry with backoff. 48 new backend tests, 690 total
 - [ ] CORS production configuration
 - [x] CI/CD pipelines — GitHub Actions: lint workflow (backend format-check + lint + typecheck, mobile typecheck + lint, docs build), test workflow (pytest with coverage → SonarCloud). All jobs use `just` commands
-- [ ] Error tracking — Sentry integration for backend and mobile
+- [x] Error tracking — Sentry integration for mobile (`@sentry/react-native`, Expo plugin, session replay, feedback widget). DSN configured in `app/_layout.tsx`, source maps via `metro.config.js` (`getSentryExpoConfig`). Root layout wrapped with `Sentry.wrap()`. Backend Sentry deferred
 - [ ] Log aggregation — structured log shipping
 - [ ] Performance budgets — bundle size limits, API response time targets
 - [ ] App store submission — iOS App Store and Google Play Store
-- [ ] Network resilience — offline detection, retry logic, offline indicator in UI
+- [x] Network resilience — `NetworkError` class wrapping fetch failures in API client (`services/api/errors.ts`, `client.ts`). Error-type-aware query retry strategy in `queryClient.ts` (3 retries with exponential backoff for network errors, 2 retries with `Retry-After` for 429s, 0 for 401s, 1 for other API errors). `LoadingScreen` component (`components/ui/LoadingScreen/`) for full-screen gate states (root router). Screen-level error states on Home, Insights, and History tabs using `EmptyState` with `WifiOff` icon and retry callbacks. `isNetworkError()` guard in `authErrors.ts` handles both `NetworkError` and raw `TypeError` from Supabase SDK
 
 ### JWKS Auto-Refresh — Critical Auth Resilience
 

@@ -12,7 +12,7 @@ create table public.journal_entries (
     longitude       double precision,
     entry_type      text not null default 'journal',
     is_pinned       boolean not null default false,
-    embedding       vector(1536),
+    embedding       extensions.vector(1536),
     embedding_model text,
     search_vector   tsvector,
     metadata        jsonb not null default '{}',
@@ -106,7 +106,7 @@ create index idx_journal_entries_location
 
 create index idx_journal_entries_embedding_hnsw
     on public.journal_entries
-    using hnsw (embedding vector_cosine_ops)
+    using hnsw (embedding extensions.vector_cosine_ops)
     with (m = 16, ef_construction = 64);
 
 create index idx_journal_entries_embedding_model

@@ -1,10 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { WifiOff } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { BreathingCard, Greeting, HomeCheckInSection, JournalListCard, MoodSnapshotStrip, StreakBanner } from "@/components/home";
-import { Header } from "@/components/ui";
+import { BreathingCard, DriftCard, Greeting, HomeCheckInSection, JournalListCard, MoodSnapshotStrip, StreakBanner } from "@/components/home";
+import { EmptyState, Header, Skeleton } from "@/components/ui";
 import {
   useCalendarRange,
   useHeaderHeight,
@@ -14,6 +15,7 @@ import {
   useTheme,
 } from "@/hooks";
 import { queryKeys } from "@/lib/queryKeys";
+import { useAuthStore } from "@/stores/authStore";
 import { spacing } from "@/styles";
 
 import { styles } from "@/styles/screens/homeStyles";
@@ -26,9 +28,12 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useProfile();
   const { streak } = useCalendarRange();
-  const { data: journals = [] } = useJournals();
+  const { data: journals, isError: journalsError, refetch: refetchJournals } = useJournals();
+
+  const isFirstLoad = profileLoading && !profile;
+  const isError = profileError && journalsError;
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -41,6 +46,16 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [queryClient]);
 
+  const handleRetry = useCallback(async () => {
+    await useAuthStore.getState().initialize();
+    await Promise.all([refetchProfile(), refetchJournals()]);
+  }, [refetchProfile, refetchJournals]);
+
+  const contentPadding = {
+    paddingTop: headerHeight + spacing.xl,
+    paddingBottom: tabBarHeight + spacing.md,
+  };
+
   return (
     <View style={styles.root}>
       <Header title={t("home.title")} />
@@ -48,10 +63,8 @@ export default function HomeScreen() {
         style={styles.content}
         contentContainerStyle={[
           styles.scrollContent,
-          {
-            paddingTop: headerHeight + spacing.xl,
-            paddingBottom: tabBarHeight + spacing.md,
-          },
+          contentPadding,
+          (isFirstLoad || isError) && styles.centeredContent,
         ]}
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical
@@ -63,18 +76,38 @@ export default function HomeScreen() {
           />
         }
       >
-        <Greeting displayName={profile?.display_name ?? null} />
-        <MoodSnapshotStrip />
-        {streak > 0 ? <StreakBanner streak={streak} /> : null}
-        {journals.length > 0 ? (
-          <JournalListCard
-            journals={journals}
-            label={t("home.myJournals")}
-            actionLabel={t("home.viewAll")}
+        {isFirstLoad ? (
+          <View style={styles.loadingContainer}>
+            <Skeleton shape="text" width="60%" height={28} />
+            <Skeleton shape="rect" height={60} />
+            <Skeleton shape="rect" height={120} />
+            <Skeleton shape="rect" height={80} />
+          </View>
+        ) : isError ? (
+          <EmptyState
+            icon={WifiOff}
+            title={t("common.error.connectionTitle")}
+            subtitle={t("common.error.connectionSubtitle")}
+            actionLabel={t("common.tryAgain")}
+            onAction={handleRetry}
           />
-        ) : null}
-        <HomeCheckInSection />
-        <BreathingCard />
+        ) : (
+          <>
+            <Greeting displayName={profile?.display_name ?? null} />
+            <MoodSnapshotStrip />
+            {streak > 0 ? <StreakBanner streak={streak} /> : null}
+            {(journals ?? []).length > 0 ? (
+              <JournalListCard
+                journals={journals ?? []}
+                label={t("home.myJournals")}
+                actionLabel={t("home.viewAll")}
+              />
+            ) : null}
+            <HomeCheckInSection />
+            <BreathingCard />
+            <DriftCard />
+          </>
+        )}
       </ScrollView>
     </View>
   );

@@ -5,12 +5,12 @@ import {
   vec,
 } from "@shopify/react-native-skia";
 import { Flame } from "lucide-react-native";
-import { useCallback, useState } from "react";
-import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { AppText, Icon } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
+import { useCanvasSize } from "@/lib/animation";
 import { withAlpha } from "@/lib/colorUtils";
 import { radius, spacing } from "@/styles";
 
@@ -24,19 +24,14 @@ const BANNER_RADIUS = 16;
 export function StreakBanner({ streak }: StreakBannerProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const [size, setSize] = useState({ width: 0, height: 0 });
-
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setSize({ width, height });
-  }, []);
+  const { size, onLayout, hasSize } = useCanvasSize();
 
   return (
     <View
       style={[styles.container, { borderColor: colors.glassBorder }]}
-      onLayout={handleLayout}
+      onLayout={onLayout}
     >
-      {size.width > 0 ? (
+      {hasSize ? (
         <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
           <RoundedRect
             x={0}

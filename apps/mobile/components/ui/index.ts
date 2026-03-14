@@ -31,6 +31,9 @@ export type { HeaderActionProps, HeaderProps } from "./Header";
 export { Icon } from "./Icon";
 export type { IconProps, IconSize } from "./Icon";
 
+export { LoadingScreen } from "./LoadingScreen";
+export type { LoadingScreenProps, LoadingScreenVariant } from "./LoadingScreen";
+
 export { MoodSelector } from "./MoodSelector";
 export type { MoodSelectorProps } from "./MoodSelector";
 

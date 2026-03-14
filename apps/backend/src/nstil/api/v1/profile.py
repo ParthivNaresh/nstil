@@ -16,13 +16,7 @@ async def get_profile(
     user: Annotated[UserPayload, Depends(get_current_user)],
     service: Annotated[CachedProfileService, Depends(get_profile_service)],
 ) -> ProfileResponse:
-    row = await service.get(UUID(user.sub))
-    if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found",
-        )
-    return ProfileResponse.from_row(row)
+    return ProfileResponse.from_row(await service.ensure(UUID(user.sub)))
 
 
 @router.patch("", response_model=ProfileResponse)

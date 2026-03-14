@@ -22,6 +22,18 @@ export class ApiError extends Error {
   }
 }
 
+export class NetworkError extends Error {
+  readonly cause: unknown;
+
+  constructor(cause: unknown) {
+    const message =
+      cause instanceof Error ? cause.message : "Network request failed";
+    super(message);
+    this.name = "NetworkError";
+    this.cause = cause;
+  }
+}
+
 export class NoSessionError extends Error {
   constructor() {
     super("No active session");

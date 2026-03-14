@@ -15,6 +15,9 @@ A cross-platform reflection and journaling companion with on-device AI intellige
 - **Insights dashboard** — Streak banners, weekly summaries, mood anomaly detection, mood trend charts, year-in-pixels grid
 - **Push notifications** — Scheduled reminders with configurable cadence, quiet hours, personalized text
 - **Glassmorphism UI** — Three theme palettes (dark/light/OLED), Skia GPU-rendered ambient background, haptic feedback throughout
+- **Network resilience** — Typed error classes, error-aware query retry with exponential backoff, screen-level error states with retry
+- **Observability** — Sentry crash reporting with session replay, structured backend logging
+- **Wellness features** — Guided breathing exercises (3 patterns, shader orb, haptics), ambient drift mini-game
 
 ## Tech Stack
 
@@ -24,6 +27,7 @@ A cross-platform reflection and journaling companion with on-device AI intellige
 | GPU Rendering | @shopify/react-native-skia |
 | State | Zustand + TanStack React Query |
 | On-device AI | Apple Foundation Models (iOS 26+) via custom Expo native module |
+| Error Tracking | Sentry (@sentry/react-native) with session replay and source maps |
 | Backend | FastAPI, Python 3.12+, strict mypy |
 | Database | Supabase (Postgres with RLS, full-text search, RPCs) |
 | Cache | Redis with pattern-based invalidation |
@@ -121,7 +125,9 @@ All CI jobs use `just` commands for consistency with local development.
 | 3 — Journal Entry CRUD | ✅ |
 | 4 — Core Journaling Features | 🔄 (4C rich text, 4G management screen remaining) |
 | 5 — AI Intelligence Layer | ✅ (iOS; Android pending) |
-| 6 — Production Deployment | Not started |
+| 6 — Onboarding & Home Screen | 🔄 (onboarding, greeting, mood snapshots done; home polish remaining) |
+| 7 — Wellness & Mini-Games | 🔄 (breathing ✅, drift in progress) |
+| 8 — Production & Observability | 🔄 (Sentry, network resilience, CI/CD, rate limiting done; SMTP, app store remaining) |
 
 See [ROADMAP.md](ROADMAP.md) for the full development plan.
 

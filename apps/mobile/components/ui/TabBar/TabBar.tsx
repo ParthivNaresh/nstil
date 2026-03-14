@@ -22,8 +22,7 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [menuVisible, setMenuVisible] = useState(false);
 
-  const buttonCenterY =
-    screenHeight - insets.bottom - TAB_BAR_CONTENT_HEIGHT / 2 - CREATE_BUTTON_LIFT;
+  const tabBarTopY = screenHeight - insets.bottom - TAB_BAR_CONTENT_HEIGHT;
 
   const handleCreatePress = useCallback(() => {
     setMenuVisible((prev) => !prev);
@@ -101,7 +100,7 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
         onClose={handleMenuClose}
         onNewEntry={handleNewEntry}
         onNewJournal={handleNewJournal}
-        anchorY={buttonCenterY}
+        anchorY={tabBarTopY}
       />
       <View
         style={[

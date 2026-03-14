@@ -2,6 +2,7 @@ import { Check } from "lucide-react-native";
 import { useCallback, useEffect, useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
+  cancelAnimation,
   FadeIn,
   useAnimatedStyle,
   useSharedValue,
@@ -56,6 +57,7 @@ export function CheckInOutcome({
       -1,
       true,
     );
+    return () => cancelAnimation(pulseScale);
   }, [pulseScale]);
 
   useEffect(() => {
@@ -92,6 +94,14 @@ export function CheckInOutcome({
     }
     onComplete();
     router.push("/breathing");
+  }, [onComplete, router]);
+
+  const handleDrift = useCallback(() => {
+    if (autoCompleteRef.current) {
+      clearTimeout(autoCompleteRef.current);
+    }
+    onComplete();
+    router.push("/drift");
   }, [onComplete, router]);
 
   const pulseStyle = useAnimatedStyle(() => ({
@@ -142,15 +152,34 @@ export function CheckInOutcome({
             variant="secondary"
             disabled={isSubmitting}
           />
-          <Pressable
-            onPress={handleBreathing}
-            style={styles.breathingLink}
-            hitSlop={8}
-          >
-            <AppText variant="caption" color={colors.accent}>
+          <View style={styles.momentLinks}>
+            <AppText variant="caption" color={colors.textTertiary}>
               {t("checkIn.needAMoment")}
             </AppText>
-          </Pressable>
+            <View style={styles.momentOptions}>
+              <Pressable
+                onPress={handleBreathing}
+                style={styles.momentLink}
+                hitSlop={8}
+              >
+                <AppText variant="caption" color={colors.accent}>
+                  {t("checkIn.tryBreathing")}
+                </AppText>
+              </Pressable>
+              <AppText variant="caption" color={colors.textTertiary}>
+                ·
+              </AppText>
+              <Pressable
+                onPress={handleDrift}
+                style={styles.momentLink}
+                hitSlop={8}
+              >
+                <AppText variant="caption" color={colors.accent}>
+                  {t("checkIn.tryDrifting")}
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
         </View>
       ) : null}
     </Animated.View>
@@ -188,8 +217,18 @@ const styles = StyleSheet.create({
   footer: {
     gap: spacing.md,
   },
-  breathingLink: {
+  momentLinks: {
     alignItems: "center",
+    gap: spacing.xs,
     paddingVertical: spacing.xs,
+  },
+  momentOptions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  momentLink: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
 });
