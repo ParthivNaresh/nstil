@@ -454,17 +454,6 @@ Three bugs fixed: gesture reliability, binary movement, and canvas height mismat
 - [ ] Keep subtle glow halo behind for visibility against dark backgrounds
 - [ ] Squash transform on touch still applies to whole group
 
-#### Step 14: Wind-streak particles
-
-**Problem:** Reference has 2-3 diagonal white streaks suggesting motion. Planned but deferred.
-
-**Files:** New `components/drift/DriftScene/WindStreaks.tsx`, `components/drift/DriftScene/DriftScene.tsx`, `components/drift/DriftScene/types.ts`, `components/drift/DriftScene/index.ts`
-
-- [ ] 3-5 `Line` elements, low opacity white, slight diagonal angle (~15-20°)
-- [ ] Positions driven by `scrollX` SharedValue
-- [ ] Varying lengths (30-80px) and opacities (0.1-0.3)
-- [ ] Phase-aware: more visible at dusk/night, less during bright day
-
 #### Execution order
 
 1. **Step 9** (gesture fix) — functional bug, fix first
