@@ -8,3 +8,7 @@ class InvalidTokenError(Exception):
 
 class TokenRevokedError(Exception):
     pass
+
+
+class ProfileCreationError(Exception):
+    pass

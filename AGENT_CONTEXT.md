@@ -188,7 +188,7 @@ All AI inference runs on-device via Apple Foundation Models (iOS 26+). No cloud 
 
 The auth guard lives in `app/_layout.tsx` (root layout), NOT in `app/index.tsx`. It uses `useSegments()` + `useAuthStore` to reactively navigate:
 
-- **Authenticated user in `(auth)` group** → `router.replace("/(tabs)")`
+- **Authenticated user in `(auth)` group** → `router.replace("/(tabs)")` (tabs layout gates onboarding)
 - **Unauthenticated user outside `(auth)` group** → `router.replace("/(auth)")`
 
 `app/index.tsx` handles cold-start routing only (initial load, onboarding check, profile fetch). It uses declarative `<Redirect>` which commits a permanent navigation state — once it fires, `router.replace("/")` from inside a group will NOT re-mount the root index. This is an Expo Router behavior.

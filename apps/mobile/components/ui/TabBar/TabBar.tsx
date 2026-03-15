@@ -16,7 +16,7 @@ export const TAB_BAR_CONTENT_HEIGHT = 60;
 const CREATE_BUTTON_LIFT = 16;
 
 export function TabBar({ state, descriptors, navigation }: TabBarProps) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, mode } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -112,7 +112,7 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
         ]}
         pointerEvents="box-none"
       >
-        <CreateTabButton onPress={handleCreatePress} isMenuOpen={menuVisible} />
+        <CreateTabButton key={mode} onPress={handleCreatePress} isMenuOpen={menuVisible} />
       </View>
     </>
   );

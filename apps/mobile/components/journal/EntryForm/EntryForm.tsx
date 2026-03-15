@@ -16,6 +16,7 @@ import { spacing } from "@/styles";
 import type { EntryFormProps } from "./types";
 
 export function EntryForm({
+  bodyLabel,
   reflectionSlot,
   journals,
   journalId,
@@ -94,7 +95,7 @@ export function EntryForm({
       {reflectionSlot}
 
       <TextArea
-        label={t("journal.body")}
+        label={bodyLabel ?? t("journal.body")}
         value={body}
         onChangeText={onBodyChange}
         error={bodyError ? t(bodyError) : undefined}

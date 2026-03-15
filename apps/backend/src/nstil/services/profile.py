@@ -1,11 +1,15 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+from postgrest.exceptions import APIError
 from supabase import AsyncClient
 
+from nstil.core.exceptions import ProfileCreationError
 from nstil.models.profile import ProfileRow, ProfileUpdate
 
 TABLE = "profiles"
+
+FK_VIOLATION_CODE = "23503"
 
 
 class ProfileService:
@@ -25,9 +29,18 @@ class ProfileService:
         if existing is not None:
             return existing
 
-        result = await (
-            self._client.table(TABLE).upsert({"id": str(user_id)}, on_conflict="id").execute()
-        )
+        try:
+            result = await (
+                self._client.table(TABLE)
+                .upsert({"id": str(user_id)}, on_conflict="id")
+                .execute()
+            )
+        except APIError as exc:
+            if exc.code == FK_VIOLATION_CODE:
+                raise ProfileCreationError(
+                    f"Auth user {user_id} not found in database"
+                ) from exc
+            raise
         return ProfileRow.model_validate(result.data[0])
 
     async def update(self, user_id: UUID, data: ProfileUpdate) -> ProfileRow | None:

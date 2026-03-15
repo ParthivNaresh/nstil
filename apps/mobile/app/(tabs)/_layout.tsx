@@ -1,10 +1,20 @@
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { useTranslation } from "react-i18next";
 
-import { TabBar } from "@/components/ui";
+import { LoadingScreen, TabBar } from "@/components/ui";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function TabLayout() {
   const { t } = useTranslation();
+  const { data: profile, isLoading } = useProfile();
+
+  if (isLoading) {
+    return <LoadingScreen variant="loading" />;
+  }
+
+  if (profile && !profile.onboarding_completed_at) {
+    return <Redirect href="/(onboarding)" />;
+  }
 
   return (
     <Tabs

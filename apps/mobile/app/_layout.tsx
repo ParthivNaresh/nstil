@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
+import { handleFreshInstall } from "@/lib/freshInstall";
 import { useNotificationSync } from "@/hooks/useNotificationSync";
 import { setupDeepLinkListener } from "@/lib/deepLink";
 import {
@@ -72,6 +73,7 @@ export default Sentry.wrap(function RootLayout() {
   useEffect(() => {
     const boot = async () => {
       try {
+        await handleFreshInstall();
         await initializeAuth();
       } catch {
         // proceed with null session

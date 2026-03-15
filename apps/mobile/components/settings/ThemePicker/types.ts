@@ -3,7 +3,7 @@ import type { ThemeMode } from "@/stores/themeStore";
 export interface ThemeModeOption {
   readonly value: ThemeMode;
   readonly labelKey: string;
-  readonly previewColors: readonly [string, string, string];
+  readonly previewColors: readonly [string, string, string, string, string];
 }
 
 export interface ThemePickerProps {

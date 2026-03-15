@@ -12,6 +12,7 @@ import {
 
 import { useTheme } from "@/hooks/useTheme";
 import { useCanvasSize } from "@/lib/animation";
+import { useThemeStore } from "@/stores/themeStore";
 
 import { getAmbientColors } from "./ambientColors";
 import { ambientShader } from "./shader";
@@ -20,8 +21,20 @@ import type { AmbientBackgroundProps } from "./types";
 const CYCLE_DURATION_MS = 120_000;
 const CYCLE_MAX = 1000;
 
+function useActiveCustomAmbient() {
+  const customThemes = useThemeStore((s) => s.customThemes);
+  const activeCustomId = useThemeStore((s) => s.activeCustomId);
+
+  return useMemo(() => {
+    if (!activeCustomId) return null;
+    const theme = customThemes.find((t) => t.id === activeCustomId);
+    return theme?.built.ambient ?? null;
+  }, [customThemes, activeCustomId]);
+}
+
 export function AmbientBackground({ style }: AmbientBackgroundProps) {
   const { mode, isDark } = useTheme();
+  const customAmbient = useActiveCustomAmbient();
   const { size, onLayout, hasSize } = useCanvasSize();
   const time = useSharedValue(0);
 
@@ -38,8 +51,8 @@ export function AmbientBackground({ style }: AmbientBackgroundProps) {
   }, [time]);
 
   const colorSet = useMemo(
-    () => getAmbientColors(mode, isDark),
-    [mode, isDark],
+    () => getAmbientColors(mode, isDark, customAmbient),
+    [mode, isDark, customAmbient],
   );
 
   const uniforms = useDerivedValue(() => ({

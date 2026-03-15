@@ -1,4 +1,6 @@
 import type { ThemeMode } from "@/stores/themeStore";
+import type { PresetId } from "@/styles/presetPalettes";
+import { getPresetTheme } from "@/styles/presetPalettes";
 
 export interface AmbientColorSet {
   readonly color1: readonly [number, number, number, number];
@@ -24,15 +26,34 @@ const oledColors: AmbientColorSet = {
   color3: [0.04, 0.12, 0.24, 1.0],
 };
 
-const COLOR_MAP: Record<Exclude<ThemeMode, "auto">, AmbientColorSet> = {
+const STANDARD_COLOR_MAP: Record<string, AmbientColorSet> = {
   dark: darkColors,
   light: lightColors,
   oled: oledColors,
 };
 
-export function getAmbientColors(mode: ThemeMode, resolvedIsDark: boolean): AmbientColorSet {
+export function getAmbientColors(
+  mode: ThemeMode,
+  resolvedIsDark: boolean,
+  customAmbient?: AmbientColorSet | null,
+): AmbientColorSet {
   if (mode === "auto") {
     return resolvedIsDark ? darkColors : lightColors;
   }
-  return COLOR_MAP[mode];
+
+  if (mode === "custom" && customAmbient) {
+    return customAmbient;
+  }
+
+  const standard = STANDARD_COLOR_MAP[mode];
+  if (standard) {
+    return standard;
+  }
+
+  const preset = getPresetTheme(mode as PresetId);
+  if (preset) {
+    return preset.ambient;
+  }
+
+  return darkColors;
 }

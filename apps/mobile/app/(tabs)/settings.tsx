@@ -1,10 +1,9 @@
 import { useRouter } from "expo-router";
-import { Bell, Sparkles } from "lucide-react-native";
+import { Bell, Palette, Sparkles } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 
-import { ThemePicker } from "@/components/settings";
 import { AppText, Avatar, Button, Card, Divider, Icon, ScreenContainer } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/stores/authStore";
@@ -13,7 +12,7 @@ import { spacing } from "@/styles";
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
-  const { colors, mode, setMode } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const signOut = useAuthStore((s) => s.signOut);
   const clearScheduled = useNotificationStore((s) => s.clearScheduled);
@@ -32,6 +31,10 @@ export default function SettingsScreen() {
       setIsSigningOut(false);
     }
   }, [signOut, clearScheduled, router]);
+
+  const handleTheme = useCallback(() => {
+    router.push("/settings/theme");
+  }, [router]);
 
   const handleNotifications = useCallback(() => {
     router.push("/settings/notifications");
@@ -52,8 +55,21 @@ export default function SettingsScreen() {
           </AppText>
         </View>
 
-        <Card>
-          <ThemePicker currentMode={mode} onSelect={setMode} />
+        <Card
+          onPress={handleTheme}
+          showChevron
+        >
+          <View style={styles.menuRow}>
+            <Icon icon={Palette} size="md" color={colors.accent} />
+            <View style={styles.menuText}>
+              <AppText variant="label">
+                {t("settings.theme")}
+              </AppText>
+              <AppText variant="caption" color={colors.textTertiary}>
+                {t("settings.themeSubtitle")}
+              </AppText>
+            </View>
+          </View>
         </Card>
 
         <Card

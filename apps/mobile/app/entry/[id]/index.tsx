@@ -35,7 +35,7 @@ export default function EntryScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, prompt } = useLocalSearchParams<{ id: string; prompt?: string }>();
   const { data: entry, isLoading: entryLoading } = useEntry(id);
   const { data: mediaResponse, isLoading: mediaLoading } = useEntryMedia(id);
 
@@ -77,6 +77,7 @@ export default function EntryScreen() {
     <EntryFormScreen
       entryId={id}
       existingMediaItems={mediaResponse?.items ?? []}
+      bodyLabel={prompt}
     />
   );
 }
@@ -84,9 +85,10 @@ export default function EntryScreen() {
 interface EntryFormScreenProps {
   readonly entryId: string;
   readonly existingMediaItems: EntryMedia[];
+  readonly bodyLabel?: string;
 }
 
-function EntryFormScreen({ entryId, existingMediaItems }: EntryFormScreenProps) {
+function EntryFormScreen({ entryId, existingMediaItems, bodyLabel }: EntryFormScreenProps) {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const router = useRouter();
@@ -186,6 +188,7 @@ function EntryFormScreen({ entryId, existingMediaItems }: EntryFormScreenProps) 
         >
           <View style={styles.content}>
             <EntryForm
+              bodyLabel={bodyLabel}
               reflectionSlot={
                 reflection ? (
                   <ReflectionCard
