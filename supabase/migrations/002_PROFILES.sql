@@ -3,6 +3,11 @@ create table public.profiles (
     display_name            text,
     avatar_url              text,
     onboarding_completed_at timestamptz,
+    theme_mode              text not null default 'dark'
+                            constraint profiles_theme_mode_check
+                            check (theme_mode in ('dark','light','oled','auto','custom','sunset','forest','ocean','rose')),
+    custom_themes           jsonb not null default '[]',
+    active_custom_theme_id  text,
     created_at              timestamptz not null default now(),
     updated_at              timestamptz not null default now()
 );

@@ -3,10 +3,13 @@ import { useTranslation } from "react-i18next";
 
 import { LoadingScreen, TabBar } from "@/components/ui";
 import { useProfile } from "@/hooks/useProfile";
+import { useThemeSync } from "@/hooks/useThemeSync";
 
 export default function TabLayout() {
   const { t } = useTranslation();
   const { data: profile, isLoading } = useProfile();
+
+  useThemeSync(profile);
 
   if (isLoading) {
     return <LoadingScreen variant="loading" />;

@@ -8,6 +8,7 @@ import type { PresetId } from "@/styles/presetPalettes";
 import { getPresetTheme } from "@/styles/presetPalettes";
 import type { BuiltCustomTheme, CustomThemeInput } from "@/lib/themeBuilder";
 import { buildCustomPalette } from "@/lib/themeBuilder";
+import type { StoredCustomThemeData } from "@/types/profile";
 
 export type ThemeMode = "dark" | "light" | "oled" | "auto" | "custom" | PresetId;
 
@@ -82,6 +83,12 @@ function resolveKeyboardAppearance(
   return resolveIsDark(mode, activeCustom) ? "dark" : "light";
 }
 
+export interface ThemeSnapshot {
+  readonly theme_mode: string;
+  readonly custom_themes: readonly StoredCustomThemeData[];
+  readonly active_custom_theme_id: string | null;
+}
+
 interface ThemeState {
   readonly mode: ThemeMode;
   readonly colors: ColorPalette;
@@ -96,6 +103,12 @@ interface ThemeState {
   updateCustomTheme: (id: string, name: string, input: CustomThemeInput) => void;
   deleteCustomTheme: (id: string) => void;
   activateCustomTheme: (id: string) => void;
+  syncFromProfile: (
+    themeMode: string,
+    serverThemes: readonly StoredCustomThemeData[],
+    activeId: string | null,
+  ) => void;
+  getThemeSnapshot: () => ThemeSnapshot;
 }
 
 function computeState(
@@ -308,5 +321,45 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       ...computeState("custom", customThemes, id),
       activeCustomId: id,
     });
+  },
+
+  syncFromProfile: (
+    themeMode: string,
+    serverThemes: readonly StoredCustomThemeData[],
+    activeId: string | null,
+  ) => {
+    const mode: ThemeMode = isValidMode(themeMode) ? themeMode : "dark";
+    const customThemes: readonly SavedCustomTheme[] = serverThemes
+      .filter((t): t is StoredCustomThemeData => isValidStoredTheme(t))
+      .slice(0, MAX_CUSTOM_THEMES)
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        input: t.input,
+        built: buildCustomPalette(t.input),
+      }));
+
+    persistMode(mode);
+    persistCustomThemes(customThemes);
+    persistActiveCustomId(activeId);
+
+    set({
+      ...computeState(mode, customThemes, activeId),
+      customThemes,
+      activeCustomId: activeId,
+    });
+  },
+
+  getThemeSnapshot: (): ThemeSnapshot => {
+    const { mode, customThemes, activeCustomId } = get();
+    return {
+      theme_mode: mode,
+      custom_themes: customThemes.map((t) => ({
+        id: t.id,
+        name: t.name,
+        input: t.input,
+      })),
+      active_custom_theme_id: activeCustomId,
+    };
   },
 }));

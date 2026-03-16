@@ -2,186 +2,107 @@
 
 ## Overview
 
-Transform the inline Theme picker in Settings into a full Theme page with preset themes, and up to 3 user-created custom themes with a modal-based color editor. The feature is split into phases, each independently shippable.
+Full theme customization system: preset themes, up to 4 user-created custom themes with 8 color fields, modal-based editor with color picker, local persistence via SecureStore, server persistence via profile API.
 
 ---
 
-## Decisions
+## Decisions (Final)
 
 | Question | Decision |
 |----------|----------|
 | Color picker library | `reanimated-color-picker` (installed) |
-| Color selection UX | Gradient panel (hue wheel + saturation/brightness) with confirm button |
-| Exposed color count | 3 (textPrimary, textSecondary, accent) — background/surface locked to dark palette |
-| Max custom themes | 3 per user |
-| Custom theme UI | Modal (like LocationSearchSheet), not inline expand or separate screen |
+| Color selection UX | Centered floating card modal (LocationSearchSheet pattern), confirm/cancel |
+| Exposed color count | 8 (background, cardColor, textPrimary, textSecondary, accent, gradient1, gradient2, gradient3) |
+| Max custom themes | 4 per user |
+| Custom theme UI | Modal (pageSheet for editor, floating card for color picker) |
 | Preset themes | 4 curated (Sunset, Forest, Ocean, Rosé) alongside Dark/Light/OLED/Auto |
 | Theme page navigation | Chevron on Theme card in Settings → dedicated Theme screen |
-| Persistence | SecureStore locally (Phase B), server-side in Phase C |
+| Local persistence | SecureStore: `nstil_theme_mode`, `nstil_custom_themes`, `nstil_active_custom_id` |
+| Server persistence | Phase C — `profiles` table columns |
 
 ---
 
 ## Phase A — Theme Page & Preset Themes ✅
 
-Completed. Settings → Theme card → Theme page with Standard (4) + Presets (4) sections.
+Settings → Theme card → Theme page with Standard (4) + Presets (4) sections.
 
 ---
 
-## Phase B — Custom Theme Editor (Revised)
+## Phase B — Custom Theme Editor ✅
 
-### Data Model
+### Final Data Model
 
-**Current (single custom theme):**
 ```typescript
-customInput: CustomThemeInput        // { textPrimary, textSecondary, accent }
-customBuilt: BuiltCustomTheme | null // derived palette + ambient
-ThemeMode includes "custom"
-```
+interface CustomThemeInput {
+  readonly background: string;    // Root layout bg, shader base
+  readonly cardColor: string;     // Surface, sheet, surfaceElevated (derived)
+  readonly textPrimary: string;   // Headings, body text
+  readonly textSecondary: string; // Subtitles, captions, textTertiary (derived)
+  readonly accent: string;        // Buttons, icons, glass/glassBorder (derived)
+  readonly gradient1: string;     // Ambient shader base color
+  readonly gradient2: string;     // Ambient shader primary glow
+  readonly gradient3: string;     // Ambient shader secondary glow
+}
 
-**New (up to 3 custom themes):**
-```typescript
 interface SavedCustomTheme {
-  readonly id: string;               // uuid or "custom_0" / "custom_1" / "custom_2"
-  readonly name: string;             // user-visible label, e.g. "My Theme 1"
-  readonly input: CustomThemeInput;  // { textPrimary, textSecondary, accent }
-  readonly built: BuiltCustomTheme;  // derived palette + ambient
+  readonly id: string;
+  readonly name: string;
+  readonly input: CustomThemeInput;
+  readonly built: BuiltCustomTheme;  // derived at load time, not persisted
 }
 
 // Store state
-customThemes: readonly SavedCustomTheme[];  // max 3
-activeCustomId: string | null;              // which custom theme is active (when mode === "custom")
+customThemes: readonly SavedCustomTheme[];  // max 4
+activeCustomId: string | null;
 ```
 
-**`ThemeMode` stays as `"custom"`** — when mode is `"custom"`, the store looks up `activeCustomId` in `customThemes` to resolve the palette. This avoids polluting the `ThemeMode` union with dynamic IDs.
+### Store Actions
 
-**SecureStore persistence:**
-- `nstil_custom_themes` — JSON array of `{ id, name, input }` (max 3 items)
-- `nstil_active_custom_id` — string ID of the active custom theme
-- Remove `nstil_custom_theme_input` (old single-theme key)
+| Action | Description |
+|--------|-------------|
+| `saveCustomTheme(name, input)` | Creates new theme, activates it, persists |
+| `updateCustomTheme(id, name, input)` | Updates existing theme in-place |
+| `deleteCustomTheme(id)` | Removes theme, falls back to last remaining or dark |
+| `activateCustomTheme(id)` | Sets mode to "custom" + activeCustomId |
 
-### Custom Section UX
+### SecureStore Keys
 
-The "Custom" section on the Theme page shows:
+| Key | Content |
+|-----|---------|
+| `nstil_theme_mode` | String: `dark\|light\|oled\|auto\|custom\|sunset\|forest\|ocean\|rose` |
+| `nstil_custom_themes` | JSON array of `{ id, name, input }` (max 4, `built` derived on load) |
+| `nstil_active_custom_id` | String ID of active custom theme |
 
-```
-Custom
-┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-│  + New   │ │ Theme 1 │ │ Theme 2 │ │         │
-│          │ │  ✓      │ │         │ │         │
-└─────────┘ └─────────┘ └─────────┘ └─────────┘
-```
+### Builder Derivation (`buildCustomPalette`)
 
-- **First card is always "+" (New Theme)** — fixed position, always visible
-- **Saved custom themes** appear as cards to the right (same visual style as Standard/Preset cards, showing the 3 preview colors from the custom input)
-- **Active custom theme** has a check indicator (same as Standard/Preset cards)
-- **Tapping a saved custom theme** applies it immediately (same as tapping a preset)
-- **Long-press a saved custom theme** shows delete option
-- **Max 3 saved** — when 3 exist, the "+" card is hidden or disabled
+From 8 user inputs, derives full 25-token `ColorPalette` + `AmbientColorSet`:
+- `isDark` auto-detected from `background` luminance
+- `surface` = `cardColor` directly
+- `surfaceElevated` = `cardColor` ± brightness
+- `glass/glassBorder/glassHover` = `accent` at low opacity (5%/8%/10% dark, 60%/10%/70% light)
+- `textTertiary` = `textSecondary` at 57% opacity
+- `accentLight/accentMuted/onAccent` derived from `accent`
+- Semantic colors (success/warning/error) fixed per dark/light
+- Ambient colors from `gradient1/gradient2/gradient3` via `hexToNormalized4`
 
-### "New Theme" Flow
+### Components
 
-1. User taps "+" card
-2. **Modal opens** (full-screen `Modal` with `presentationStyle="pageSheet"`, same pattern as `LocationSearchSheet` and `ReflectionCard`)
-3. Modal shows:
-   - Header: "New Custom Theme" with X close button
-   - 3 color rows (Primary Text, Secondary Text, Accent) — pre-filled with the **currently active theme's** resolved colors
-   - Each row: label + color swatch + hex value. Tap opens the color picker
-   - Color picker: `reanimated-color-picker` panel with a **"Done" button** (check mark) to confirm the selection
-   - "Save Theme" button at the bottom
-4. While editing, the app shows a **live preview** — the modal is translucent enough to see the ambient background change, or the modal itself uses the draft colors for its own styling
-5. Tapping "Save Theme" → saves to `customThemes` array, sets mode to `"custom"`, sets `activeCustomId` to the new theme's ID, closes modal
-6. Tapping X → discards draft, closes modal, reverts to previous theme
-
-### Color Picker Confirmation
-
-The `ColorPickerSheet` currently auto-applies on `onCompleteJS`. Change to:
-
-1. User taps a color row → bottom sheet slides up with the picker
-2. User drags on the gradient panel — **preview updates live** (the draft color changes in real-time)
-3. User taps a **"Done" check mark button** at the top-right of the sheet → confirms the color, closes the sheet
-4. User taps backdrop → **cancels**, reverts to the previous color for that field
-
-This requires the `ColorPickerSheet` to manage a draft color internally and only commit on confirm.
-
-### Store Changes
-
-| Current | New |
-|---------|-----|
-| `customInput: CustomThemeInput` | `customThemes: SavedCustomTheme[]` (max 3) |
-| `customBuilt: BuiltCustomTheme \| null` | `activeCustomId: string \| null` |
-| `setCustomTheme(input)` | `saveCustomTheme(name, input)` — adds/updates a theme in the array |
-| — | `deleteCustomTheme(id)` — removes from array |
-| — | `activateCustomTheme(id)` — sets mode to "custom" + activeCustomId |
-| `resolvePalette("custom", customBuilt)` | `resolvePalette("custom", ...)` looks up `activeCustomId` in `customThemes` |
-
-### Component Changes
-
-| Component | Change |
-|-----------|--------|
-| `ThemePage` | Remove inline expand/collapse. Custom section renders a horizontal row of cards: "+" card + saved theme cards. Tapping "+" opens modal. |
-| `CustomThemeEditor` | Move into a `Modal` wrapper. Receives draft input as state, calls `onSave(input)` on confirm. |
-| `ColorPickerSheet` | Add "Done" confirm button (check mark icon). Manage internal draft color. Backdrop dismiss = cancel. |
-| `ColorRow` | No change — still shows label + swatch + hex. |
-| `ColorSection` | No change. |
-
-### New Components
-
-| Component | Purpose |
-|-----------|---------|
-| `CustomThemeModal` | Full-screen `Modal` wrapping `CustomThemeEditor` + header + save button. Manages draft state. Pre-fills from current theme's resolved colors. |
-| `CustomThemeCard` | Card for a saved custom theme in the grid. Shows preview colors, name, check indicator. Tap to activate, long-press to delete. |
-| `NewThemeCard` | The "+" card. Fixed first position. Tap opens `CustomThemeModal`. |
-
-### Pre-fill Logic
-
-When the user taps "+", the modal pre-fills the 3 color fields from the **currently active theme's resolved palette**:
-
-```typescript
-function getPreFillInput(colors: ColorPalette): CustomThemeInput {
-  return {
-    textPrimary: colors.textPrimary,
-    textSecondary: colors.textSecondary,
-    accent: colors.accent,
-  };
-}
-```
-
-This works for any theme — Dark, Light, OLED, presets, or an existing custom theme. The user sees the current colors and can tweak from there.
-
-**Edge case:** `textSecondary` in the existing palettes uses `rgba()` format (e.g., `"rgba(255, 255, 255, 0.70)"`), but the color picker works with hex. The pre-fill function needs to convert rgba to hex. Add a `rgbaToHex()` utility to `colorUtils.ts`.
-
-### i18n Keys
-
-```typescript
-settings.customTheme.newTheme: "New Custom Theme"
-settings.customTheme.saveTheme: "Save Theme"
-settings.customTheme.deleteTitle: "Delete Theme?"
-settings.customTheme.deleteMessage: "This custom theme will be removed."
-settings.customTheme.deleteConfirm: "Delete"
-settings.customTheme.deleteCancel: "Cancel"
-settings.customTheme.maxReached: "Maximum 3 custom themes"
-settings.customTheme.colorDone: "Done"
-```
-
-### Execution Steps
-
-| Step | Description | Status |
-|------|-------------|--------|
-| B1 | Update `themeStore` — replace single custom with `SavedCustomTheme[]` (max 3), `activeCustomId`, `saveCustomTheme()`, `deleteCustomTheme()`, `activateCustomTheme()`. Updated persistence to `nstil_custom_themes` + `nstil_active_custom_id`. Updated `useTheme` hook. Updated `AmbientBackground` to read active custom ambient. | ✅ |
-| B2 | Add `rgbaToHex()` to `colorUtils.ts` for pre-fill conversion | ✅ |
-| B3 | Update `ColorPickerSheet` — converted to centered floating card modal matching `LocationSearchSheet` pattern (`Modal transparent animationType="none"`, centered overlay, `CARD_WIDTH` max 340px, `borderRadius["2xl"]`, `FadeIn`/`FadeOut`). Check/X confirm/cancel in header. Internal `draftColor` state. Props changed to `onConfirm`/`onCancel`. `CustomThemeEditor` updated to match. | ✅ |
-| B4 | Create `CustomThemeCard` — saved theme card matching `ThemeModeCard` visual style, preview colors from custom input, check indicator when active, tap to activate with haptic, long-press to delete with Alert confirmation. | ✅ |
-| B5 | Create `NewThemeCard` — "+" card with dashed border, Plus icon, disabled at opacity 0.4 when 3 themes exist. | ✅ |
-| B6 | Create `CustomThemeModal` — `Modal` with `presentationStyle="pageSheet"`, X close + title header, `CustomThemeEditor` in `ScrollView`, "Save Theme" footer button. Pre-fills from current palette via `getPreFillInput()` + `rgbaToHex()`. Draft state resets on open. | ✅ |
-| B7 | Update `ThemePage` — Custom section renders `NewThemeCard` + `CustomThemeCard` cards. "+" opens modal, save auto-names and commits to store, activate/delete wired to store actions. | ✅ |
-| B8 | Update `freshInstall.ts` — new SecureStore keys | ✅ |
-| B9 | i18n keys — added `newTheme`, `newLabel`, `saveTheme`, `deleteTitle`, `deleteMessage`, `deleteConfirm`, `deleteCancel`, `maxReached`, `textSection`, `accentSection`, `primary`, `secondary`, `accent`, `subtitle` under `settings.customTheme`. Added `custom` to `settings.themeSections`. | ✅ |
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `ThemePage` | `components/settings/ThemePage/` | Standard + Presets + Custom sections with grid layout |
+| `CustomThemeCard` | `components/settings/ThemePage/` | Saved theme card with 5-color preview, pencil edit button |
+| `NewThemeCard` | `components/settings/ThemePage/` | "+" card, dashed border, disabled at max |
+| `CustomThemeModal` | `components/settings/CustomThemeEditor/` | pageSheet modal with name input, editor, save/delete |
+| `CustomThemeEditor` | `components/settings/CustomThemeEditor/` | 4 sections (Surfaces, Text, Accent, Gradient) with color rows |
+| `ColorPickerSheet` | `components/settings/CustomThemeEditor/` | Centered floating card modal with reanimated-color-picker |
+| `ColorRow` | `components/settings/CustomThemeEditor/` | Tappable row: label + hex + swatch |
+| `ColorSection` | `components/settings/CustomThemeEditor/` | Section wrapper with title |
 
 ---
 
 ## Phase C — Backend Persistence & Sync
 
-### Database Migration
+### Database Migration: `011_PROFILE_THEME.sql`
 
 ```sql
 ALTER TABLE public.profiles
@@ -192,27 +113,99 @@ ALTER TABLE public.profiles
     ADD COLUMN active_custom_theme_id text;
 ```
 
-`custom_themes` stores the array of `{ id, name, input }` objects (max 3). `active_custom_theme_id` stores which custom theme is active when `theme_mode = 'custom'`.
+`custom_themes` stores array of `{ id, name, input }` objects (max 4). Each `input` has 8 string fields. `active_custom_theme_id` stores which custom theme is active when `theme_mode = 'custom'`.
 
-### Backend Changes
+### Backend Model Changes (`models/profile.py`)
 
-- `ProfileRow`, `ProfileUpdate`, `ProfileResponse` — add `theme_mode`, `custom_themes`, `active_custom_theme_id`
-- Validation: `custom_themes` array max length 3, each item validated against `CustomThemeInput` schema
-- Existing `PATCH /api/v1/profile` handles the new fields
+New Pydantic models:
+```python
+class CustomThemeInputModel(BaseModel):
+    background: str
+    cardColor: str
+    textPrimary: str
+    textSecondary: str
+    accent: str
+    gradient1: str
+    gradient2: str
+    gradient3: str
 
-### Mobile Sync
+class StoredCustomThemeModel(BaseModel):
+    id: str
+    name: str = Field(max_length=20)
+    input: CustomThemeInputModel
 
-- On profile fetch: if server `theme_mode` differs from local, apply server's theme
-- On theme change: update store → persist to SecureStore → fire `PATCH /api/v1/profile`
+VALID_THEME_MODES = {"dark","light","oled","auto","custom","sunset","forest","ocean","rose"}
+MAX_CUSTOM_THEMES = 4
+```
+
+Updated models:
+- `ProfileRow` — add `theme_mode: str`, `custom_themes: list[dict[str, object]]`, `active_custom_theme_id: str | None`
+- `ProfileUpdate` — add optional `theme_mode`, `custom_themes`, `active_custom_theme_id` with validation
+- `ProfileResponse` — add same 3 fields
+
+Validation on `ProfileUpdate`:
+- `theme_mode` must be in `VALID_THEME_MODES`
+- `custom_themes` max length 4, each validated against `StoredCustomThemeModel`
+- `active_custom_theme_id` must reference an ID in `custom_themes` if `theme_mode == "custom"`
+
+### Backend Service Changes
+
+No service changes needed — `ProfileService.update()` already handles arbitrary column updates via `to_update_dict()`. The cache layer (`CachedProfileService`) invalidates on update.
+
+### Backend Tests
+
+- Model tests: validate `CustomThemeInputModel`, reject invalid hex, reject >4 themes
+- API tests: PATCH with theme fields → 200, PATCH with invalid theme_mode → 422
+
+### Mobile Type Changes (`types/profile.ts`)
+
+```typescript
+interface Profile {
+  // ...existing fields...
+  readonly theme_mode: string;
+  readonly custom_themes: readonly StoredCustomTheme[];
+  readonly active_custom_theme_id: string | null;
+}
+
+interface StoredCustomTheme {
+  readonly id: string;
+  readonly name: string;
+  readonly input: CustomThemeInput;
+}
+
+interface ProfileUpdate {
+  readonly display_name?: string | null;
+  readonly theme_mode?: string;
+  readonly custom_themes?: readonly StoredCustomTheme[];
+  readonly active_custom_theme_id?: string | null;
+}
+```
+
+### Mobile Sync Logic
+
+**On profile fetch (boot + tab layout):**
+1. Compare `profile.theme_mode` with local store's `mode`
+2. If different, apply server's theme: `setMode(profile.theme_mode)`
+3. If `theme_mode === "custom"`, load `profile.custom_themes` into store and set `activeCustomId`
+
+**On theme change (any setMode/save/update/delete/activate):**
+1. Update Zustand store immediately (instant visual feedback)
+2. Persist to SecureStore (offline resilience)
+3. Fire `updateProfile({ theme_mode, custom_themes, active_custom_theme_id })` via existing `useUpdateProfile` hook (optimistic mutation)
+
+### Execution Steps
+
+| Step | Description | Status |
+|------|-------------|--------|
+| C1 | Database schema — columns inlined into `002_PROFILES.sql` | ✅ |
+| C2 | Backend models — `CustomThemeInputModel`, `StoredCustomThemeModel`, update `ProfileRow`/`ProfileUpdate`/`ProfileResponse` | ✅ |
+| C3 | Backend `to_update_dict()` — return type widened to `dict[str, object]` for JSONB | ✅ |
+| C4 | Backend tests — model validation + API route tests | |
+| C5 | Mobile `types/profile.ts` — `StoredCustomThemeData`, updated `Profile`/`ProfileUpdate` | ✅ |
+| C6 | Mobile sync — `useThemeSync` hook, `syncFromProfile`/`getThemeSnapshot` store actions, wired in `(tabs)/_layout.tsx` | ✅ |
 
 ---
 
-## Phase D — Custom Image Backgrounds
+## Phase D — Custom Image Backgrounds (deferred)
 
-(Unchanged from previous plan — deferred)
-
----
-
-## Phase E — Animated Video Backgrounds
-
-(Unchanged from previous plan — deferred)
+## Phase E — Animated Video Backgrounds (deferred)

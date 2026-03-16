@@ -73,4 +73,5 @@ export { useResetPassword } from "./useResetPassword";
 export { useSignInForm } from "./useSignInForm";
 export { useSignUpForm } from "./useSignUpForm";
 export { useTheme } from "./useTheme";
+export { useThemeSync } from "./useThemeSync";
 export { useVerifyEmail } from "./useVerifyEmail";

@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from nstil.models.profile import ProfileResponse, ProfileUpdate
-from tests.factories import make_profile_row
+from tests.factories import make_custom_theme_payload, make_profile_row
 
 
 class TestProfileUpdate:
@@ -44,6 +44,57 @@ class TestProfileUpdate:
         result = update.to_update_dict()
         assert result == {"display_name": None}
 
+    def test_theme_mode_accepted(self) -> None:
+        update = ProfileUpdate(theme_mode="sunset")
+        assert update.theme_mode == "sunset"
+
+    def test_theme_mode_invalid_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="Invalid theme mode"):
+            ProfileUpdate(theme_mode="neon")
+
+    def test_custom_themes_accepted(self) -> None:
+        themes = [make_custom_theme_payload(theme_id=f"t{i}") for i in range(4)]
+        update = ProfileUpdate(custom_themes=themes)
+        assert update.custom_themes is not None
+        assert len(update.custom_themes) == 4
+
+    def test_custom_themes_exceeds_max_rejected(self) -> None:
+        themes = [make_custom_theme_payload(theme_id=f"t{i}") for i in range(5)]
+        with pytest.raises(ValidationError, match="Maximum 4"):
+            ProfileUpdate(custom_themes=themes)
+
+    def test_custom_themes_invalid_input_rejected(self) -> None:
+        bad_theme = {
+            "id": "t1",
+            "name": "Bad",
+            "input": {"background": "#000"},
+        }
+        with pytest.raises(ValidationError):
+            ProfileUpdate(custom_themes=[bad_theme])
+
+    def test_theme_name_too_long_rejected(self) -> None:
+        theme = make_custom_theme_payload(name="x" * 21)
+        with pytest.raises(ValidationError):
+            ProfileUpdate(custom_themes=[theme])
+
+    def test_to_update_dict_includes_theme_fields(self) -> None:
+        theme = make_custom_theme_payload()
+        update = ProfileUpdate(
+            theme_mode="custom",
+            custom_themes=[theme],
+            active_custom_theme_id="custom_test_001",
+        )
+        result = update.to_update_dict()
+        assert result["theme_mode"] == "custom"
+        assert isinstance(result["custom_themes"], list)
+        assert len(result["custom_themes"]) == 1
+        assert result["active_custom_theme_id"] == "custom_test_001"
+
+    def test_theme_mode_only_update(self) -> None:
+        update = ProfileUpdate(theme_mode="oled")
+        result = update.to_update_dict()
+        assert result == {"theme_mode": "oled"}
+
 
 class TestProfileResponse:
     def test_from_row(self) -> None:
@@ -71,6 +122,13 @@ class TestProfileResponse:
         assert response.avatar_url is None
         assert response.onboarding_completed_at is None
 
+    def test_from_row_includes_theme_fields(self) -> None:
+        row = make_profile_row(theme_mode="sunset", active_custom_theme_id="t1")
+        response = ProfileResponse.from_row(row)
+        assert response.theme_mode == "sunset"
+        assert response.custom_themes == []
+        assert response.active_custom_theme_id == "t1"
+
 
 class TestProfileRow:
     def test_extra_fields_ignored(self) -> None:
@@ -81,3 +139,9 @@ class TestProfileRow:
 
         parsed = ProfileRow.model_validate(data)
         assert not hasattr(parsed, "unknown_field")
+
+    def test_default_theme_fields(self) -> None:
+        row = make_profile_row()
+        assert row.theme_mode == "dark"
+        assert row.custom_themes == []
+        assert row.active_custom_theme_id is None

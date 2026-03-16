@@ -4,7 +4,8 @@ import { Appearance } from "react-native";
 import type { CustomThemeInput } from "@/lib/themeBuilder";
 import type { ColorPalette } from "@/styles/palettes";
 import { useThemeStore } from "@/stores/themeStore";
-import type { SavedCustomTheme, ThemeMode } from "@/stores/themeStore";
+import type { SavedCustomTheme, ThemeMode, ThemeSnapshot } from "@/stores/themeStore";
+import type { StoredCustomThemeData } from "@/types/profile";
 
 interface ThemeResult {
   readonly colors: ColorPalette;
@@ -18,6 +19,12 @@ interface ThemeResult {
   readonly updateCustomTheme: (id: string, name: string, input: CustomThemeInput) => void;
   readonly deleteCustomTheme: (id: string) => void;
   readonly activateCustomTheme: (id: string) => void;
+  readonly syncFromProfile: (
+    themeMode: string,
+    serverThemes: readonly StoredCustomThemeData[],
+    activeId: string | null,
+  ) => void;
+  readonly getThemeSnapshot: () => ThemeSnapshot;
 }
 
 export function useTheme(): ThemeResult {
@@ -32,6 +39,8 @@ export function useTheme(): ThemeResult {
   const updateCustomTheme = useThemeStore((s) => s.updateCustomTheme);
   const deleteCustomTheme = useThemeStore((s) => s.deleteCustomTheme);
   const activateCustomTheme = useThemeStore((s) => s.activateCustomTheme);
+  const syncFromProfile = useThemeStore((s) => s.syncFromProfile);
+  const getThemeSnapshot = useThemeStore((s) => s.getThemeSnapshot);
 
   useEffect(() => {
     if (mode !== "auto") return;
@@ -55,5 +64,7 @@ export function useTheme(): ThemeResult {
     updateCustomTheme,
     deleteCustomTheme,
     activateCustomTheme,
+    syncFromProfile,
+    getThemeSnapshot,
   };
 }

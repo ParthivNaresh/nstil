@@ -31,25 +31,24 @@ class ProfileService:
 
         try:
             result = await (
-                self._client.table(TABLE)
-                .upsert({"id": str(user_id)}, on_conflict="id")
-                .execute()
+                self._client.table(TABLE).upsert({"id": str(user_id)}, on_conflict="id").execute()
             )
         except APIError as exc:
             if exc.code == FK_VIOLATION_CODE:
-                raise ProfileCreationError(
-                    f"Auth user {user_id} not found in database"
-                ) from exc
+                raise ProfileCreationError(f"Auth user {user_id} not found in database") from exc
             raise
         return ProfileRow.model_validate(result.data[0])
 
     async def update(self, user_id: UUID, data: ProfileUpdate) -> ProfileRow | None:
-        update_data = data.to_update_dict()
+        update_data: dict[str, object] = data.to_update_dict()
         if not update_data:
             return await self.get(user_id)
 
         result = await (
-            self._client.table(TABLE).update(update_data).eq("id", str(user_id)).execute()
+            self._client.table(TABLE)
+            .update(dict(update_data))  # type: ignore[arg-type]
+            .eq("id", str(user_id))
+            .execute()
         )
         if not result.data:
             return None
