@@ -64,6 +64,10 @@ Redesigned existing screens toward premium glassmorphism aesthetic.
 - [ ] Header polish — blur/transparent modes across themes
 - [ ] Full visual verification — all screens, all themes, on device
 
+#### Custom Themes ✅
+
+Full theme customization system: 4 preset themes (Sunset, Forest, Ocean, Rosé) alongside Dark/Light/OLED/Auto, plus up to 4 user-created custom themes with 8 color fields (background, cardColor, textPrimary, textSecondary, accent, gradient1, gradient2, gradient3). Modal-based editor with `reanimated-color-picker`. Pre-fill captures current theme's exact colors including ambient shader gradients. `buildCustomPalette()` derives full 25-token `ColorPalette` + `AmbientColorSet` from 8 inputs. Local persistence via SecureStore, server persistence via `profiles` table (`theme_mode`, `custom_themes` JSONB, `active_custom_theme_id`). Bidirectional sync: server → local on boot via `useThemeSync`, local → server on change via `useUpdateProfile`. Backend Pydantic models with validation (mode check, max 4 themes, camelCase aliases). 5-color preview icons on all theme cards (Standard, Preset, Custom). Dedicated theme page at `settings/theme.tsx`. See `docs/design/custom-themes.md` for full implementation plan.
+
 ### Subphase 4C — Rich Text Editing
 
 Replace plain text body with Markdown-based editing and rendering.

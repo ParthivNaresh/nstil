@@ -329,7 +329,8 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     activeId: string | null,
   ) => {
     const mode: ThemeMode = isValidMode(themeMode) ? themeMode : "dark";
-    const customThemes: readonly SavedCustomTheme[] = serverThemes
+    const safeThemes = Array.isArray(serverThemes) ? serverThemes : [];
+    const customThemes: readonly SavedCustomTheme[] = safeThemes
       .filter((t): t is StoredCustomThemeData => isValidStoredTheme(t))
       .slice(0, MAX_CUSTOM_THEMES)
       .map((t) => ({

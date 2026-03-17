@@ -61,7 +61,7 @@ This project is in active development. Backwards compatibility is not a concern.
 | `sonar-project.properties` | SonarCloud analysis config |
 | `.github/workflows/` | CI — `lint.yml` (format + lint + typecheck + docs build), `test.yml` (pytest + SonarCloud) |
 | `supabase/config.toml` | Local Supabase config (auth, email, DB) |
-| `supabase/migrations/` | SQL migrations (8 consolidated domain-based files) |
+| `supabase/migrations/` | SQL migrations (10 domain-based files) |
 | `packages/shared/` | Placeholder for shared types/constants |
 
 ### Backend (`apps/backend/`)
@@ -89,7 +89,7 @@ Source lives in `src/nstil/` (hatchling src layout).
 | `components/auth/` | Auth-specific shared components |
 | `components/journal/` | Journal feature components (EntryForm, EntryCard, Calendar, LocationPicker, ReflectionCard, VoiceMemo) |
 | `components/insights/` | Insight components (StreakBanner, WeeklySummaryCard, MoodTrendChart, NarrativeSummary, YearInPixels) |
-| `components/settings/` | Settings components (NotificationSettings, AIProfileSettings) |
+| `components/settings/` | Settings components (NotificationSettings, AIProfileSettings, ThemePage, CustomThemeEditor) |
 | `hooks/` | Custom hooks — form logic, data fetching, theme, AI capabilities, check-in state machine |
 | `lib/` | Utilities — Supabase client, React Query, i18n, validation, location, date formatting, audio |
 | `lib/ai/` | On-device AI — foundationModels, promptGenerator, promptTemplates, promptContext, reflectionEngine, summaryEngine, notificationTextEngine, personalizedNotifications |
@@ -138,18 +138,20 @@ cd apps/mobile && npx tsc --noEmit && npx eslint .
 - **Observability**: structlog with sensitive data scrubbing, request logging middleware
 - **AI orchestration**: PromptEngine (context-aware prompt selection), CheckInOrchestrator (multi-step flow), InsightEngine (streak/milestone/summary/anomaly computation)
 
-### Database (8 consolidated migrations)
+### Database (10 migrations)
 
 1. `001_EXTENSIONS` — Required Postgres extensions
-2. `002_PROFILES` — User profiles
+2. `002_PROFILES` — User profiles (display_name, avatar_url, onboarding, theme_mode, custom_themes JSONB, active_custom_theme_id)
 3. `003_JOURNALS` — journals table with RLS, default journal trigger
 4. `004_JOURNAL_ENTRIES` — journal_entries with search vector, mood, location, pin, calendar RPC
 5. `005_ENTRY_MEDIA` — entry_media table + storage bucket (images, audio, waveform)
 6. `006_USER_PREFERENCES` — user_ai_profiles + user_notification_preferences
 7. `007_AI_INTELLIGENCE_LAYER` — ai_sessions, ai_messages, ai_prompts, ai_insights, ai_feedback, ai_agent_tasks, entry_embeddings
 8. `008_TRIGGERS_AND_FUNCTIONS` — handle_new_user() trigger
+9. `009_BREATHING_SESSIONS` — breathing_sessions table with RLS
+10. `010_ROLE_GRANTS` — Role-based access grants
 
-### Tests: 627 passing
+### Tests: 807 passing
 
 Covers models, API endpoints, cache layer, validators, AI services, check-in flow, insights, prompts.
 
@@ -159,9 +161,15 @@ Covers models, API endpoints, cache layer, validators, AI services, check-in flo
 
 ### Theme system
 
-Three palettes: `darkPalette` (default), `lightPalette`, `oledPalette`. Zustand `themeStore` persisted to SecureStore. `useTheme()` hook returns `colors`, `isDark`, `keyboardAppearance`. Every component uses `useTheme()` — no static color imports.
+**Standard palettes:** `darkPalette` (default), `lightPalette`, `oledPalette`. **Preset palettes:** Sunset, Forest, Ocean, Rosé (`styles/presetPalettes.ts`). **Custom themes:** up to 4 user-created themes with 8 color fields (background, cardColor, textPrimary, textSecondary, accent, gradient1, gradient2, gradient3).
 
-Skia `AmbientBackground` mounted at root layout — all screens are transparent overlays on top of a continuous GPU-rendered gradient.
+Zustand `themeStore` persisted to SecureStore (`nstil_theme_mode`, `nstil_custom_themes`, `nstil_active_custom_id`). Server-synced via `useThemeSync` hook in `(tabs)/_layout.tsx` — pulls from profile on boot, pushes on change via `useUpdateProfile`. `useTheme()` hook returns `colors`, `isDark`, `keyboardAppearance`, plus custom theme CRUD actions.
+
+`buildCustomPalette()` (`lib/themeBuilder.ts`) derives full 25-token `ColorPalette` + `AmbientColorSet` from 8 user inputs. `colorUtils.ts` provides `withAlpha`, `getLuminance`, `adjustBrightness`, `normalizedToHex`, `hexToNormalized4`, `hexToShaderColor`, `rgbaToHex`.
+
+Theme editor: `components/settings/ThemePage/` (ThemePage, CustomThemeCard, NewThemeCard) + `components/settings/CustomThemeEditor/` (CustomThemeEditor, CustomThemeModal, ColorPickerSheet, ColorRow, ColorSection). Uses `reanimated-color-picker`.
+
+Skia `AmbientBackground` mounted at root layout — all screens are transparent overlays on top of a continuous GPU-rendered gradient. Custom themes provide their own ambient colors via `gradient1/gradient2/gradient3`.
 
 ### Navigation structure
 
@@ -173,6 +181,7 @@ Skia `AmbientBackground` mounted at root layout — all screens are transparent 
 - `app/check-in.tsx` — AI check-in flow (4-step state machine)
 - `app/settings/notifications.tsx` — notification preferences
 - `app/settings/ai-profile.tsx` — AI profile settings
+- `app/settings/theme.tsx` — theme selection (standard, presets, custom)
 
 **Important**: tapping an entry card navigates directly to the edit screen (`/entry/${id}`). There is no read-only detail screen.
 
@@ -243,8 +252,8 @@ See `ROADMAP.md` for full details. Summary:
 | 1 — Authentication | ✅ | JWT auth, 6 auth screens, deep linking, SecureStore, 401 auto-sign-out |
 | 2 — Design System | ✅ | 18 UI components, design tokens, glassmorphism theme |
 | 3 — Journal CRUD | ✅ | Create/read/update/delete entries, cursor pagination, Redis caching |
-| 4A — Theme and Skia | ✅ | 3 palettes, Skia gradients, ambient background, theme persistence |
-| 4B — Visual Polish | 🔄 | Custom date/time picker, mood selector, entry cards, tab bar (auth screen verification remaining) |
+| 4A — Theme and Skia | ✅ | 3 standard + 4 preset + custom palettes, Skia gradients, ambient background, theme persistence |
+| 4B — Visual Polish | 🔄 | Custom themes (8-field editor, server sync), date/time picker, mood selector, entry cards, tab bar (auth screen verification remaining) |
 | 4C — Rich Text | ❌ | Not started |
 | 4D — Pin and Star | ✅ | Pin toggle with haptics, pinned-first sort |
 | 4E — Full-Text Search | ✅ | Postgres tsvector, search RPC, History tab with search |
@@ -276,7 +285,7 @@ cd apps/backend && uv run ruff check src tests && uv run mypy src && uv run pyte
 cd apps/mobile && npx tsc --noEmit && npx eslint .
 ```
 
-Backend: 627 tests across models, API, cache, validators, AI services.
+Backend: 807 tests across models, API, cache, validators, AI services.
 
 ---
 

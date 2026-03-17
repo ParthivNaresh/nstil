@@ -200,7 +200,7 @@ interface ProfileUpdate {
 | C1 | Database schema — columns inlined into `002_PROFILES.sql` | ✅ |
 | C2 | Backend models — `CustomThemeInputModel`, `StoredCustomThemeModel`, update `ProfileRow`/`ProfileUpdate`/`ProfileResponse` | ✅ |
 | C3 | Backend `to_update_dict()` — return type widened to `dict[str, object]` for JSONB | ✅ |
-| C4 | Backend tests — model validation + API route tests | |
+| C4 | Backend tests — model validation + API route tests | ✅ |
 | C5 | Mobile `types/profile.ts` — `StoredCustomThemeData`, updated `Profile`/`ProfileUpdate` | ✅ |
 | C6 | Mobile sync — `useThemeSync` hook, `syncFromProfile`/`getThemeSnapshot` store actions, wired in `(tabs)/_layout.tsx` | ✅ |
 

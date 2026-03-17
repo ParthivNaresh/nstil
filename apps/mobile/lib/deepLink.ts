@@ -37,7 +37,7 @@ async function handleDeepLinkUrl(url: string): Promise<void> {
   const tokens = extractTokensFromUrl(url);
   if (!tokens) return;
 
-  if (tokens.type) {
+  if (tokens.type === "recovery") {
     useAuthStore.getState().setPendingDeepLinkType(tokens.type);
   }
 

@@ -1,5 +1,5 @@
 import { Canvas, Fill, Shader } from "@shopify/react-native-skia";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   cancelAnimation,
@@ -12,7 +12,6 @@ import {
 
 import { useTheme } from "@/hooks/useTheme";
 import { lerp } from "@/lib/animation";
-
 import { hexToShaderColor } from "./colors";
 import { breathingOrbShader } from "./shader";
 import type { BreathingOrbProps } from "./types";
@@ -35,6 +34,15 @@ export function BreathingOrb({ phaseSignal, progress, size }: BreathingOrbProps)
   const { colors } = useTheme();
   const time = useSharedValue(0);
 
+  const coreR = useSharedValue(0);
+  const coreG = useSharedValue(0);
+  const coreB = useSharedValue(0);
+  const coreA = useSharedValue(CORE_ALPHA);
+  const edgeR = useSharedValue(0);
+  const edgeG = useSharedValue(0);
+  const edgeB = useSharedValue(0);
+  const edgeA = useSharedValue(EDGE_ALPHA);
+
   useEffect(() => {
     time.value = withRepeat(
       withTiming(CYCLE_MAX, {
@@ -47,18 +55,22 @@ export function BreathingOrb({ phaseSignal, progress, size }: BreathingOrbProps)
     return () => cancelAnimation(time);
   }, [time]);
 
+  useEffect(() => {
+    const core = hexToShaderColor(colors.accent, CORE_ALPHA);
+    coreR.value = core[0];
+    coreG.value = core[1];
+    coreB.value = core[2];
+    coreA.value = core[3];
+
+    const edge = hexToShaderColor(colors.accentLight, EDGE_ALPHA);
+    edgeR.value = edge[0];
+    edgeG.value = edge[1];
+    edgeB.value = edge[2];
+    edgeA.value = edge[3];
+  }, [colors.accent, colors.accentLight, coreR, coreG, coreB, coreA, edgeR, edgeG, edgeB, edgeA]);
+
   const minRadius = size * MIN_RADIUS_RATIO;
   const maxRadius = size * MAX_RADIUS_RATIO;
-
-  const colorCore = useMemo(
-    () => hexToShaderColor(colors.accent, CORE_ALPHA),
-    [colors.accent],
-  );
-
-  const colorEdge = useMemo(
-    () => hexToShaderColor(colors.accentLight, EDGE_ALPHA),
-    [colors.accentLight],
-  );
 
   const animatedRadius = useDerivedValue(() => {
     const p = phaseSignal.value;
@@ -82,8 +94,8 @@ export function BreathingOrb({ phaseSignal, progress, size }: BreathingOrbProps)
     uTime: time.value,
     uRadius: animatedRadius.value,
     uOpacity: animatedOpacity.value,
-    uColorCore: colorCore,
-    uColorEdge: colorEdge,
+    uColorCore: [coreR.value, coreG.value, coreB.value, coreA.value] as const,
+    uColorEdge: [edgeR.value, edgeG.value, edgeB.value, edgeA.value] as const,
   }));
 
   if (!breathingOrbShader) {

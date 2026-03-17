@@ -25,17 +25,20 @@ export function useThemeSync(profile: Profile | undefined): void {
   useEffect(() => {
     if (!profile || hasSyncedFromServer.current) return;
 
+    const serverThemes = profile.custom_themes ?? [];
+    const activeThemeId = profile.active_custom_theme_id ?? null;
+
     syncFromProfile(
-      profile.theme_mode,
-      profile.custom_themes,
-      profile.active_custom_theme_id,
+      profile.theme_mode ?? "dark",
+      serverThemes,
+      activeThemeId,
     );
     hasSyncedFromServer.current = true;
 
     lastPushedSnapshot.current = {
-      theme_mode: profile.theme_mode,
-      custom_themes: profile.custom_themes,
-      active_custom_theme_id: profile.active_custom_theme_id,
+      theme_mode: profile.theme_mode ?? "dark",
+      custom_themes: serverThemes,
+      active_custom_theme_id: activeThemeId,
     };
   }, [profile, syncFromProfile]);
 

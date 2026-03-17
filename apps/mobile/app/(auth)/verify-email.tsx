@@ -1,5 +1,5 @@
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 
@@ -13,23 +13,14 @@ import { spacing } from "@/styles";
 export default function VerifyEmailScreen() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
-  const isEmailVerified = useAuthStore((s) => s.isEmailVerified);
   const signOut = useAuthStore((s) => s.signOut);
   const { cooldownRemaining, isResending, statusMessage, resend } =
     useVerifyEmail(email ?? "");
 
-  useEffect(() => {
-    if (isEmailVerified) {
-      router.replace("/");
-    }
-  }, [isEmailVerified, router]);
-
   const handleDifferentEmail = useCallback(async () => {
     await signOut();
-    router.replace("/(auth)/sign-up");
-  }, [signOut, router]);
+  }, [signOut]);
 
   const resendButtonTitle =
     cooldownRemaining > 0

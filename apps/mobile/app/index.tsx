@@ -1,8 +1,9 @@
 import { Redirect } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { LoadingScreen } from "@/components/ui";
 import { useProfile } from "@/hooks/useProfile";
+import { ApiError } from "@/services/api/errors";
 import { useAuthStore } from "@/stores/authStore";
 
 export default function Index() {
@@ -11,12 +12,24 @@ export default function Index() {
   const isEmailVerified = useAuthStore((s) => s.isEmailVerified);
   const pendingDeepLinkType = useAuthStore((s) => s.pendingDeepLinkType);
   const initialize = useAuthStore((s) => s.initialize);
+  const signOut = useAuthStore((s) => s.signOut);
+  const hasAttemptedRecovery = useRef(false);
 
   const isAuthenticated = initialized && !!session && isEmailVerified && !pendingDeepLinkType;
 
-  const { data: profile, isLoading: profileLoading, isError: profileError, refetch } = useProfile({
+  const { data: profile, isLoading: profileLoading, isError: profileError, error: profileErrorObj, refetch } = useProfile({
     enabled: isAuthenticated,
   });
+
+  useEffect(() => {
+    if (!profileError || hasAttemptedRecovery.current) return;
+    const isInconsistentState =
+      profileErrorObj instanceof ApiError && profileErrorObj.status === 422;
+    if (isInconsistentState) {
+      hasAttemptedRecovery.current = true;
+      signOut();
+    }
+  }, [profileError, profileErrorObj, signOut]);
 
   const handleRetry = useCallback(async () => {
     await initialize();
