@@ -1,32 +1,51 @@
 import * as Haptics from "expo-haptics";
-import { Check } from "lucide-react-native";
+import { Check, Pencil } from "lucide-react-native";
 import { useCallback } from "react";
-import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
 import { useTheme } from "@/hooks/useTheme";
+import type { SavedCustomTheme } from "@/stores/themeStore";
 import { radius, spacing } from "@/styles";
 
-import type { ThemeModeCardProps } from "./types";
+interface CustomThemeCardProps {
+  readonly theme: SavedCustomTheme;
+  readonly isSelected: boolean;
+  readonly onActivate: (id: string) => void;
+  readonly onEdit: (theme: SavedCustomTheme) => void;
+}
 
 const PREVIEW_SIZE = 48;
 const PREVIEW_INNER_WIDTH = 28;
 const PREVIEW_INNER_HEIGHT = 30;
 const CHECK_SIZE = 16;
+const EDIT_SIZE = 12;
 const TEXT_LINE_HEIGHT = 2;
 const ACCENT_LINE_HEIGHT = 3;
 
-export function ThemeModeCard({ option, isSelected, onSelect }: ThemeModeCardProps) {
-  const { t } = useTranslation();
+export function CustomThemeCard({
+  theme,
+  isSelected,
+  onActivate,
+  onEdit,
+}: CustomThemeCardProps) {
   const { colors } = useTheme();
 
   const handlePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onSelect(option.value);
-  }, [option.value, onSelect]);
+    onActivate(theme.id);
+  }, [theme.id, onActivate]);
 
-  const [bg, surface, textPrimary, textSecondary, accent] = option.previewColors;
+  const handleEditPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onEdit(theme);
+  }, [theme, onEdit]);
+
+  const bg = theme.input.background;
+  const surface = theme.built.palette.surface;
+  const primary = theme.input.textPrimary;
+  const secondary = theme.input.textSecondary;
+  const accent = theme.input.accent;
 
   return (
     <Pressable
@@ -40,22 +59,33 @@ export function ThemeModeCard({ option, isSelected, onSelect }: ThemeModeCardPro
       ]}
       accessibilityRole="radio"
       accessibilityState={{ selected: isSelected }}
-      accessibilityLabel={option.labelKey}
+      accessibilityLabel={theme.name}
     >
-      <View style={[styles.preview, { backgroundColor: bg }]}>
-        <View style={[styles.previewSurface, { backgroundColor: surface }]}>
-          <View style={[styles.previewTextPrimary, { backgroundColor: textPrimary }]} />
-          <View style={[styles.previewTextSecondary, { backgroundColor: textSecondary }]} />
-          <View style={[styles.previewAccent, { backgroundColor: accent }]} />
+      <View style={styles.previewContainer}>
+        <View style={[styles.preview, { backgroundColor: bg }]}>
+          <View style={[styles.previewSurface, { backgroundColor: surface }]}>
+            <View style={[styles.previewTextPrimary, { backgroundColor: primary }]} />
+            <View style={[styles.previewTextSecondary, { backgroundColor: secondary }]} />
+            <View style={[styles.previewAccent, { backgroundColor: accent }]} />
+          </View>
         </View>
+        <Pressable
+          onPress={handleEditPress}
+          hitSlop={8}
+          style={[styles.editButton, { backgroundColor: colors.surfaceElevated }]}
+        >
+          <Pencil size={EDIT_SIZE} color={colors.textTertiary} />
+        </Pressable>
       </View>
 
       <View style={styles.labelRow}>
         <AppText
           variant="caption"
           color={isSelected ? colors.accent : colors.textSecondary}
+          numberOfLines={1}
+          style={styles.labelText}
         >
-          {t(option.labelKey)}
+          {theme.name}
         </AppText>
         {isSelected ? (
           <Check size={CHECK_SIZE} color={colors.accent} />
@@ -74,6 +104,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     gap: spacing.xs,
+  },
+  previewContainer: {
+    position: "relative",
   },
   preview: {
     width: PREVIEW_SIZE,
@@ -108,9 +141,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     marginTop: 1,
   },
+  editButton: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   labelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 2,
+    maxWidth: "100%",
+    paddingHorizontal: spacing.xs,
+  },
+  labelText: {
+    flexShrink: 1,
   },
 });

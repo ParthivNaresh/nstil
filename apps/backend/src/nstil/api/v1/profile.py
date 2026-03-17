@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from nstil.api.deps import get_current_user, get_profile_service
+from nstil.core.exceptions import ProfileCreationError
 from nstil.models import UserPayload
 from nstil.models.profile import ProfileResponse, ProfileUpdate
 from nstil.services.cached_profile import CachedProfileService
@@ -16,7 +17,14 @@ async def get_profile(
     user: Annotated[UserPayload, Depends(get_current_user)],
     service: Annotated[CachedProfileService, Depends(get_profile_service)],
 ) -> ProfileResponse:
-    return ProfileResponse.from_row(await service.ensure(UUID(user.sub)))
+    try:
+        row = await service.ensure(UUID(user.sub))
+    except ProfileCreationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="User account is in an inconsistent state. Please sign out and sign up again.",
+        ) from exc
+    return ProfileResponse.from_row(row)
 
 
 @router.patch("", response_model=ProfileResponse)

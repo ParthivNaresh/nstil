@@ -93,11 +93,14 @@ export default function CheckInScreen() {
     const entry = await convert();
     void queryClient.invalidateQueries({ queryKey: queryKeys.entries.all });
     if (entry) {
-      router.replace(`/entry/${entry.id}`);
+      router.replace({
+        pathname: `/entry/${entry.id}`,
+        params: promptContent ? { prompt: promptContent } : undefined,
+      });
     } else {
       router.replace("/(tabs)");
     }
-  }, [convert, router]);
+  }, [convert, router, promptContent]);
 
   return (
     <View style={styles.root}>

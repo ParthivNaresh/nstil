@@ -1,5 +1,5 @@
 import { Check } from "lucide-react-native";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   cancelAnimation,
@@ -30,7 +30,6 @@ interface CheckInOutcomeProps {
 
 const FADE_DURATION = 400;
 const PULSE_DURATION = 1500;
-const AUTO_COMPLETE_MS = 8000;
 
 export function CheckInOutcome({
   moodCategory,
@@ -44,7 +43,6 @@ export function CheckInOutcome({
   const router = useRouter();
   const gradient = getMoodGradient(moodCategory);
   const pulseScale = useSharedValue(1);
-  const autoCompleteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isFinished = sessionStatus === "completed" || sessionStatus === "converted";
 
@@ -60,46 +58,20 @@ export function CheckInOutcome({
     return () => cancelAnimation(pulseScale);
   }, [pulseScale]);
 
-  useEffect(() => {
-    if (isFinished) return;
-
-    autoCompleteRef.current = setTimeout(() => {
-      onComplete();
-    }, AUTO_COMPLETE_MS);
-
-    return () => {
-      if (autoCompleteRef.current) {
-        clearTimeout(autoCompleteRef.current);
-      }
-    };
-  }, [isFinished, onComplete]);
-
   const handleConvert = useCallback(() => {
-    if (autoCompleteRef.current) {
-      clearTimeout(autoCompleteRef.current);
-    }
     onConvert();
   }, [onConvert]);
 
   const handleComplete = useCallback(() => {
-    if (autoCompleteRef.current) {
-      clearTimeout(autoCompleteRef.current);
-    }
     onComplete();
   }, [onComplete]);
 
   const handleBreathing = useCallback(() => {
-    if (autoCompleteRef.current) {
-      clearTimeout(autoCompleteRef.current);
-    }
     onComplete();
     router.push("/breathing");
   }, [onComplete, router]);
 
   const handleDrift = useCallback(() => {
-    if (autoCompleteRef.current) {
-      clearTimeout(autoCompleteRef.current);
-    }
     onComplete();
     router.push("/drift");
   }, [onComplete, router]);

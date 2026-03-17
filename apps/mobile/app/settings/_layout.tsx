@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 export default function SettingsLayout() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }}>
+      <Stack.Screen name="theme" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="ai-profile" />
     </Stack>

@@ -176,7 +176,7 @@ done
 
 if $DEVICE_MODE; then
   step "Opening Metro + iOS Device in new iTerm tab"
-  open_iterm_tab "cd $REPO_ROOT/apps/mobile && npx expo run:ios --device 2>&1 | grep -v 'HALC_ProxyObjectMap'"
+  open_iterm_tab "cd $REPO_ROOT/apps/mobile && npx expo run:ios --device"
 
   echo -e "\n${GREEN}${BOLD}All services started (device mode)!${RESET}"
   echo -e "  Backend:  http://${LAN_IP}:8000"

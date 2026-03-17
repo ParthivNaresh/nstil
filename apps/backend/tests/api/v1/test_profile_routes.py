@@ -3,7 +3,13 @@ from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
-from tests.factories import DEFAULT_USER_ID, make_profile_row, make_token
+from nstil.core.exceptions import ProfileCreationError
+from tests.factories import (
+    DEFAULT_USER_ID,
+    make_custom_theme_payload,
+    make_profile_row,
+    make_token,
+)
 
 PROFILE_URL = "/api/v1/profile"
 
@@ -15,7 +21,7 @@ def _auth_headers(sub: str = DEFAULT_USER_ID) -> dict[str, str]:
 class TestGetProfile:
     def test_success(self, client: TestClient, mock_profile_service: AsyncMock) -> None:
         row = make_profile_row(display_name="Parthiv")
-        mock_profile_service.get.return_value = row
+        mock_profile_service.ensure.return_value = row
 
         response = client.get(PROFILE_URL, headers=_auth_headers())
 
@@ -29,7 +35,7 @@ class TestGetProfile:
     ) -> None:
         now = datetime.now(UTC)
         row = make_profile_row(display_name="Parthiv", onboarding_completed_at=now)
-        mock_profile_service.get.return_value = row
+        mock_profile_service.ensure.return_value = row
 
         response = client.get(PROFILE_URL, headers=_auth_headers())
 
@@ -37,11 +43,11 @@ class TestGetProfile:
         assert response.json()["onboarding_completed_at"] is not None
 
     def test_not_found(self, client: TestClient, mock_profile_service: AsyncMock) -> None:
-        mock_profile_service.get.return_value = None
+        mock_profile_service.ensure.side_effect = ProfileCreationError("not found")
 
         response = client.get(PROFILE_URL, headers=_auth_headers())
 
-        assert response.status_code == 404
+        assert response.status_code == 422
 
     def test_unauthenticated(self, client: TestClient) -> None:
         response = client.get(PROFILE_URL)
@@ -104,6 +110,79 @@ class TestUpdateProfile:
         )
 
         assert response.status_code == 422
+
+    def test_update_theme_mode(self, client: TestClient, mock_profile_service: AsyncMock) -> None:
+        row = make_profile_row(theme_mode="sunset")
+        mock_profile_service.update.return_value = row
+
+        response = client.patch(
+            PROFILE_URL,
+            json={"theme_mode": "sunset"},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["theme_mode"] == "sunset"
+
+    def test_update_theme_mode_invalid(self, client: TestClient) -> None:
+        response = client.patch(
+            PROFILE_URL,
+            json={"theme_mode": "neon"},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 422
+
+    def test_update_custom_themes(
+        self, client: TestClient, mock_profile_service: AsyncMock
+    ) -> None:
+        theme = make_custom_theme_payload()
+        row = make_profile_row(theme_mode="custom", active_custom_theme_id="custom_test_001")
+        mock_profile_service.update.return_value = row
+
+        response = client.patch(
+            PROFILE_URL,
+            json={"custom_themes": [theme]},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+
+    def test_update_custom_themes_exceeds_max(self, client: TestClient) -> None:
+        themes = [make_custom_theme_payload(theme_id=f"t{i}") for i in range(5)]
+
+        response = client.patch(
+            PROFILE_URL,
+            json={"custom_themes": themes},
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 422
+
+    def test_update_all_theme_fields(
+        self, client: TestClient, mock_profile_service: AsyncMock
+    ) -> None:
+        theme = make_custom_theme_payload()
+        row = make_profile_row(
+            theme_mode="custom",
+            active_custom_theme_id="custom_test_001",
+        )
+        mock_profile_service.update.return_value = row
+
+        response = client.patch(
+            PROFILE_URL,
+            json={
+                "theme_mode": "custom",
+                "custom_themes": [theme],
+                "active_custom_theme_id": "custom_test_001",
+            },
+            headers=_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["theme_mode"] == "custom"
+        assert data["active_custom_theme_id"] == "custom_test_001"
 
 
 class TestCompleteOnboarding:

@@ -13,6 +13,7 @@ import type {
 } from "@/types";
 
 export interface EntryFormProps {
+  readonly bodyLabel?: string;
   readonly reflectionSlot?: ReactNode;
   readonly journals: JournalSpace[];
   readonly journalId: string;

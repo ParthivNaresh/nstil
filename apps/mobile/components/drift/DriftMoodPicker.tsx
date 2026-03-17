@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { AppText } from "@/components/ui";
 import { MoodItem } from "@/components/ui/MoodSelector/MoodItem";
+import { useTheme } from "@/hooks/useTheme";
 import { withAlpha } from "@/lib/colorUtils";
 import { MOOD_CATEGORIES } from "@/lib/moodUtils";
 import { radius, spacing } from "@/styles";
@@ -21,11 +22,6 @@ interface DriftMoodPickerProps {
 }
 
 const FADE_DURATION = 250;
-const OVERLAY_BG = "rgba(0, 0, 0, 0.6)";
-const CARD_BG = "rgba(20, 20, 30, 0.85)";
-const CARD_BORDER = "rgba(255, 255, 255, 0.1)";
-const PILL_BG = "rgba(255, 255, 255, 0.1)";
-const PILL_BORDER = "rgba(255, 255, 255, 0.15)";
 
 function formatDuration(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -37,6 +33,7 @@ function formatDuration(totalSeconds: number): string {
 
 export function DriftMoodPicker({ durationSec, onComplete }: DriftMoodPickerProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<PickerStep>("before");
   const [moodBefore, setMoodBefore] = useState<MoodCategory | null>(null);
@@ -76,14 +73,17 @@ export function DriftMoodPicker({ durationSec, onComplete }: DriftMoodPickerProp
     });
   }, [step, durationSec, moodBefore, moodAfter, onComplete]);
 
+  const overlayBg = withAlpha(colors.background, 0.6);
+  const cardBg = withAlpha(colors.surface, 0.85);
+
   return (
-    <View style={[styles.overlay, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[styles.overlay, { paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: overlayBg }]}>
       <View style={styles.centered}>
         <Animated.View
           key={step}
           entering={FadeIn.duration(FADE_DURATION)}
           exiting={FadeOut.duration(FADE_DURATION)}
-          style={styles.card}
+          style={[styles.card, { backgroundColor: cardBg, borderColor: colors.glassBorder }]}
         >
           {step === "before" ? (
             <MoodStepContent
@@ -140,13 +140,15 @@ function MoodStepContent({
   onSelect,
   onSkip,
 }: MoodStepContentProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.stepContainer}>
       <View style={styles.header}>
-        <AppText variant="h3" color={withAlpha("#FFFFFF", 0.9)}>
+        <AppText variant="h3" color={colors.textPrimary}>
           {title}
         </AppText>
-        <AppText variant="bodySmall" color={withAlpha("#FFFFFF", 0.5)}>
+        <AppText variant="bodySmall" color={colors.textTertiary}>
           {subtitle}
         </AppText>
       </View>
@@ -167,7 +169,7 @@ function MoodStepContent({
       </ScrollView>
 
       <Pressable onPress={onSkip} style={styles.skipButton}>
-        <AppText variant="caption" color={withAlpha("#FFFFFF", 0.4)}>
+        <AppText variant="caption" color={colors.textTertiary}>
           {skipLabel}
         </AppText>
       </Pressable>
@@ -183,19 +185,24 @@ interface DoneContentProps {
 }
 
 function DoneContent({ title, subtitle, doneLabel, onDone }: DoneContentProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.stepContainer}>
       <View style={styles.header}>
-        <AppText variant="h3" color={withAlpha("#FFFFFF", 0.9)}>
+        <AppText variant="h3" color={colors.textPrimary}>
           {title}
         </AppText>
-        <AppText variant="bodySmall" color={withAlpha("#FFFFFF", 0.5)}>
+        <AppText variant="bodySmall" color={colors.textTertiary}>
           {subtitle}
         </AppText>
       </View>
 
-      <Pressable onPress={onDone} style={styles.donePill}>
-        <AppText variant="label" color={withAlpha("#FFFFFF", 0.85)}>
+      <Pressable
+        onPress={onDone}
+        style={[styles.donePill, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}
+      >
+        <AppText variant="label" color={colors.textPrimary}>
           {doneLabel}
         </AppText>
       </Pressable>
@@ -206,7 +213,6 @@ function DoneContent({ title, subtitle, doneLabel, onDone }: DoneContentProps) {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: OVERLAY_BG,
     justifyContent: "center",
     zIndex: 20,
   },
@@ -215,8 +221,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   card: {
-    backgroundColor: CARD_BG,
-    borderColor: CARD_BORDER,
     borderWidth: 1,
     borderRadius: radius["2xl"],
     width: "100%",
@@ -241,8 +245,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   donePill: {
-    backgroundColor: PILL_BG,
-    borderColor: PILL_BORDER,
     borderWidth: 1,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm + 2,

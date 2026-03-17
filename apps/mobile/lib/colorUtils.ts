@@ -62,6 +62,44 @@ export function withAlpha(color: string, alpha: number): string {
   return `${color}${a}`;
 }
 
+export function getLuminance(color: string): number {
+  const rgb = parseRgb(color);
+  if (!rgb) return 0;
+  const [r, g, b] = rgb.map((c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+export function adjustBrightness(color: string, amount: number): string {
+  const rgb = parseRgb(color);
+  if (!rgb) return color;
+  const adjusted = rgb.map((c) =>
+    Math.max(0, Math.min(255, Math.round(c + amount))),
+  );
+  return `#${adjusted.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+export function rgbaToHex(color: string): string {
+  const rgb = parseRgb(color);
+  if (!rgb) return color;
+  return `#${rgb.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+export function normalizedToHex(color: readonly [number, number, number, number]): string {
+  const r = Math.round(color[0] * 255).toString(16).padStart(2, "0");
+  const g = Math.round(color[1] * 255).toString(16).padStart(2, "0");
+  const b = Math.round(color[2] * 255).toString(16).padStart(2, "0");
+  return `#${r}${g}${b}`;
+}
+
+export function hexToNormalized4(hex: string): readonly [number, number, number, number] {
+  const rgb = parseRgb(hex);
+  if (!rgb) return [0, 0, 0, 1.0];
+  return [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, 1.0];
+}
+
 export function hexToShaderColor(hex: string, alpha: number = 1.0): ShaderColor {
   const match = HEX6_REGEX.exec(hex);
   if (!match) {

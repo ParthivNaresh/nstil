@@ -26,6 +26,27 @@ DEFAULT_SESSION_ID = "00000000-0000-0000-0000-000000000099"
 DEFAULT_JOURNAL_ID = "00000000-0000-0000-0000-000000000010"
 
 
+def make_custom_theme_payload(
+    *,
+    theme_id: str = "custom_test_001",
+    name: str = "Test Theme",
+) -> dict[str, object]:
+    return {
+        "id": theme_id,
+        "name": name,
+        "input": {
+            "background": "#1A0E0A",
+            "cardColor": "#241410",
+            "textPrimary": "#F5E6D3",
+            "textSecondary": "#B8A08A",
+            "accent": "#F97316",
+            "gradient1": "#1A0E0A",
+            "gradient2": "#731D06",
+            "gradient3": "#4D1433",
+        },
+    }
+
+
 def build_jwt_claims(**overrides: object) -> dict[str, object]:
     defaults: dict[str, object] = {
         "sub": DEFAULT_USER_ID,
@@ -392,6 +413,9 @@ def make_profile_row(
     display_name: str | None = None,
     avatar_url: str | None = None,
     onboarding_completed_at: datetime | None = None,
+    theme_mode: str = "dark",
+    custom_themes: list[dict[str, object]] | None = None,
+    active_custom_theme_id: str | None = None,
     created_at: datetime | None = None,
     updated_at: datetime | None = None,
 ) -> ProfileRow:
@@ -401,6 +425,9 @@ def make_profile_row(
         display_name=display_name,
         avatar_url=avatar_url,
         onboarding_completed_at=onboarding_completed_at,
+        theme_mode=theme_mode,
+        custom_themes=custom_themes or [],
+        active_custom_theme_id=active_custom_theme_id,
         created_at=created_at or now,
         updated_at=updated_at or now,
     )
